@@ -1,0 +1,21 @@
+ - To make restoring the configuration/settings of programs easier when reinstalling them or when moving to a new system etc
+    - bckup Compress-Log
+    - Cura Slicer
+    - JDownloader
+    - qBittorrent
+    - Jackett
+        - Backup whole install in ProgramData\Jackett
+    - Prowlarr
+    - Microsoft PowerToys
+    - Fusion360
+    - Chrome
+    - Firefox
+    Plan:
+        - Per program stores config in extra directory by date.
+        - Checks if config changed.
+            - If it did, keeps the previous config folder and creates a new one with current date
+            - If didnt change, rename the folder to current date
+        - Keeps x number of previous config folders when x = currentNumber, delete oldest folder
+        - config file lists programs for which a config backup will be created // needed?
+        - programs.hpp class for program specific paths/info
+        - config_analyser.hpp has tools to check for config changes. compare the config files of the programs with the ones already backed up
