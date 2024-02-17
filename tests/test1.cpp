@@ -16,7 +16,7 @@ bool compareFilenames(const std::string& path1, const std::string& path2) {
 
 int main() {
     // Sample vector of file paths
-    std::vector<std::string> paths = {"/aaaaa/aaaa/file3.txt", "/bbbbbbbb/bbbb/file1.txt", "/path/to/file2.txt"};
+    std::vector<std::string> paths = {"/aaaaa/aaaa/file3.txt", "/bbbbbbbb/bbbb/file1.txt", "/bbbbbbbb/bbbb/File1.txt", "/path/to/file2.txt"};
 
     // Sort the vector based on filenames using the custom comparator function
     std::sort(paths.begin(), paths.end(), compareFilenames);

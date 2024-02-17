@@ -16,6 +16,7 @@ class analyser{
     public:
         analyser(const std::vector<std::string>& path, const std::string& name) : programPaths(path), programName(name) {}
 
+
         const std::string backupDir = "C:\\Data\\TW\\Software\\Coding\\ConfigSync\\ConfigArchive\\" + programName;
 
         void recurse_scanner(const std::filesystem::path& dirPath, std::vector<std::string>& itemVector){ // Self referencing function. itemVector parameter passed in as reference, to modify original object directly.
@@ -29,6 +30,7 @@ class analyser{
             }
         }
         
+
         int is_identical_filenames(const std::vector<std::string>& base, const std::vector<std::string>& reference){
             int i = 0;
             for(const auto& entry : base){
@@ -43,6 +45,7 @@ class analyser{
             }
             return 1;
         }
+
 
         int is_identical_bytes(const std::string& path1, const std::string& path2){
             std::fstream file1Binary(path1, std::iostream::binary);
@@ -71,11 +74,13 @@ class analyser{
             }
         }
 
+
         bool filename_comparator(const std::string& path1, const std::string& path2){
             std::string filename1 = std::filesystem::path(path1).filename().generic_string();
             std::string filename2 = std::filesystem::path(path2).filename().generic_string();
             return filename1 < filename2; // lexicograhical
         }
+
 
         std::string get_last_backup_path(){
             const std::filesystem::path backupDirFs = backupDir;
@@ -91,27 +96,44 @@ class analyser{
             return dateDirs[0];
         }
 
-        int is_identical_config(){
+        
+        void get_config_items_saved(std::vector<std::string>& configItems){
             const std::string lastSavedDir = get_last_backup_path();
-            const std::filesystem::path savedConfigPath = backupDir + "\\" + lastSavedDir;
+            const std::filesystem::path configPathSaved = backupDir + "\\" + lastSavedDir;
             
-            // Scan saved config directory recursively
-            std::vector<std::string> savedConfigItems;
-            recurse_scanner(savedConfigPath, savedConfigItems);
-            std::sort(savedConfigItems.begin(), savedConfigItems.end(), filename_comparator);
+            recurse_scanner(configPathSaved, configItems);
+        
+        }
 
-            // Scan ProgramPaths recursively
-            std::vector<std::string> currentConfigItems;
+        void get_config_items_current(std::vector<std::string>& configItems){
             for(const auto& item : programPaths){
-                recurse_scanner(item, currentConfigItems);
+                recurse_scanner(item, configItems);
             }
-            std::sort(currentConfigItems.begin(), currentConfigItems.end(), filename_comparator);
+        }    
+
+
+        void sortby_filename(std::vector<std::string>& filenames){
+            std::sort(filenames.begin(), filenames.end(), filename_comparator);
+        }
+
+
+        int is_identical_config(){
+
+            // Get saved config items
+            std::vector<std::string> configItemsSaved;
+            get_config_items_saved(configItemsSaved);
+            sortby_filename(configItemsSaved);
+            
+            // Get ProgramPaths
+            std::vector<std::string> configItemsCurrent;
+            get_config_items_current(configItemsCurrent);
+            sortby_filename(configItemsCurrent);
             
             // Compare vectors
-            if(is_identical_filenames(savedConfigItems, currentConfigItems)){
+            if(is_identical_filenames(configItemsSaved, configItemsCurrent)){
                 int i = 1;
-                for(const auto& item : savedConfigItems){
-                    if(!is_identical_bytes(item, currentConfigItems[i])){
+                for(const auto& item : configItemsSaved){
+                    if(!is_identical_bytes(item, configItemsCurrent[i])){
                         // config changed
                         return 0;
 
