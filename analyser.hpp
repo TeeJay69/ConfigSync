@@ -17,7 +17,6 @@ class analyser{
         analyser(const std::vector<std::string>& path, const std::string& name) : programPaths(path), programName(name) {}
 
         const std::string backupDir = "C:\\Data\\TW\\Software\\Coding\\ConfigSync\\ConfigArchive\\" + programName;
-        
 
         void recurse_scanner(const std::filesystem::path& dirPath, std::vector<std::string>& itemVector){ // Self referencing function. itemVector parameter passed in as reference, to modify original object directly.
             for(const auto& entry : std::filesystem::directory_iterator(dirPath)){
@@ -33,8 +32,8 @@ class analyser{
         int is_identical_filenames(const std::vector<std::string>& base, const std::vector<std::string>& reference){
             int i = 0;
             for(const auto& entry : base){
-                std::filesystem::path entry_fs = entry;
-                std::filesystem::path reference_fs = reference[i];
+                const std::filesystem::path entry_fs = entry;
+                const std::filesystem::path reference_fs = reference[i];
 
                 if(entry_fs.filename() != reference_fs.filename()){
                     return 0;
@@ -45,7 +44,32 @@ class analyser{
             return 1;
         }
 
-        int byte_comparison();
+        int is_identical_bytes(const std::string& path1, const std::string& path2){
+            std::fstream file1Binary(path1, std::iostream::binary);
+            std::fstream file2Binary(path2, std::iostream::binary);
+
+            if(!file1Binary.is_open() || !file2Binary.is_open()){
+                throw std::runtime_error("Error opening files - Error-Code 52");
+            }
+            
+            char byte1, byte2;
+            while(true){
+                byte1 = file1Binary.get();
+                byte2 = file2Binary.get();
+
+                if(byte1 != byte2){
+                    file1Binary.close();
+                    file2Binary.close();
+                    return 0;
+                }
+
+                if(file1Binary.eof() && file2Binary.eof()){
+                    file1Binary.close();
+                    file2Binary.close();
+                    return 1;
+                }
+            }
+        }
 
         std::string get_last_backup_path(){
             const std::filesystem::path backupDirFs = backupDir;
@@ -71,11 +95,11 @@ class analyser{
 
             
             // Scan each item of ProgramPaths recursively
-            std::vector<std::string> currentConfigItems; 
+            std::vector<std::string> currentConfigItems;
             for(const auto& item : programPaths){
                 recurse_scanner(item, currentConfigItems);
             }
-
+            
             // Compare vectors
             if(is_identical_filenames(savedConfigItems, currentConfigItems)){
                 
