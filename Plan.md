@@ -18,4 +18,4 @@
         - Keeps x number of previous config folders when x = currentNumber, delete oldest folder
         - config file lists programs for which a config backup will be created // needed?
         - programs.hpp class for program specific paths/info
-        - config_analyser.hpp has tools to check for config changes. compare the config files of the programs with the ones already backed up
+        - Implement incremental config saves, (storing modified files in vector)

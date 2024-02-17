@@ -71,6 +71,12 @@ class analyser{
             }
         }
 
+        bool filename_comparator(const std::string& path1, const std::string& path2){
+            std::string filename1 = std::filesystem::path(path1).filename().generic_string();
+            std::string filename2 = std::filesystem::path(path2).filename().generic_string();
+            return filename1 < filename2; // lexicograhical
+        }
+
         std::string get_last_backup_path(){
             const std::filesystem::path backupDirFs = backupDir;
 
@@ -85,30 +91,43 @@ class analyser{
             return dateDirs[0];
         }
 
-        std::string check_diff(){
+        int is_identical_config(){
             const std::string lastSavedDir = get_last_backup_path();
             const std::filesystem::path savedConfigPath = backupDir + "\\" + lastSavedDir;
             
             // Scan saved config directory recursively
             std::vector<std::string> savedConfigItems;
             recurse_scanner(savedConfigPath, savedConfigItems);
+            std::sort(savedConfigItems.begin(), savedConfigItems.end(), filename_comparator);
 
-            
-            // Scan each item of ProgramPaths recursively
+            // Scan ProgramPaths recursively
             std::vector<std::string> currentConfigItems;
             for(const auto& item : programPaths){
                 recurse_scanner(item, currentConfigItems);
             }
+            std::sort(currentConfigItems.begin(), currentConfigItems.end(), filename_comparator);
             
             // Compare vectors
             if(is_identical_filenames(savedConfigItems, currentConfigItems)){
-                
+                int i = 1;
+                for(const auto& item : savedConfigItems){
+                    if(!is_identical_bytes(item, currentConfigItems[i])){
+                        // config changed
+                        return 0;
+
+                    }
+                    else{
+                        // config did not change
+                        return 1;
+                    }
+                }
             }
             else{
-                std::string matchError = "Error: (checkDiff) entries do not match!"; // For debugging only
+                return 0;
+                std::string matchError = "Error: (is_identical_config) entries do not match!"; // For debugging only
                 throw std::runtime_error(matchError);
-
                 // --> structure changed, new save config
+
             }
 
             // Load last_write_time in multilevel vector
