@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <string>
 #include <filesystem>
+#include <ctime>
 
 // Custom comparator function to compare two file paths based on their filenames
 bool compareFilenames(const std::string& path1, const std::string& path2) {
@@ -26,6 +27,11 @@ int main() {
     for (const auto& path : paths) {
         std::cout << path << "\n";
     }
+
+    char out[11];
+    std::time_t t=std::time(NULL);
+    std::strftime(out, sizeof(out), "%Y-%m-%d", std::localtime(&t));
+    std::cout<<out;
 
     return 0;
 }
