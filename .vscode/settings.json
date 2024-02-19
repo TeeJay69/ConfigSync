@@ -71,6 +71,12 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "variant": "cpp",
-        "ranges": "cpp"
+        "ranges": "cpp",
+        "*.ipp": "cpp",
+        "hash_map": "cpp",
+        "strstream": "cpp",
+        "complex": "cpp",
+        "source_location": "cpp",
+        "typeindex": "cpp"
     }
 }

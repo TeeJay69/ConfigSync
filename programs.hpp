@@ -5,11 +5,11 @@
 #include <string>
 #include <vector>
 
-class programConfig{
+class programconfig{
     private:
         std::string programName;
     public:
-        programConfig(const std::string& name) : programName(name) {} // Constructor
+        programconfig(const std::string& name) : programName(name) {} // Constructor
         
         std::string getUsername(){
             std::string x = std::getenv("username");

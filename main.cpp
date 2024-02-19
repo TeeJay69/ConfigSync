@@ -3,18 +3,21 @@
 #include <algorithm>
 #include <vector>
 #include <cstdlib>
-#include <programs.hpp>
-#include <analyser.hpp>
-
+#include "analyzer.hpp"
+#include "programs.hpp"
+#include "synchronizer.hpp"
+#include <boost\uuid\uuid.hpp>
+#include <boost\uuid\uuid_generators.hpp>
 
 int main(){
-    programConfig jackett("Jackett");
+    
+    programconfig jackett("Jackett");
     std::vector<std::string> jackettPaths = jackett.getFilePaths();
 
-    programConfig prowlarr("Prowlarr");
+    programconfig prowlarr("Prowlarr");
     std::vector<std::string> prowlarrPaths = prowlarr.getFilePaths();
 
-    programConfig qbittorrent("qBittorrent");
+    programconfig qbittorrent("qBittorrent");
     std::vector<std::string> qbittorrentPaths = qbittorrent.getFilePaths();
 
     const std::filesystem::path jackettDir = "ConfigArchive\\Jackett"; // should be in class of program.hpp

@@ -1,5 +1,5 @@
-#ifndef PROGRAMS_HPP
-#define PROGRAMS_HPP
+#ifndef ANALYZER_HPP
+#define ANALYZER_HPP
 
 #include <iostream>
 #include <string>
@@ -9,15 +9,15 @@
 #include <stdexcept>
 #include <fstream>
 
-class analyser{
+class analyzer{
     private:
         const std::vector<std::string> programPaths;
         const std::string programName;
     public:
-        analyser(const std::vector<std::string>& path, const std::string& name) : programPaths(path), programName(name) {}
+        analyzer(const std::vector<std::string>& path, const std::string& name) : programPaths(path), programName(name) {}
 
 
-        const std::string backupDir = "C:\\Data\\TW\\Software\\Coding\\ConfigSync\\ConfigArchive\\" + programName;
+        const std::string archivePath = "C:\\Data\\TW\\Software\\Coding\\ConfigSync\\ConfigArchive\\" + programName;
 
         void recurse_scanner(const std::filesystem::path& dirPath, std::vector<std::string>& itemVector){ // Self referencing function. itemVector parameter passed in as reference, to modify original object directly.
             for(const auto& entry : std::filesystem::directory_iterator(dirPath)){
@@ -75,18 +75,11 @@ class analyser{
         }
 
 
-        bool filename_comparator(const std::string& path1, const std::string& path2){
-            std::string filename1 = std::filesystem::path(path1).filename().generic_string();
-            std::string filename2 = std::filesystem::path(path2).filename().generic_string();
-            return filename1 < filename2; // lexicograhical
-        }
-
-
         std::string get_last_backup_path(){
-            const std::filesystem::path backupDirFs = backupDir;
+            const std::filesystem::path archivePathFs = archivePath;
 
             std::vector<std::string> dateDirs;
-            for(const auto& item : std::filesystem::directory_iterator(backupDirFs)){
+            for(const auto& item : std::filesystem::directory_iterator(archivePathFs)){
                 if(item.is_directory()){
                     dateDirs.push_back(item.path().generic_string());
                 }
@@ -99,7 +92,7 @@ class analyser{
         
         void get_config_items_saved(std::vector<std::string>& configItems){
             const std::string lastSavedDir = get_last_backup_path();
-            const std::filesystem::path configPathSaved = backupDir + "\\" + lastSavedDir;
+            const std::filesystem::path configPathSaved = archivePath + "\\" + lastSavedDir;
             
             recurse_scanner(configPathSaved, configItems);
         
@@ -113,7 +106,11 @@ class analyser{
 
 
         void sortby_filename(std::vector<std::string>& filenames){
-            std::sort(filenames.begin(), filenames.end(), filename_comparator);
+            std::sort(filenames.begin(), filenames.end(), [this](const std::string& path1, const std::string& path2){
+                std::string filename1 = std::filesystem::path(path1).filename().generic_string();
+                std::string filename2 = std::filesystem::path(path2).filename().generic_string();
+                return filename1 < filename2;
+            });
         }
 
 

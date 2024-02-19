@@ -1,0 +1,9 @@
+Files and directories included in version:
+
+----------
+Compile command:
+g++ main.cpp -lbcrypt -march=native -O3
+----------
+Alias:
+ConfigSync
+----------
