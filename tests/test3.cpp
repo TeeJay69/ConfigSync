@@ -10,15 +10,12 @@ int main(){
     mapX["Key 2..."] = "Value...2";
     mapX["Key 3..."] = "Value...3";
 
-    database data;
-    std::ofstream file("map.bin", std::ios::binary);
-    data.storeStringMap(file, mapX);
-    file.close();
+    database data("map.bin");
+    data.storeStringMap(mapX);
     
-    std::ifstream infile("map.bin", std::ios::binary);
+    database data2("map.bin");
     std::map<std::string, std::string> mapY;
-    data.readStringMap(infile, mapY);
-    infile.close();
+    data2.readStringMap(mapY);
 
     for(const auto& [key, val] : mapY){
         std::cout << "Key: " << key << "     " << "Value: " << val << std::endl;

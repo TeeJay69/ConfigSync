@@ -34,6 +34,3 @@ restore config:
         - move backup inside the ConfigBackup\\program\\temp directory to ConfigBackup\\program\\RecycleBin
         - If RecycleBin has more than x number of items, delete x number of oldest items in RecycleBin directory.
         - Inform user that config was restored successfully
-
-    - User should be able to choose any of the x archived configs to restore.
-    - Serialize map data and store in binary file. (length prefix encoding etc.)
