@@ -94,47 +94,29 @@ class synchronizer{
                 throw std::runtime_error(errorCode);
             }
 
-            // databasePath inside temp UUID dir 
-            std::string databasePath = backupDir + "\\temp\\" + dirUUID;
-            std::map<std::string, std::string> pathMap;
-
             // Backup to UUID directory
             for(const auto& item : programPaths){
                 const std::filesystem::path source = item;
                 
                 if(std::filesystem::is_directory(source)){
-                    std::string destination = backupDir + "\\temp\\" + dirUUID + "\\" + source.filename().string();
-
                     try{
-                        std::filesystem::copy(source, destination, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
+                        std::filesystem::copy(source, backupDir + "\\temp\\" + dirUUID + "\\" + source.filename().string(), std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
                     }
                     catch(std::filesystem::filesystem_error& copyError){
                         throw std::runtime_error(copyError);
                    }
-
-                    // Store path pairs
-                   pathMap.insert(std::make_pair(item, destination));
                 }
                 else{
-                    std::string sourceParentDir = source.parent_path().filename().string();
-                    std::string destination = backupDir + "\\temp\\" + dirUUID + "\\" + sourceParentDir + "\\" + source.filename().string();
-                    
                     try{
+                        std::string sourceParentDir = source.parent_path().filename().string();
                         std::filesystem::create_directories(backupDir + "\\temp\\" + dirUUID + "\\" + sourceParentDir);
-                        std::filesystem::copy(source, destination);
+                        std::filesystem::copy(source, backupDir + "\\temp\\" + dirUUID + "\\" + sourceParentDir + "\\" + source.filename().string());
                     }
                     catch(std::filesystem::filesystem_error& copyError){
                         throw std::runtime_error(copyError);
                     }
-
-                    // Store path pairs
-                    pathMap.insert(std::make_pair(item, destination));
                 }
             }
-
-            // Write path map to file
-            database db(databasePath);
-            db.storeStringMap(pathMap);
         }
 
         
@@ -157,7 +139,7 @@ class synchronizer{
             // Backup to temp
             else{
                 std::string dirUUID = generate_UUID();
-                backup_config_for_restore(dirUUID);
+                backup_config(dirUUID);
             }
         }
 };
