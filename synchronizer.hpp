@@ -9,6 +9,7 @@
 #include <boost\uuid\uuid.hpp>
 #include <boost\uuid\uuid_generators.hpp>
 #include <boost\uuid\uuid_io.hpp>
+#include <map>
 
 class synchronizer{
     private:
@@ -25,12 +26,15 @@ class synchronizer{
 
         void copy_config(const std::string& archivePath, const std::string& dateDir){ // archivePath = programs directory containing the date directories
             // create date folder
-            if(std::filesystem::is_empty(std::filesystem::path(archivePath))){
+            if(std::filesystem::is_empty(std::filesystem::path(dateDir)) || std::filesystem::is_empty(std::filesystem::path(archivePath))){
                 char out[11];
                 std::time_t t=std::time(NULL);
                 std::strftime(out, sizeof(out), "%Y-%m-%d", std::localtime(&t));
-                std::filesystem::create_directory("ConfigArchive\\" + programName + "\\" + out); // dateDir
+                std::filesystem::create_directory("ConfigArchive\\" + programName + "\\" + out); // Creates dateDir
             }
+
+            std::map<std::filesystem::path, std::filesystem::path> pathDatabase; // Original path -- Archive path
+
             for(const auto& item : programPaths){
                 const std::filesystem::path source = item;
                 
@@ -41,16 +45,21 @@ class synchronizer{
                     catch(std::filesystem::filesystem_error& copyError){
                         throw std::runtime_error(copyError);
                     }
+
+                    pathDatabase[source] = (archivePath + "\\" + dateDir + "\\" + source.filename().string());
                 }
                 else{
+                    std::string sourceParentDir = source.parent_path().filename().string();
+
                     try{
-                        std::string sourceParentDir = source.parent_path().filename().string();
                         std::filesystem::create_directories(archivePath + "\\" + dateDir + "\\" + sourceParentDir);
                         std::filesystem::copy(source, archivePath + "\\" + dateDir + "\\" + sourceParentDir + "\\" + source.filename().string(), std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
                     }
                     catch(std::filesystem::filesystem_error& copyError){
                         throw std::runtime_error(copyError);
                     }
+
+                    pathDatabase[source] = (archivePath + "\\" + dateDir + "\\" + sourceParentDir + "\\" + source.filename().string());
                 }
             }
         }

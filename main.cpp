@@ -3,14 +3,15 @@
 #include <algorithm>
 #include <vector>
 #include <cstdlib>
+#include <boost\uuid\uuid.hpp>
+#include <boost\uuid\uuid_generators.hpp>
 #include "analyzer.hpp"
 #include "programs.hpp"
 #include "synchronizer.hpp"
-#include <boost\uuid\uuid.hpp>
-#include <boost\uuid\uuid_generators.hpp>
+#include "database.hpp"
 
 int main(){
-    
+
     programconfig jackett("Jackett");
     std::vector<std::string> jackettPaths = jackett.getFilePaths();
 
