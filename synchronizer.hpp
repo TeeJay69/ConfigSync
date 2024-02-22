@@ -9,6 +9,8 @@
 #include <boost\uuid\uuid.hpp>
 #include <boost\uuid\uuid_generators.hpp>
 #include <boost\uuid\uuid_io.hpp>
+#include <map>
+#include "database.hpp"
 
 class synchronizer{
     private:
@@ -24,39 +26,59 @@ class synchronizer{
         }
 
         void copy_config(const std::string& archivePath, const std::string& dateDir){ // archivePath = programs directory containing the date directories
-            // create date folder
+            // create date folder if it doesnt exist yet
             if(std::filesystem::is_empty(std::filesystem::path(archivePath))){
                 char out[11];
                 std::time_t t=std::time(NULL);
                 std::strftime(out, sizeof(out), "%Y-%m-%d", std::localtime(&t));
                 std::filesystem::create_directory("ConfigArchive\\" + programName + "\\" + out); // dateDir
             }
+            
+            // PathDatabase location is inside the dateDir
+            std::string databasePath = archivePath + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin";
+            std::map<std::string, std::string> pathMap;
+
+
             for(const auto& item : programPaths){
                 const std::filesystem::path source = item;
-                
+
                 if(std::filesystem::is_directory(source)){
+                    std::string destination = archivePath + "\\" + dateDir + "\\" + source.filename().string();
+
                     try{
-                        std::filesystem::copy(source, archivePath + "\\" + dateDir + "\\" + source.filename().string(), std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
+                        std::filesystem::copy(source, std::filesystem::path(destination), std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
                     }
                     catch(std::filesystem::filesystem_error& copyError){
                         throw std::runtime_error(copyError);
                     }
+
+                    // Store path pair in map
+                    pathMap.insert(std::make_pair(item, destination));
                 }
                 else{
+                    std::string sourceParentDir = source.parent_path().filename().string();
+                    std::string destination = archivePath + "\\" + dateDir + "\\" + sourceParentDir + "\\" + source.filename().string();
+
                     try{
-                        std::string sourceParentDir = source.parent_path().filename().string();
                         std::filesystem::create_directories(archivePath + "\\" + dateDir + "\\" + sourceParentDir);
-                        std::filesystem::copy(source, archivePath + "\\" + dateDir + "\\" + sourceParentDir + "\\" + source.filename().string(), std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
+                        std::filesystem::copy(source, std::filesystem::path(destination), std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
                     }
                     catch(std::filesystem::filesystem_error& copyError){
                         throw std::runtime_error(copyError);
                     }
+
+                    // Store path pair in map
+                    pathMap.insert(std::make_pair(item, destination));
                 }
             }
+
+            // Writes the path map to file
+            database db(databasePath);
+            db.storeStringMap(pathMap);
         }
 
         
-        void backup_config(const std::string& dirUUID){
+        void backup_config_for_restore(const std::string& dirUUID){
             std::string backupDir = "ConfigBackup\\" + programName;
 
             if(std::filesystem::is_empty(backupDir)){
