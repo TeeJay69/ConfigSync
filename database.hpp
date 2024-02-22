@@ -18,14 +18,37 @@ class database{
         file.write(str.c_str(), length); // (c_str) char* points to a memory buffer with raw binary
     }
 
+    std::string encryptString(std::string str){
+        std::vector<std::string> keys = {
+            "lsßg8shefayy9zuier10101938949kjsiwwUIEJAPCNrßrprl",
+            "pa0ßßrYfokfjsvqpplmaxncjviibuhbvgzztfcdrrexswyqqe62293",
+            "pksjavebtoETnsa2123",
+            "CvWie921010LsdpcaAPdpkBVuronWOrutbaao"
+        };
+
+        std::vector<char> charVector(str.begin(), str.end());
+        
+        for(const auto& key : keys){
+            for(size_t i = 0; i != charVector.size(); i++){
+
+                charVector[i] ^= key[i % key.size()];
+            }
+        }
+
+        str.assign(charVector.begin(), charVector.end());
+        return str;
+    }
+
     void storeStringMap(std::ofstream& file, std::map<std::string, std::string>& map){
         if(!file.is_open()){
             throw std::runtime_error("Failed to open file in, (storeStringMap)");
         }
 
         for(const auto& pair : map){
-            encodeStringPrefix(file, pair.first);
-            encodeStringPrefix(file, pair.second);
+            std::string first = encryptString(pair.first);
+            std::string value = encryptString(pair.second);
+            encodeStringPrefix(file, first);
+            encodeStringPrefix(file, value);
         }
         file.close();
     }
@@ -53,8 +76,12 @@ class database{
             value.resize(vPrefix);
             file.read(value.data(), vPrefix);
 
+            // decrypt
+            std::string key2 = encryptString(key);
+            std::string value2 = encryptString(value);
+
             // Insert in map
-            map[key] = value;
+            map[key2] = value2;
             
             if(file.eof()){
                 file.close();
