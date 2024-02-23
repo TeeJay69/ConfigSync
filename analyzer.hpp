@@ -97,6 +97,7 @@ class analyzer{
             recurse_scanner(configPathSaved, configItems);
         
         }
+        
 
         void get_config_items_current(std::vector<std::string>& configItems){
             for(const auto& item : programPaths){

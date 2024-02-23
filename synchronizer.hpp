@@ -11,6 +11,7 @@
 #include <boost\uuid\uuid_io.hpp>
 #include <map>
 #include "database.hpp"
+#include "analyzer.hpp"
 
 class synchronizer{
     private:
@@ -19,23 +20,28 @@ class synchronizer{
     public:
         synchronizer(const std::vector<std::string>& ppaths, const std::string& pname) : programPaths(ppaths), programName(pname) {}
         
+        // hardcoded absolute program location //TODO: get program location automatically.
+        const std::string absoluteProgramLocation = "C:\\Data\\TW\\Software\\Coding\\ConfigSync";
+
+
         std::string generate_UUID(){
             boost::uuids::random_generator generator;
             boost::uuids::uuid UUID = generator();
             return boost::uuids::to_string(UUID);
         }
 
-        void copy_config(const std::string& archivePath, const std::string& dateDir){ // archivePath = programs directory containing the date directories
+
+        void copy_config(const std::string& archivePathAbs, const std::string& dateDir){ // archivePathAbs = programs directory containing the date directories
             // create date folder if it doesnt exist yet
-            if(std::filesystem::is_empty(std::filesystem::path(archivePath))){
+            if(std::filesystem::is_empty(std::filesystem::path(archivePathAbs))){
                 char out[11];
                 std::time_t t=std::time(NULL);
                 std::strftime(out, sizeof(out), "%Y-%m-%d", std::localtime(&t));
-                std::filesystem::create_directory("ConfigArchive\\" + programName + "\\" + out); // dateDir
+                std::filesystem::create_directory(absoluteProgramLocation + "\\" + "ConfigArchive\\" + programName + "\\" + out); // Create archive dir and the subdir "dateDir"
             }
             
             // PathDatabase location is inside the dateDir
-            std::string databasePath = archivePath + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin";
+            std::string databasePath = archivePathAbs + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin";
             std::map<std::string, std::string> pathMap;
 
 
@@ -43,7 +49,7 @@ class synchronizer{
                 const std::filesystem::path source = item;
 
                 if(std::filesystem::is_directory(source)){
-                    std::string destination = archivePath + "\\" + dateDir + "\\" + source.filename().string();
+                    std::string destination = archivePathAbs + "\\" + dateDir + "\\" + source.filename().string();
 
                     try{
                         std::filesystem::copy(source, std::filesystem::path(destination), std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
@@ -57,10 +63,10 @@ class synchronizer{
                 }
                 else{
                     std::string sourceParentDir = source.parent_path().filename().string();
-                    std::string destination = archivePath + "\\" + dateDir + "\\" + sourceParentDir + "\\" + source.filename().string();
+                    std::string destination = archivePathAbs + "\\" + dateDir + "\\" + sourceParentDir + "\\" + source.filename().string();
 
                     try{
-                        std::filesystem::create_directories(archivePath + "\\" + dateDir + "\\" + sourceParentDir);
+                        std::filesystem::create_directories(archivePathAbs + "\\" + dateDir + "\\" + sourceParentDir);
                         std::filesystem::copy(source, std::filesystem::path(destination), std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
                     }
                     catch(std::filesystem::filesystem_error& copyError){
@@ -79,7 +85,7 @@ class synchronizer{
 
         
         void backup_config_for_restore(const std::string& dirUUID){
-            std::string backupDir = "ConfigBackup\\" + programName;
+            std::string backupDir = absoluteProgramLocation + "\\ConfigBackup\\" + programName;
 
             if(std::filesystem::is_empty(backupDir)){
                 std::filesystem::create_directories(backupDir + "\\temp");
@@ -121,7 +127,7 @@ class synchronizer{
                     
                     try{
                         std::filesystem::create_directories(backupDir + "\\temp\\" + dirUUID + "\\" + sourceParentDir);
-                        std::filesystem::copy(source, destination);
+                        std::filesystem::copy(source, destination, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
                     }
                     catch(std::filesystem::filesystem_error& copyError){
                         throw std::runtime_error(copyError);
@@ -137,8 +143,27 @@ class synchronizer{
             db.storeStringMap(pathMap);
         }
 
+
+        int rebuild_from_backup(const std::string databasePath){
+            database db(databasePath);
+
+            std::map<std::string, std::string> pathMap;
+            db.readStringMap(pathMap);
+            
+            for(const auto& pair : pathMap){
+                try{
+                    std::filesystem::copy(pair.second, pair.first, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
+                }
+                catch(std::filesystem::filesystem_error& copyError){
+                    return 0;
+                }
+            }
+            
+            return 1;
+        }
         
-        int restore_config(){
+
+        int restore_config(const std::string dateDir){
             // Check if programPaths exist
             for(const auto& item : programPaths){
                 if(!std::filesystem::exists(std::filesystem::path(item))){
@@ -147,7 +172,11 @@ class synchronizer{
                 }
             }
 
-            std::string backupDir = "ConfigBackup\\" + programName;
+            std::string backupDir = absoluteProgramLocation + "\\ConfigBackup\\" + programName;
+            
+            // Backup config
+            std::string dirUUID = generate_UUID();
+            
             // Clean up temp directory
             if(!std::filesystem::is_empty(std::filesystem::path(backupDir + "\\temp"))){
                 for(const auto& item : std::filesystem::directory_iterator(backupDir + "\\temp")){
@@ -156,9 +185,41 @@ class synchronizer{
             }
             // Backup to temp
             else{
-                std::string dirUUID = generate_UUID();
                 backup_config_for_restore(dirUUID);
             }
+
+
+            // Get path database
+            std::string databasePath = (absoluteProgramLocation + "\\ConfigArchive\\" + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin");
+            database db(databasePath);
+            std::map<std::string, std::string> pathMap;
+            db.readStringMap(pathMap);
+
+
+            // Replace config
+            for(const auto& pair : pathMap){
+                try{
+                    std::filesystem::copy(pair.second, pair.first, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
+                }
+                catch(std::filesystem::filesystem_error& copyError){
+                    std::cerr << "Aborting synchronisation of config: Error during copying ( " << &copyError << ")" << std::endl;
+                    std::cout << "Rebuilding config from backup..." << std::endl;
+                    
+                    const std::string databaseBackupPath = absoluteProgramLocation + "\\ConfigBackup\\" + programName + "\\temp\\" + dirUUID + "\\ConfigSync-PathDatabase.bin";
+
+                    // Rebuild from backup
+                    if(rebuild_from_backup(databaseBackupPath) != 1){
+                        std::cerr << "Failed to rebuild from backup. (" << copyError.what() << "). Fatal, please verify that none of the selected programs components are missing. Potentially reinstall the affected application";  
+                        return 0;
+                    }
+                    else{
+                        std::cout << "Rebuild was successfull!" << std::endl;
+                        return 1;
+                    }
+                }
+            }
+
+            return 1;
         }
 };
 #endif
