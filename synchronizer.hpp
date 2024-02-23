@@ -167,7 +167,7 @@ class synchronizer{
             // Check if programPaths exist
             for(const auto& item : programPaths){
                 if(!std::filesystem::exists(std::filesystem::path(item))){
-                    std::cerr << "Failed to restore config. Error: programs config path does not exist";
+                    std::cerr << "Error: programs config path does not exist" << std::endl;
                     return 0;
                 }
             }
@@ -209,7 +209,7 @@ class synchronizer{
 
                     // Rebuild from backup
                     if(rebuild_from_backup(databaseBackupPath) != 1){
-                        std::cerr << "Failed to rebuild from backup. (" << copyError.what() << "). Fatal, please verify that none of the selected programs components are missing. Potentially reinstall the affected application";  
+                        std::cerr << "Failed to rebuild from backup. (" << copyError.what() << "). Fatal, please verify that none of the selected programs components are missing. Potentially reinstall the affected application" << std::endl;  
                         return 0;
                     }
                     else{
@@ -218,7 +218,7 @@ class synchronizer{
                     }
                 }
             }
-
+            
             return 1;
         }
 };
