@@ -11,7 +11,7 @@
 #include <boost\uuid\uuid_io.hpp>
 #include <map>
 #include "database.hpp"
-#include "analyzer.hpp"
+
 
 class synchronizer{
     private:
@@ -29,7 +29,7 @@ class synchronizer{
             boost::uuids::uuid UUID = generator();
             return boost::uuids::to_string(UUID);
         }
-
+        
 
         void copy_config(const std::string& archivePathAbs, const std::string& dateDir){ // archivePathAbs = programs directory containing the date directories
 
@@ -45,7 +45,7 @@ class synchronizer{
             std::string databasePath = archivePathAbs + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin";
             std::map<std::string, std::string> pathMap;
 
-
+            // Copy process
             for(const auto& item : programPaths){
                 const std::filesystem::path source = item;
 

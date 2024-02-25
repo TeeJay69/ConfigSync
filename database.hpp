@@ -8,9 +8,9 @@
 
 class database{
     private:
-        const std::string fileName;
+        const std::string filePath;
     public:
-        database(const std::string& name) : fileName(name) {}
+        database(const std::string& name) : filePath(name) {}
 
         void encodeStringWithPrefix(std::ofstream& file, std::string& str){
             std::cout << "Break-5" << std::endl;
@@ -23,7 +23,7 @@ class database{
         }
 
         // void encrypt_decrypt_File(){
-        //     std::fstream file(fileName);
+        //     std::fstream file(filePath);
         //     file.seekg(0, std::ios::end);
         //     size_t size = file.tellg();
         //     std::string buffer(size, ' ');
@@ -55,7 +55,7 @@ class database{
         }
 
         void storeStringMap(std::map<std::string, std::string>& map){
-            std::ofstream file(fileName);
+            std::ofstream file(filePath);
 
             if(!file.is_open()){
                 throw std::runtime_error("Failed to open file in, (storeStringMap)");
@@ -73,7 +73,7 @@ class database{
         
 
         void readStringMap(std::map<std::string, std::string>& map){
-            std::ifstream file(fileName);
+            std::ifstream file(filePath);
 
             if(!file.is_open()){
                 throw std::runtime_error("Failed to open file in, (readStringMap)");

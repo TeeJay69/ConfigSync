@@ -20,6 +20,13 @@
         - programs.hpp class for program specific paths/info
         - Implement incremental config saves, (storing modified files in vector)
 
+        - Command line options:
+            + restore. Can be followed by the program name and the date of the folder to restore. 
+                - When no date provided, either 
+                    - default to restore most recent config
+                    - Show list of dates to choose from
+            + 
+
 
 restore config:
     ~~- Check if current config exists~~

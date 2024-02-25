@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 
+
 class programconfig{
     private:
         std::string programName;
@@ -67,7 +68,7 @@ class programconfig{
             }
 
             // ...
-            
+
         }
 };
 

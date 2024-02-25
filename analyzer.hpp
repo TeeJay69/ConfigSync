@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <fstream>
 
+
 class analyzer{
     private:
         const std::vector<std::string> programPaths;
@@ -78,7 +79,7 @@ class analyzer{
         }
 
 
-        std::string get_last_backup_path(){
+        std::string get_newest_backup_path(){
             const std::filesystem::path archivePathFs = archivePath;
 
             std::vector<std::string> dateDirs;
@@ -94,7 +95,7 @@ class analyzer{
 
         
         void get_config_items_saved(std::vector<std::string>& configItems){
-            const std::string lastSavedDir = get_last_backup_path();
+            const std::string lastSavedDir = get_newest_backup_path();
             const std::filesystem::path configPathSaved = archivePath + "\\" + lastSavedDir;
             
             recurse_scanner(configPathSaved, configItems);
