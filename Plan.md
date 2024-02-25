@@ -37,4 +37,4 @@ restore config:
 
 
 // TODO: Make database path copy function self referencing with error message parameter. Use only this function wherever you copy database paths
-// TODO: Fix hardcoded absolute program location problem. Program needs the absolute location where its stored on the filesystem, not where its run from!
+~~// TODO: Fix hardcoded absolute program location problem. Program needs the absolute location where its stored on the filesystem, not where its run from!~~

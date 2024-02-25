@@ -17,11 +17,11 @@ class synchronizer{
     private:
         const std::vector<std::string> programPaths;
         const std::string programName;
+        const std::string exeLocation;
     public:
-        synchronizer(const std::vector<std::string>& ppaths, const std::string& pname) : programPaths(ppaths), programName(pname) {}
+        synchronizer(const std::vector<std::string>& ppaths, const std::string& pname, const std::string& exeLocat) : programPaths(ppaths), programName(pname), exeLocation(exeLocat) {}
         
-        // hardcoded absolute program location //TODO: get program location automatically.
-        const std::string absoluteProgramLocation = "C:\\Data\\TW\\Software\\Coding\\ConfigSync";
+        const std::string absoluteProgramLocation = exeLocation;
 
 
         std::string generate_UUID(){
@@ -32,6 +32,7 @@ class synchronizer{
 
 
         void copy_config(const std::string& archivePathAbs, const std::string& dateDir){ // archivePathAbs = programs directory containing the date directories
+
             // create date folder if it doesnt exist yet
             if(std::filesystem::is_empty(std::filesystem::path(archivePathAbs))){
                 char out[11];
@@ -174,15 +175,16 @@ class synchronizer{
 
             std::string backupDir = absoluteProgramLocation + "\\ConfigBackup\\" + programName;
             
-            // Backup config
+            // Backup config:
             std::string dirUUID = generate_UUID();
             
-            // Clean up temp directory
+                // Clean up temp directory
             if(!std::filesystem::is_empty(std::filesystem::path(backupDir + "\\temp"))){
                 for(const auto& item : std::filesystem::directory_iterator(backupDir + "\\temp")){
                     std::filesystem::rename(item, backupDir + "\\RecycleBin\\" + item.path().filename().string());
                 }
             }
+
             // Backup to temp
             else{
                 backup_config_for_restore(dirUUID);

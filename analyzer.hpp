@@ -13,11 +13,12 @@ class analyzer{
     private:
         const std::vector<std::string> programPaths;
         const std::string programName;
+        const std::string exeLocation;
     public:
-        analyzer(const std::vector<std::string>& path, const std::string& name) : programPaths(path), programName(name) {}
+        analyzer(const std::vector<std::string>& path, const std::string& name, const std::string& exeLocat) : programPaths(path), programName(name), exeLocation(exeLocat) {}
 
 
-        const std::string archivePath = "C:\\Data\\TW\\Software\\Coding\\ConfigSync\\ConfigArchive\\" + programName;
+        const std::string archivePath = exeLocation + "\\ConfigSync\\ConfigArchive\\" + programName;
 
         void recurse_scanner(const std::filesystem::path& dirPath, std::vector<std::string>& itemVector){ // Self referencing function. itemVector parameter passed in as reference, to modify original object directly.
             for(const auto& entry : std::filesystem::directory_iterator(dirPath)){
@@ -115,7 +116,7 @@ class analyzer{
         }
 
 
-        int is_identical_config(){
+        int is_identical_config(){ // Main function of this class
 
             // Get saved config items
             std::vector<std::string> configItemsSaved;
