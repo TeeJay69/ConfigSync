@@ -53,6 +53,8 @@ class analyzer{
             std::fstream file2Binary(path2, std::iostream::binary);
 
             if(!file1Binary.is_open() || !file2Binary.is_open()){
+                file1Binary.close();
+                file2Binary.close();
                 throw std::runtime_error("Error opening files - Error-Code 52");
             }
             

@@ -20,10 +20,7 @@ int main(){
     programconfig qbittorrent("qBittorrent");
     std::vector<std::string> qbittorrentPaths = qbittorrent.getFilePaths();
 
-    const std::filesystem::path jackettDir = "ConfigArchive\\Jackett"; // should be in class of program.hpp
-    const std::filesystem::path prowlarrDir = "ConfigArchive\\Prowlarr"; // should be in class of program.hpp
-    const std::filesystem::path qbittorrentDir = "ConfigArchive\\qBittorrent"; // should be in class of program.hpp
-
+    
     if(std::filesystem::exists(jackettDir)){
         // something
     }

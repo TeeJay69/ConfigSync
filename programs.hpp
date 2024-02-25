@@ -56,11 +56,17 @@ class programconfig{
 
             // Prowlarr
             else if(programName == "Prowlarr"){
-                const std::string prowlarrArchivePath = ;
+                const std::string prowlarrArchivePath = exeLocation + "\\ConfigArchive\\Prowlarr";
+                return prowlarrArchivePath;
             }
 
-            "ConfigArchive\\qBittorrent"; // should be in class of program.hpp
-            const std::filesystem::path prowlarrDir = "ConfigArchive\\Prowlarr"; // should be in class of program.hpp
+            // qBittorrent
+            else if(programName == "qBittorrent"){
+                const std::string qBittorrentArchivePath = exeLocation + "\\ConfigArchive\\qBittorrent";
+                return qBittorrentArchivePath;
+            }
+
+            // ...
             
         }
 };
