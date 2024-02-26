@@ -79,6 +79,7 @@ Planner
 # Feature requests:
 
 - Implement incremental config saves, (storing modified files in vector)
+- Write the integer map in database.hpp serialized to a binary file. 
 -------------------------------------------------
 
 

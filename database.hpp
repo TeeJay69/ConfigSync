@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <vector>
 #include <map>
 
 class database{
@@ -12,8 +13,8 @@ class database{
     public:
         database(const std::string& name) : filePath(name) {}
 
+        
         void encodeStringWithPrefix(std::ofstream& file, std::string& str){
-            std::cout << "Break-5" << std::endl;
             // get length of string
             size_t length = str.length();
 
@@ -22,16 +23,6 @@ class database{
             file.write(str.c_str(), length); // (c_str) char* points to a memory buffer with raw binary
         }
 
-        // void encrypt_decrypt_File(){
-        //     std::fstream file(filePath);
-        //     file.seekg(0, std::ios::end);
-        //     size_t size = file.tellg();
-        //     std::string buffer(size, ' ');
-        //     file.seekg(0);
-        //     file.read(&buffer[0], size); 
-
-        //     file.write((encryptString(buffer).c_str()), sizeof(buffer));
-        // }
 
         std::string encryptString(std::string str){
             std::vector<std::string> keys = {
@@ -53,6 +44,7 @@ class database{
             str.assign(charVector.begin(), charVector.end());
             return str;
         }
+
 
         void storeStringMap(std::map<std::string, std::string>& map){
             std::ofstream file(filePath);
@@ -96,7 +88,6 @@ class database{
 
                 // Read value1
                 file.read(reinterpret_cast<char*>(&vPrefix), sizeof(size_t));
-                std::cout << "Break-4" << std::endl;
                 value1.resize(vPrefix);
                 file.read(value1.data(), vPrefix);
 
@@ -112,6 +103,58 @@ class database{
                     return;
                 }
             }
+        }
+
+        
+        void storeIntMap(std::map<int, std::string>& map){
+            std::ofstream file(filePath);
+            if(!file.is_open()){
+                throw std::runtime_error("Error creating file. class (database), readIntMap()");
+            }
+
+            for(const auto& pair : map){
+                // encode key
+                int key = pair.first;
+                std::string s = std::to_string(key);
+                encodeStringWithPrefix(file, s);
+
+                // encode value
+                std::string value = pair.second;
+                encodeStringWithPrefix(file, value);
+            }
+
+            file.close();
+        }
+
+        void readIntMap(std::map<int, std::string>& map){
+            std::ifstream file(filePath);
+            if(!file.is_open()){
+                throw std::runtime_error("Error creating file. class (database), readIntMap()");
+            }
+
+            size_t prefix;
+            size_t valuePrefix;
+            std::string keyString;
+            std::string value;
+
+            while(true){
+                // Read keys:
+                file.read(reinterpret_cast<char*>(&prefix), sizeof(size_t));
+                keyString.resize(prefix);
+                file.read(keyString.data(), prefix);
+
+                // Read value
+                file.read(reinterpret_cast<char*>(&valuePrefix), sizeof(size_t));
+                value.resize(valuePrefix);
+                file.read(value.data(), valuePrefix);
+
+                // Add to map
+                int key = std::stoi(keyString);
+                map[key] = value;
+            
+            }
+            
+            file.close();
         }
 };
 #endif
