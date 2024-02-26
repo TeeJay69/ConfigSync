@@ -12,7 +12,6 @@
 class organizer{
     private:
         std::string dateDirParent;
-
     public:
         organizer(const std::string& dateDirParentPath) : dateDirParent(dateDirParentPath) {}
 
@@ -30,7 +29,7 @@ class organizer{
                 }
             }
             
-            // Logic for removing the oldest saves
+            // Logic for removing the oldest save
             if(itemList.size() > maxdirs){
                 std::sort(itemList.begin(), itemList.end());
                 try{

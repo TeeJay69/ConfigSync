@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 
 class programconfig{
@@ -41,8 +42,8 @@ class programconfig{
                 return qBittorrentPaths;
             }
             else{
-                std::string nameError = "Error: Program \"" + programName + "\" is currently unsupported";
-                throw std::runtime_error(nameError);
+                const std::string nameError = "Error: Program \"" + programName + "\" is currently unsupported";
+                throw std::invalid_argument(nameError);
             }
         }
 
@@ -66,7 +67,11 @@ class programconfig{
                 const std::string qBittorrentArchivePath = exeLocation + "\\ConfigArchive\\qBittorrent";
                 return qBittorrentArchivePath;
             }
-
+            else{
+                const std::string nameError = "Error: Program \"" + programName + "\" is currently unsupported";
+                throw std::invalid_argument(nameError);
+            }
+            
             // ...
 
         }
