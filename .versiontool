@@ -2,7 +2,7 @@ Files and directories included in version:
 
 ----------
 Compile command:
-g++ main.cpp -lbcrypt -march=native -O3
+g++ main.cpp -lbcrypt -l:libboost_filesystem-mgw13-mt-x64-1_84.a -march=native -O3
 ----------
 Alias:
 ConfigSync

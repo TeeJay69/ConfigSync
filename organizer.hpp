@@ -16,6 +16,7 @@ class organizer{
     public:
         organizer(const std::string& dateDirParentPath) : dateDirParent(dateDirParentPath) {}
 
+
         void limit_enforcer(const int& maxdirs){
             // count the number of saved configs
             std::vector<std::filesystem::path> itemList;
@@ -39,7 +40,7 @@ class organizer{
                     std::cerr << ANSI_COLOR_RED << "Failed to remove directory. (Class: organizer). Error Code: 38 & <" << error.what() << ">" << ANSI_COLOR_RESET << std::endl;
                 }
             }
-        }
+        }  
 };
 
 

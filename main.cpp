@@ -8,10 +8,15 @@
 #include "synchronizer.hpp"
 #include <boost\uuid\uuid.hpp>
 #include <boost\uuid\uuid_generators.hpp>
+#include <boost\filesystem\operations.hpp>
+#include <boost\filesystem\path.hpp>
 
-int main(){
+int main(int argc, char* argv[]){
     
-    programconfig jackett("Jackett");
+    boost::filesystem::path exePath(boost::filesystem::initial_path<boost::filesystem::path>());
+    exePath = (boost::filesystem::system_complete(boost::filesystem::path(argv[0])));
+
+    programconfig jackett("Jackett", exePath.generic_string());
     std::vector<std::string> jackettPaths = jackett.getFilePaths();
 
     programconfig prowlarr("Prowlarr");
