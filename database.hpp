@@ -11,7 +11,7 @@ class database{
     private:
         const std::string filePath;
     public:
-        database(const std::string& name) : filePath(name) {}
+        database(const std::string& path) : filePath(path) {}
 
         
         void encodeStringWithPrefix(std::ofstream& file, std::string& str){
@@ -104,12 +104,12 @@ class database{
                 }
             }
         }
-
         
-        void storeIntMap(std::map<int, std::string>& map){
+
+        void storeIntMap(std::map<unsigned long long, std::string>& map){
             std::ofstream file(filePath);
             if(!file.is_open()){
-                throw std::runtime_error("Error creating file. class (database), readIntMap()");
+                throw std::runtime_error("Error creating file. class (database), storeIntMap()");
             }
 
             for(const auto& pair : map){
@@ -125,8 +125,9 @@ class database{
 
             file.close();
         }
+        
 
-        void readIntMap(std::map<int, std::string>& map){
+        void readIntMap(std::map<unsigned long long, std::string>& map){
             std::ifstream file(filePath);
             if(!file.is_open()){
                 throw std::runtime_error("Error creating file. class (database), readIntMap()");
@@ -149,7 +150,7 @@ class database{
                 file.read(value.data(), valuePrefix);
 
                 // Add to map
-                int key = std::stoi(keyString);
+                unsigned long long key = std::stoi(keyString);
                 map[key] = value;
             
             }

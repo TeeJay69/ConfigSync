@@ -10,6 +10,7 @@
 #include <boost\uuid\uuid_generators.hpp>
 #include <boost\uuid\uuid_io.hpp>
 #include <map>
+#include <chrono>
 #include "database.hpp"
 
 
@@ -163,6 +164,15 @@ class synchronizer{
             return 1;
         }
         
+        
+        void timestamp_objects(std::map<unsigned long long, std::string>& map, const std::string& strValue){
+            std::chrono::time_point<std::chrono::system_clock> timePoint;
+            timePoint = std::chrono::system_clock::now();
+            unsigned long long t = std::chrono::system_clock::to_time_t(timePoint);
+            
+            map[t] = strValue;
+        }
+
 
         int restore_config(const std::string dateDir){
             // Check if programPaths exist
@@ -173,25 +183,26 @@ class synchronizer{
                 }
             }
 
-            std::string backupDir = absoluteProgramLocation + "\\ConfigBackup\\" + programName;
-            
             // Backup config:
+            std::string backupDir = absoluteProgramLocation + "\\ConfigBackup\\" + programName;
             std::string dirUUID = generate_UUID();
-            
-                // Clean up temp directory
-            if(!std::filesystem::is_empty(std::filesystem::path(backupDir + "\\temp"))){
+            std::map<unsigned long long, std::string> recycleMap; // Stores recycleBin items with timestamps
+
+            if(!std::filesystem::is_empty(std::filesystem::path(backupDir + "\\temp"))){ // Clean up temp directory
+                database db(backupDir + "\\RecycleBin\\RecycleMap.bin"); // Inside respective programs RecycleBin dir
+                
                 for(const auto& item : std::filesystem::directory_iterator(backupDir + "\\temp")){
-                    std::filesystem::rename(item, backupDir + "\\RecycleBin\\" + item.path().filename().string());
+                    const std::string newPath = backupDir + "\\RecycleBin\\" + item.path().filename().string();
+                    std::filesystem::rename(item, newPath); // Move item
+                    timestamp_objects(recycleMap, newPath); // Timestamp and load into map                                       
                 }
+
+                db.storeIntMap(recycleMap); // Store map as file
             }
+            
+            backup_config_for_restore(dirUUID); // Backup to temp directory
 
-            // Backup to temp
-            else{
-                backup_config_for_restore(dirUUID);
-            }
-
-
-            // Get path database
+            // Get path database from ConfigArchive
             std::string databasePath = (absoluteProgramLocation + "\\ConfigArchive\\" + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin");
             database db(databasePath);
             std::map<std::string, std::string> pathMap;

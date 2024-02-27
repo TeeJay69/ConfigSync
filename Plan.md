@@ -1,6 +1,5 @@
----
-Planner
----
+# ConfigSync Development Plan
+
 
 -------------------------------------------------.
 # Minimal description:
@@ -40,7 +39,7 @@ Planner
         - defaults to most recent save.
 
     + show [program name]
-    
+
     + status
 
     + settings
@@ -59,6 +58,30 @@ Planner
         - Notify when new version is not backward compatible. 
             - Ask if user is ok with removing the saves.
             - Option to move current install to configsync.old
+
+- Structure:
+
+Install-Location
+    |---ConfigArchive
+    |    |---Program-1
+    |    |    |---Save-1 (DateDir)
+    |    |    |---Save-2 (DateDir)
+    |    |
+    |    |---Program-2
+    |       |---Save-1 (DateDir)
+    |       |---Save-2 (DateDir)
+    |
+    |---ConfigBackup
+        |---Program-1
+        |   |---Temp
+        |   |   |---287421 (UUID)
+        |   |
+        |   |---RecycleBin
+        |       |---928811
+        |       |---118272
+        |       |---327366
+        |
+        |---Program-2
 -------------------------------------------------
             
 -------------------------------------------------
