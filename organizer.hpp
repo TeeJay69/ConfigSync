@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <map>
 #include "ANSIcolor.hpp"
+#include "database.hpp"
 
 
 class organizer{
@@ -42,7 +43,7 @@ class organizer{
         }
 
 
-        void recyclebin_cleaner(const int& maxdirs, std::map<unsigned long long, std::string>& map){
+        void recyclebin_cleaner(const int& maxdirs, std::map<unsigned long long, std::string>& map, const std::string& mapPath){
             if(map.size() > maxdirs){
 
                 for(auto pair = map.begin(); pair != map.end();){ // Iterator, not range based.
@@ -57,6 +58,9 @@ class organizer{
                         pair++;
                     }
                 }
+
+                database db(mapPath);
+                db.storeIntMap(map);
             }
         }
 };

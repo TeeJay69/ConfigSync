@@ -39,6 +39,8 @@
         - defaults to most recent save.
 
     + show [program name]
+        - Show last save date
+        - Show number of saves
 
     + status
 
@@ -46,6 +48,12 @@
         - Scheduled task On/Off 
             - No intervall provided: default:xxx
         - Change Intervall of scheduled task
+    + list
+        - displays all supported programs
+    
+    + version
+    + help
+    
         
 - Service/ScheduledTask
     - Logic for creating a scheduled task
@@ -58,6 +66,9 @@
         - Notify when new version is not backward compatible. 
             - Ask if user is ok with removing the saves.
             - Option to move current install to configsync.old
+
+- Support running program through explorer
+
 
 - Structure:
 
@@ -86,10 +97,11 @@ Install-Location
             
 -------------------------------------------------
 # Critical ToDo's:
-
 [x] Fix hardcoded absolute program location problem. Program needs the absolute location where its stored on the filesystem, not where its run from!
 [x] Check that we keep the copy of the config (because of restore) after program has run --> When restoring we backup to configbackup\programname\temp\. When restoring we copy contents of temp to configbackup\programname\recyclebin.
-[ ] Cleanup recyclebin after x 
+[x] Cleanup recyclebin after x
+[ ] Help message formatting
+[ ] License stuff. Include license in installer. Display license in help message.
 -------------------------------------------------
 
 -------------------------------------------------
@@ -103,6 +115,8 @@ Install-Location
 
 - Implement incremental config saves, (storing modified files in vector)
 - Write the integer map in database.hpp serialized to a binary file. 
+- Let user change number of saves to keep
+- Let user delete saves
 -------------------------------------------------
 
 
@@ -123,4 +137,46 @@ restore config:
         - ~~move backup inside the ConfigBackup\\program\\temp directory to ConfigBackup\\program\\RecycleBin~~
         - ~~If RecycleBin has more than x number of items, delete x number of oldest items in RecycleBin directory.~~
         - ~~Inform user that config was restored successfully~~ -->
+-------------------------------------------------
+
+-------------------------------------------------
+# Parking Lot
+    if(argc <= 1){
+        std::cout << "This program is currently CLI only.\nPlease open a command prompt or powershell window and run it from there.\n";
+        std::this_thread::sleep_for(std::chrono::milliseconds(5000));
+        std::exit(EXIT_SUCCESS);
+    }
+    // @section program run through explorer
+    // Get programconfig
+    programconfig jackett("Jackett", exePath.generic_string());
+    std::vector<std::string> jackettPaths = jackett.getFilePaths();
+
+    programconfig prowlarr("Prowlarr", exePath.generic_string());
+    std::vector<std::string> prowlarrPaths = prowlarr.getFilePaths();
+
+    programconfig qbittorrent("qBittorrent", exePath.generic_string());
+    std::vector<std::string> qbittorrentPaths = qbittorrent.getFilePaths();
+
+
+    if(std::filesystem::exists(jackett.get_archive_path())){
+        // something
+    }
+    else{
+        std::filesystem::create_directories(jackett.get_archive_path());
+        // Make first backup
+    }
+
+    if(std::filesystem::exists(prowlarr.get_archive_path())){
+        // 
+    }
+    else{
+        std::filesystem::create_directories(prowlarr.get_archive_path());
+    }
+
+    if(std::filesystem::exists(qbittorrent.get_archive_path())){
+        // 
+    }
+    else{
+        std::filesystem::create_directories(qbittorrent.get_archive_path());
+    }
 -------------------------------------------------
