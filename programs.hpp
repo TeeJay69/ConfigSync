@@ -19,7 +19,7 @@ class programconfig{
             return x;
         }
 
-        std::vector<std::string> getFilePaths(){
+        std::vector<std::string> get_config_paths(){
             
             std::string userName = getUsername();
 

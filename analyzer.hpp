@@ -133,28 +133,18 @@ class analyzer{
             
             // Compare vectors
             if(is_identical_filenames(configItemsSaved, configItemsCurrent)){
-                int i = 1;
+                int i = 0;
                 for(const auto& item : configItemsSaved){
+                    
                     if(!is_identical_bytes(item, configItemsCurrent[i])){
-                        // config changed
-                        return 0;
-
+                        return 0; // config changed
                     }
-                    else{
-                        // config did not change
-                        return 1;
-                    }
+                    
+                    i++;
                 }
             }
-            else{
-                return 0;
-                std::string matchError = "Error: (is_identical_config) entries do not match!"; // For debugging only
-                throw std::runtime_error(matchError);
-                // --> structure changed, new save config
 
-            }
-
-            // Load last_write_time in multilevel vector
+            return 1; // config did not change
         }
 };
 #endif

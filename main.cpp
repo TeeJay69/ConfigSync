@@ -16,11 +16,55 @@
 #include "database.hpp"
 #include "organizer.hpp"
 
+#ifdef DEBUG
+#define DEBUG_MODE 1
+#else 
+#define DEBUG_MODE 0
+#endif
+
 #define VERSION "v0.0.1"
+
+std::string ymd_date(){
+    const std::chrono::time_point now(std::chrono::system_clock::now());
+    const std::chrono::year_month_day ymd(std::chrono::floor<std::chrono::days>(now));
+
+    std::stringstream ss;
+    ss << std::setfill('0') << std::setw(4) << static_cast<int>(ymd.year()) << '-'
+       << std::setw(2) << static_cast<unsigned>(ymd.month()) << '-'
+       << std::setw(2) << static_cast<unsigned>(ymd.day());
+
+    return ss.str();
+}
+
+int path_check(const std::vector<std::string>& paths){
+    for(const auto& item : paths){ // Check if program exist
+        if(!std::filesystem::exists(item)){
+            std::cerr << "Program path not found: (" << item << ").\n" << std::endl;
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+
+void create_save(const std::vector<std::string>& programPaths, const std::string& program, const std::string& exelocation){
+    if(path_check(programPaths) == 1){ //Program paths verified
+        
+        analyzer configAnalyzer(programPaths, program, exelocation);
+        if(configAnalyzer.is_identical_config()){
+            // std::filesystem::rename(configAnalyzer.get_newest_backup_path(), );
+        }
+    }
+}
 
 
 int main(int argc, char* argv[]){
     
+    std::cout << ymd_date() << std::endl;
+    std::string x = ymd_date();
+    std::cout << x << std::endl;
+    return 0;
     // Get location of exe
     boost::filesystem::path exePath(boost::filesystem::initial_path<boost::filesystem::path>());
     exePath = (boost::filesystem::system_complete(boost::filesystem::path(argv[0])));
@@ -52,7 +96,27 @@ int main(int argc, char* argv[]){
         if(argv[3] == NULL){ // default behavior. Create a save of all supported, installed programs.
             
             // Get program paths
+            programconfig jackett("Jackett", exePath.generic_string());
+            std::vector<std::string> jackettPaths = jackett.get_config_paths();
+
+            programconfig prowlarr("Prowlarr", exePath.generic_string());
+            std::vector<std::string> prowlarrPaths = prowlarr.get_config_paths();
+
+            programconfig qbittorrent("qBittorrent", exePath.generic_string());
+            std::vector<std::string> qbittorrentPaths = qbittorrent.get_config_paths();
             
+            // Create the archive if it does not exist yet
+            if(!std::filesystem::exists(jackett.get_archive_path())){
+                std::filesystem::create_directories(jackett.get_archive_path());
+            }
+
+            if(!std::filesystem::exists(prowlarr.get_archive_path())){
+                std::filesystem::create_directories(prowlarr.get_archive_path());
+            }
+
+            if(!std::filesystem::exists(qbittorrent.get_archive_path())){
+                std::filesystem::create_directories(qbittorrent.get_archive_path()); 
+            }        
         }
     }
 
