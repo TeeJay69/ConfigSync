@@ -22,24 +22,53 @@ class synchronizer{
     public:
         synchronizer(const std::vector<std::string>& ppaths, const std::string& pname, const std::string& exeLocat) : programPaths(ppaths), programName(pname), exeLocation(exeLocat) {}
         
-        const std::string absoluteProgramLocation = exeLocation;
 
-
-        std::string generate_UUID(){
+        static std::string generate_UUID(){
             boost::uuids::random_generator generator;
             boost::uuids::uuid UUID = generator();
             return boost::uuids::to_string(UUID);
         }
-        
 
-        void copy_config(const std::string& archivePathAbs, const std::string& dateDir){ // archivePathAbs = programs directory containing the date directories
+        
+        static std::string ymd_date(){
+            const std::chrono::time_point now(std::chrono::system_clock::now());
+            const std::chrono::year_month_day ymd(std::chrono::floor<std::chrono::days>(now));
+
+            std::stringstream ss;
+            ss << std::setfill('0') << std::setw(4) << static_cast<int>(ymd.year()) << '-'
+            << std::setw(2) << static_cast<unsigned>(ymd.month()) << '-'
+            << std::setw(2) << static_cast<unsigned>(ymd.day());
+
+            return ss.str();
+        }        
+        
+        
+        static char* ymd_date_cstyle(){
+            char out[11];
+            std::time_t t=std::time(NULL);
+            std::strftime(out, sizeof(out), "%Y-%m-%d", std::localtime(&t));
+            
+            return out;
+        }
+
+        
+        static void timestamp_objects(std::map<unsigned long long, std::string>& map, const std::string& strValue){
+            std::chrono::time_point<std::chrono::system_clock> timePoint;
+            timePoint = std::chrono::system_clock::now();
+            unsigned long long t = std::chrono::system_clock::to_time_t(timePoint);
+            
+            map[t] = strValue;
+        }
+
+
+        int copy_config(const std::string& archivePathAbs, const std::string& dateDir){ // archivePathAbs = programs directory containing the date directories
 
             // create date folder if it doesnt exist yet
             if(std::filesystem::is_empty(std::filesystem::path(archivePathAbs))){
-                char out[11];
-                std::time_t t=std::time(NULL);
-                std::strftime(out, sizeof(out), "%Y-%m-%d", std::localtime(&t));
-                std::filesystem::create_directory(absoluteProgramLocation + "\\" + "ConfigArchive\\" + programName + "\\" + out); // Create archive dir and the subdir "dateDir"
+
+                char* date = ymd_date_cstyle();
+                
+                std::filesystem::create_directory(exeLocation + "\\" + "ConfigArchive\\" + programName + "\\" + date); // Create archive dir and the subdir "dateDir"
             }
             
             // PathDatabase location is inside the dateDir
@@ -57,7 +86,7 @@ class synchronizer{
                         std::filesystem::copy(source, std::filesystem::path(destination), std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
                     }
                     catch(std::filesystem::filesystem_error& copyError){
-                        throw std::runtime_error(copyError);
+                        return 0; // throw std::runtime_error(copyError);
                     }
 
                     // Store path pair in map
@@ -72,7 +101,7 @@ class synchronizer{
                         std::filesystem::copy(source, std::filesystem::path(destination), std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
                     }
                     catch(std::filesystem::filesystem_error& copyError){
-                        throw std::runtime_error(copyError);
+                        return 0; // throw std::runtime_error(copyError);
                     }
 
                     // Store path pair in map
@@ -83,11 +112,13 @@ class synchronizer{
             // Writes the path map to file
             database db(databasePath);
             db.storeStringMap(pathMap);
+
+            return 1;
         }
 
         
         void backup_config_for_restore(const std::string& dirUUID){
-            std::string backupDir = absoluteProgramLocation + "\\ConfigBackup\\" + programName;
+            std::string backupDir = exeLocation + "\\ConfigBackup\\" + programName;
 
             if(std::filesystem::is_empty(backupDir)){
                 std::filesystem::create_directories(backupDir + "\\temp");
@@ -164,14 +195,6 @@ class synchronizer{
             return 1;
         }
         
-        
-        void timestamp_objects(std::map<unsigned long long, std::string>& map, const std::string& strValue){
-            std::chrono::time_point<std::chrono::system_clock> timePoint;
-            timePoint = std::chrono::system_clock::now();
-            unsigned long long t = std::chrono::system_clock::to_time_t(timePoint);
-            
-            map[t] = strValue;
-        }
 
 
         int restore_config(const std::string dateDir){
@@ -184,7 +207,7 @@ class synchronizer{
             }
 
             // Backup config:
-            std::string backupDir = absoluteProgramLocation + "\\ConfigBackup\\" + programName;
+            std::string backupDir = exeLocation + "\\ConfigBackup\\" + programName;
             std::string dirUUID = generate_UUID();
             std::map<unsigned long long, std::string> recycleMap; // Stores recycleBin items with timestamps
 
@@ -203,7 +226,7 @@ class synchronizer{
             backup_config_for_restore(dirUUID); // Backup to temp directory
 
             // Get path database from ConfigArchive
-            std::string databasePath = (absoluteProgramLocation + "\\ConfigArchive\\" + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin");
+            std::string databasePath = (exeLocation + "\\ConfigArchive\\" + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin");
             database db(databasePath);
             std::map<std::string, std::string> pathMap;
             db.readStringMap(pathMap);
@@ -218,7 +241,7 @@ class synchronizer{
                     std::cerr << "Aborting synchronisation of config: Error during copying ( " << &copyError << ")" << std::endl;
                     std::cout << "Rebuilding config from backup..." << std::endl;
                     
-                    const std::string databaseBackupPath = absoluteProgramLocation + "\\ConfigBackup\\" + programName + "\\temp\\" + dirUUID + "\\ConfigSync-PathDatabase.bin";
+                    const std::string databaseBackupPath = exeLocation + "\\ConfigBackup\\" + programName + "\\temp\\" + dirUUID + "\\ConfigSync-PathDatabase.bin";
 
                     // Rebuild from backup
                     if(rebuild_from_backup(databaseBackupPath) != 1){

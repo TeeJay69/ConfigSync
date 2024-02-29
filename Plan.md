@@ -100,8 +100,9 @@ Install-Location
 [x] Fix hardcoded absolute program location problem. Program needs the absolute location where its stored on the filesystem, not where its run from!
 [x] Check that we keep the copy of the config (because of restore) after program has run --> When restoring we backup to configbackup\programname\temp\. When restoring we copy contents of temp to configbackup\programname\recyclebin.
 [x] Cleanup recyclebin after x
-[ ] Help message formatting
+[ ] Help message formatting.
 [ ] License stuff. Include license in installer. Display license in help message.
+[ ] Add more verbose messages.
 -------------------------------------------------
 
 -------------------------------------------------
@@ -179,4 +180,25 @@ restore config:
     else{
         std::filesystem::create_directories(qbittorrent.get_archive_path());
     }
+
++++
+if(path_check(jackettPaths) == 1){ //Program paths verified
+                analyzer configAnalyzer(jackettPaths, "Jackett", exePath);
+
+                if(configAnalyzer.is_identical_config()){ // Config identical    
+                    std::cout << "Jackett config did not change, updating save date..." << std::endl;
+
+                    std::filesystem::path newestPath = configAnalyzer.get_newest_backup_path();
+                    std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
+
+                }
+                else{ // Config changed
+                    std::cout << "Jackett config changed.\nSynchronizing Jackett..." << std::endl;
+                    synchronizer sync(jackettPaths, "Jackett", exePath);
+
+                    if(sync.copy_config(jackett.get_archive_path().string(), synchronizer::ymd_date()) == 0){
+                        std::cerr << "Error synchronizing Jackett." << std::endl;
+                    }
+                }
+            }
 -------------------------------------------------

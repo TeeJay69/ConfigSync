@@ -21,7 +21,7 @@ class analyzer{
 
         const std::string archivePath = exeLocation + "\\ConfigSync\\ConfigArchive\\" + programName;
 
-        void recurse_scanner(const std::filesystem::path& dirPath, std::vector<std::string>& itemVector){ // Self referencing function. itemVector parameter passed in as reference, to modify original object directly.
+        static void recurse_scanner(const std::filesystem::path& dirPath, std::vector<std::string>& itemVector){ // Self referencing function. itemVector parameter passed in as reference, to modify original object directly.
             for(const auto& entry : std::filesystem::directory_iterator(dirPath)){
                 if(entry.is_directory()){
                     recurse_scanner(entry.path(), itemVector);
@@ -33,7 +33,7 @@ class analyzer{
         }
         
 
-        int is_identical_filenames(const std::vector<std::string>& base, const std::vector<std::string>& reference){
+        static int is_identical_filenames(const std::vector<std::string>& base, const std::vector<std::string>& reference){
             int i = 0;
             for(const auto& entry : base){
                 const std::filesystem::path entry_fs = entry;
@@ -49,7 +49,7 @@ class analyzer{
         }
 
 
-        int is_identical_bytes(const std::string& path1, const std::string& path2){
+        static int is_identical_bytes(const std::string& path1, const std::string& path2){
             std::fstream file1Binary(path1, std::iostream::binary);
             std::fstream file2Binary(path2, std::iostream::binary);
 
