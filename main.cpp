@@ -37,7 +37,7 @@ int path_check(const std::vector<std::string>& paths){
 }
 
 
-void create_save(const std::vector<std::string>& programPaths, const std::string& program, const std::string& pArchivePath, const std::string& exelocation){
+int create_save(const std::vector<std::string>& programPaths, const std::string& program, const std::string& pArchivePath, const std::string& exelocation){
     if(path_check(programPaths) == 1){ // Verify program paths        
         
         analyzer configAnalyzer(programPaths, program, exelocation);
@@ -48,19 +48,25 @@ void create_save(const std::vector<std::string>& programPaths, const std::string
             std::filesystem::path newestPath = configAnalyzer.get_newest_backup_path();
             std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
 
+            return 1;
         }
         else{ // Config changed
             std::cout << program << " config changed.\nSynchronizing " << program << "..." << std::endl;
-            synchronizer sync(programPaths, program, exelocation);
 
-            if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) == 0){
+            synchronizer sync(programPaths, program, exelocation); // initialize class
+
+            if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
                 std::cerr << "Error synchronizing " + program << "." << std::endl;
+                return 0;
             }
         }
     }
     else{
         std::cerr << "Verification of " << program << " location failed." << std::endl;
+        return 0;
     }
+
+    return 1;
 }
 
 
@@ -92,9 +98,10 @@ int main(int argc, char* argv[]){
         std::cout << "Following commands are available:" << std::endl;
     }
 
-    if(argv[2] == "sync" || argv[2] == "--sync" || argv[2] == "save" || argv[2] == "--save"){ // Create a save @param
 
-        if(argv[3] == NULL){ // Default behavior. Create a save of all supported, installed programs. @param
+    if(argv[2] == "sync" || argv[2] == "--sync" || argv[2] == "save" || argv[2] == "--save"){ // Sync @param
+
+        if(argv[3] == NULL){ // Default behavior. Create a save of all supported, installed programs. No subparam provided
             
             // Get program paths
             programconfig jackett("Jackett", exePath);
@@ -120,15 +127,55 @@ int main(int argc, char* argv[]){
                 std::filesystem::create_directories(qbittorrent.get_archive_path()); 
             }        
             
-            // @section Jackett
+            // Sync Jackett
             create_save(jackettPaths, "Jackett", jackett.get_archive_path().string(), exePath);
 
-            // @section Prowlarr
+            // Sync Prowlarr
             create_save(prowlarrPaths, "Prowlarr", prowlarr.get_archive_path().string(), exePath);
 
-            // @section qBittorrent
+            // Sync qBittorrent
             create_save(qbittorrentPaths, "qBittorrent", qbittorrent.get_archive_path().string(), exePath);
+
+
+            // User info
+            std::cout << ANSI_COLOR_GREEN << "Synchronization finished." << ANSI_COLOR_RESET << std::endl;
         }
+
+        else if(argv[3] == "jackett" || argv[3] == "Jackett"){ // Jackett sync @subparam
+            // Get program path
+            programconfig jackett("Jackett", exePath);
+            std::vector<std::string> pPaths = jackett.get_config_paths();
+
+            // Create archive if it doesnt exist
+            if(!std::filesystem::exists(jackett.get_archive_path())){
+                std::filesystem::create_directories(jackett.get_archive_path());
+            }
+
+
+            if(create_save(pPaths, "Jackett", jackett.get_archive_path().string(), exePath) == 1){ // save config
+                std::cout << ANSI_COLOR_GREEN << "Synchronization finished." << ANSI_COLOR_RESET << std::endl;
+            }
+            else{
+                std::cout << ANSI_COLOR_RED << "Synchronization failed." << ANSI_COLOR_RESET << std::endl;
+            }
+        }
+
+        else if(argv[3] == "prowlarr" || argv[3] == "Prowlarr"){ // Prowlarr sync @subparam
+            // TODO
+        }
+
+        else if(argv[3] == "qBittorrent" || argv[3] == "qbittorrent"){  // qBittorrent sync @subparam
+            // TODO
+        }
+
+        else{ // Invalid parameter provided
+            std::cerr << "'" << argv[3] << "' is not a configsync command. See 'cfgs --help'." << std::endl;
+        }
+    }
+
+
+    else if(argv[2] == "..."){ // ... @param
+        // TODO next parameter
     }
 
     

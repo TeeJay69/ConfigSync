@@ -69,6 +69,7 @@
 
 - Support running program through explorer
 
+- Option to install on a USB stick, so that the archive is on the flash drive and restoring on a new pc is easier.
 
 - Structure:
 
@@ -103,6 +104,7 @@ Install-Location
 [ ] Help message formatting.
 [ ] License stuff. Include license in installer. Display license in help message.
 [ ] Add more verbose messages.
+[ ] Support pointing to existing Archive during installation (Copy existing Archive to installation directory).
 -------------------------------------------------
 
 -------------------------------------------------
