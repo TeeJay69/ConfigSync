@@ -28,7 +28,7 @@
 int path_check(const std::vector<std::string>& paths){
     for(const auto& item : paths){ // Check if program exist
         if(!std::filesystem::exists(item)){
-            std::cerr << "Program path not found: (" << item << ").\n" << std::endl;
+            // std::cerr << "Program path not found: (" << item << ").\n" << std::endl;
             return 0;
         }
     }
@@ -56,7 +56,7 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
             synchronizer sync(programPaths, program, exelocation); // initialize class
 
             if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
-                std::cerr << "Error synchronizing " + program << "." << std::endl;
+                std::cerr << "Error synchronizing " + program << "." << std::endl; // copy_config returned 0
                 return 0;
             }
         }
@@ -127,18 +127,39 @@ int main(int argc, char* argv[]){
                 std::filesystem::create_directories(qbittorrent.get_archive_path()); 
             }        
             
+            std::vector<std::string> syncedList; // For sync message
+
             // Sync Jackett
-            create_save(jackettPaths, "Jackett", jackett.get_archive_path().string(), exePath);
+            int jackettSync = 0;
+            if(create_save(jackettPaths, "Jackett", jackett.get_archive_path().string(), exePath) == 1){
+                jackettSync = 1;
+                syncedList.push_back("Jackett");
+            }
 
             // Sync Prowlarr
-            create_save(prowlarrPaths, "Prowlarr", prowlarr.get_archive_path().string(), exePath);
+            int prowlarrSync = 0;
+            if(create_save(prowlarrPaths, "Prowlarr", prowlarr.get_archive_path().string(), exePath) == 1){
+                prowlarrSync = 1;
+                syncedList.push_back("Prowlarr");
+            }
 
             // Sync qBittorrent
-            create_save(qbittorrentPaths, "qBittorrent", qbittorrent.get_archive_path().string(), exePath);
+            int qbittorrentSync = 0;
+            if(create_save(qbittorrentPaths, "qBittorrent", qbittorrent.get_archive_path().string(), exePath) == 1){
+                qbittorrentSync = 1;
+                syncedList.push_back("qBittorrent");
+            };
 
 
-            // User info
+            // Info
             std::cout << ANSI_COLOR_GREEN << "Synchronization finished." << ANSI_COLOR_RESET << std::endl;
+            std::cout << "Synced Programs:" << std::endl;
+
+            int i = 1;
+            for(const auto& item : syncedList){
+                std::cout << ANSI_COLOR_GREEN << "      " << i << "." << item << ANSI_COLOR_RESET << std::endl;
+                i++;
+            }
         }
 
         else if(argv[3] == "jackett" || argv[3] == "Jackett"){ // Jackett sync @subparam
@@ -153,19 +174,49 @@ int main(int argc, char* argv[]){
 
 
             if(create_save(pPaths, "Jackett", jackett.get_archive_path().string(), exePath) == 1){ // save config
-                std::cout << ANSI_COLOR_GREEN << "Synchronization finished." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_GREEN << "Synchronization of Jackett finished." << ANSI_COLOR_RESET << std::endl;
             }
             else{
-                std::cout << ANSI_COLOR_RED << "Synchronization failed." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_RED << "Synchronization of Jackett failed." << ANSI_COLOR_RESET << std::endl;
             }
         }
 
         else if(argv[3] == "prowlarr" || argv[3] == "Prowlarr"){ // Prowlarr sync @subparam
-            // TODO
+            // Get program paths
+            programconfig prowlarr("Prowlarr", exePath);
+            std::vector<std::string> pPaths = prowlarr.get_config_paths();
+
+            // Create archive if it doesnt exists
+            if(!std::filesystem::create_directories(prowlarr.get_archive_path())){
+                std::filesystem::create_directories(prowlarr.get_archive_path());
+            }
+
+            if(create_save(pPaths, "Prowlarr", prowlarr.get_archive_path().string(), exePath) == 1){
+                std::cout << ANSI_COLOR_GREEN << "Synchronization of Prowlarr finished." << ANSI_COLOR_RESET << std::endl;
+
+            }
+            else{
+                std::cout << ANSI_COLOR_RED << "Synchronization of Prowlarr failed." << ANSI_COLOR_RESET << std::endl;
+            }
         }
 
         else if(argv[3] == "qBittorrent" || argv[3] == "qbittorrent"){  // qBittorrent sync @subparam
-            // TODO
+            // Get program paths
+            programconfig qbittorrent("qBittorrent", exePath);
+            std::vector<std::string> pPaths = qbittorrent.get_config_paths();
+
+            // Create archive if it doesnt exists
+            if(!std::filesystem::create_directories(qbittorrent.get_archive_path())){
+                std::filesystem::create_directories(qbittorrent.get_archive_path());
+            }
+
+            if(create_save(pPaths, "qBittorrent", qbittorrent.get_archive_path().string(), exePath) == 1){
+                std::cout << ANSI_COLOR_GREEN << "Synchronization of qBittorrent finished." << ANSI_COLOR_RESET << std::endl;
+
+            }
+            else{
+                std::cout << ANSI_COLOR_RED << "Synchronization of qBittorrent failed." << ANSI_COLOR_RESET << std::endl;
+            }
         }
 
         else{ // Invalid parameter provided

@@ -101,7 +101,7 @@ Install-Location
 [x] Fix hardcoded absolute program location problem. Program needs the absolute location where its stored on the filesystem, not where its run from!
 [x] Check that we keep the copy of the config (because of restore) after program has run --> When restoring we backup to configbackup\programname\temp\. When restoring we copy contents of temp to configbackup\programname\recyclebin.
 [x] Cleanup recyclebin after x
-[ ] Help message formatting.
+[ ] Format Help message.
 [ ] License stuff. Include license in installer. Display license in help message.
 [ ] Add more verbose messages.
 [ ] Support pointing to existing Archive during installation (Copy existing Archive to installation directory).
