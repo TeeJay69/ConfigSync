@@ -34,9 +34,10 @@
         - Save a programs config.
         - Defaults to all supported programs.
         
-    + restore/rollback [program name] [date to restore]--default:newest.
+    + restore/rollback [program name] ([date to restore]--default:newest).
         - Rollback a programs config by replacing it with a save from the archive.
         - defaults to most recent save.
+        - --All restores all programs config
 
     + show [program name]
         - Show last save date

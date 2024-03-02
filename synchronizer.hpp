@@ -12,6 +12,7 @@
 #include <map>
 #include <chrono>
 #include "database.hpp"
+#include "ANSIcolor.hpp"
 
 
 class synchronizer{
@@ -197,7 +198,7 @@ class synchronizer{
         
 
 
-        int restore_config(const std::string dateDir){
+        int restore_config(const std::string dateDir){ // Main function for restoring. Uses generate_UUID, timestamp_objects, backup_config_for_restore, backup_config_for_restore, rebuild_from_backup
             // Check if programPaths exist
             for(const auto& item : programPaths){
                 if(!std::filesystem::exists(std::filesystem::path(item))){
@@ -223,6 +224,7 @@ class synchronizer{
                 db.storeIntMap(recycleMap); // Store map as file
             }
             
+            std::cout << ANSI_COLOR_YELLOW << "Backing up program config, in case of plan B..." << ANSI_COLOR_RESET << std::endl; // Verbose
             backup_config_for_restore(dirUUID); // Backup to temp directory
 
             // Get path database from ConfigArchive
@@ -237,20 +239,21 @@ class synchronizer{
                 try{
                     std::filesystem::copy(pair.second, pair.first, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
                 }
-                catch(std::filesystem::filesystem_error& copyError){
-                    std::cerr << "Aborting synchronisation of config: Error during copying ( " << &copyError << ")" << std::endl;
-                    std::cout << "Rebuilding config from backup..." << std::endl;
+                catch(std::filesystem::filesystem_error& copyError){ // Error. Breaks for loop 
+                    std::cerr << "Aborting synchronisation: Error during copying ( " << &copyError << ")" << std::endl;
+                    std::cout << "Plan B: Rebuilding from backup..." << std::endl;
                     
                     const std::string databaseBackupPath = exeLocation + "\\ConfigBackup\\" + programName + "\\temp\\" + dirUUID + "\\ConfigSync-PathDatabase.bin";
 
                     // Rebuild from backup
                     if(rebuild_from_backup(databaseBackupPath) != 1){
-                        std::cerr << "Failed to rebuild from backup. (" << copyError.what() << "). Fatal, please verify that none of the selected programs components are missing. Potentially reinstall the affected application" << std::endl;  
+                        std::cerr << ANSI_COLOR_RED << "Fatal: Failed to rebuild from backup. (" << copyError.what() << "). Please verify that none of the selected programs components are missing or corrupted." << ANSI_COLOR_RESET << std::endl;
+                        std::cerr << "You may have to reinstall the affected application" << std::endl;  
                         return 0;
                     }
                     else{
-                        std::cout << "Rebuild was successfull!" << std::endl;
-                        return 1;
+                        std::cout << ANSI_COLOR_YELLOW << "Rebuild was successfull!" << ANSI_COLOR_RESET << std::endl;
+                        return 0; // The main goal did not succeed. We have to return 0.    
                     }
                 }
             }

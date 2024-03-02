@@ -225,8 +225,26 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(argv[2] == "..."){ // ... @param
-        // TODO next parameter
+    else if(argv[2] == "restore" || argv[2] == "--restore"){ // Restore @param
+
+        if(argv[3] == NULL){ // No program provided. Display advice. No subparam provided.
+            std::cout << "Fatal: Missing program or restore argument." << std::endl;
+            std::cout << "For usage see 'cfgs --help'" << std::endl;
+        }
+
+        else if(argv[3] == "Jackett" || argv[3] == "jackett"){ // Jackett @subparam
+
+            if(argv[4] == NULL){ // default behavior. Use latest save. No 2subparam provided
+
+                programconfig jackett("Jackett", exePath); // Initialize class
+                std::vector<std::string> pPaths = jackett.get_config_paths(); // Get program paths
+
+                analyzer anly(pPaths, "Jackett", exePath); // Initialize class
+
+                synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
+                sync.restore_config(anly.get_newest_backup_path()); // Restore from newest save
+            }
+        }
     }
 
     

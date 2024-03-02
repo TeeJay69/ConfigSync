@@ -4,6 +4,9 @@ analyzer.hpp
 programs.hpp
 synchronizer.hpp
 database.hpp
+organizer.hpp
+ANSIcolor.hpp
+.restorepoint
 Plan.md
 .versiontool
 ######
