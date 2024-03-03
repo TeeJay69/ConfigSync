@@ -22,7 +22,7 @@ class database{
             file.write(reinterpret_cast<const char*>(&length), sizeof(size_t)); // Size_t is a fixed number of bytes that we use to store the length of the following string 
             file.write(str.c_str(), length); // (c_str) char* points to a memory buffer with raw binary
         }
-
+        
 
         std::string encryptString(std::string str){
             std::vector<std::string> keys = {

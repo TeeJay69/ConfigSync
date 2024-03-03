@@ -219,7 +219,7 @@ int main(int argc, char* argv[]){
             }
         }
 
-        else{ // Invalid parameter provided
+        else{ // Invalid subparam provided
             std::cerr << "'" << argv[3] << "' is not a configsync command. See 'cfgs --help'." << std::endl;
         }
     }
@@ -231,6 +231,7 @@ int main(int argc, char* argv[]){
             std::cout << "Fatal: Missing program or restore argument." << std::endl;
             std::cout << "For usage see 'cfgs --help'" << std::endl;
         }
+
 
         else if(argv[3] == "Jackett" || argv[3] == "jackett"){ // Jackett @subparam
             
@@ -266,8 +267,89 @@ int main(int argc, char* argv[]){
                 }
             }
 
-            else{ // Invalid 2subparameter (not null and not valid --> invalid)
-                // TODO print message
+            else{ // Invalid 2subparameter (not null + not valid)
+                std::cerr << "Fatal: '" << argv[4] << "' is not a valid date." << std::endl;
+                std::cout << "To view all save dates use 'cfgs --show jackett'" << std::endl;
+            }
+        }
+
+
+        else if(argv[3] == "Prowlarr" || argv[3] == "prowlarr"){ // Prowlarr @subparam
+            programconfig prowlarr("Prowlarr", exePath); // Initialize class
+            std::vector<std::string> pPaths = prowlarr.get_config_paths(); // Get program paths
+            
+            analyzer anly(pPaths, "Prowlarr", exePath); // Initialize class
+
+            std::vector<std::string> prowlarrSaves;
+            anly.get_all_saves(prowlarrSaves);
+
+            if(argv[4] == NULL){ // default behavior. Use latest save. No 2subparam provided
+
+                synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
+
+                if(sync.restore_config(anly.get_newest_backup_path()) == 1){ // Restore from newest save
+                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+
+            else if(std::find(prowlarrSaves.begin(), prowlarrSaves.end(), std::string(argv[4])) != prowlarrSaves.end()){ // Specific save date @2subparam. Check if date is valid.
+
+                synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
+
+                if(sync.restore_config(std::string(argv[4])) == 1){ // Restore from user defined save date
+                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+
+            else{ // Invalid 2subparameter (not null + not valid)
+                std::cerr << "Fatal: '" << argv[4] << "' is not a valid date." << std::endl;
+                std::cout << "To view all save dates use 'cfgs --show prowlarr'" << std::endl;
+            }
+        }
+
+
+        else if(argv[3] == "qBittorrent" || argv[3] == "qbittorrent"){ // qBittorrent @subparam
+            programconfig qbittorrent("qBittorrent", exePath); // Initialize class
+            std::vector<std::string> pPaths = qbittorrent.get_config_paths(); // Get program paths
+            
+            analyzer anly(pPaths, "qBittorrent", exePath); // Initialize class
+
+            std::vector<std::string> qbittorrentSaves;
+            anly.get_all_saves(qbittorrentSaves);
+
+            if(argv[4] == NULL){ // default behavior. Use latest save. No 2subparam provided
+
+                synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
+
+                if(sync.restore_config(anly.get_newest_backup_path()) == 1){ // Restore from newest save
+                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+
+            else if(std::find(qbittorrentSaves.begin(), qbittorrentSaves.end(), std::string(argv[4])) != qbittorrentSaves.end()){ // Specific save date @2subparam. Check if date is valid.
+
+                synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
+
+                if(sync.restore_config(std::string(argv[4])) == 1){ // Restore from user defined save date
+                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+
+            else{ // Invalid 2subparameter (not null + not valid)
+                std::cerr << "Fatal: '" << argv[4] << "' is not a valid date." << std::endl;
+                std::cout << "To view all save dates use 'cfgs --show qbittorrent'" << std::endl;
             }
         }
     }

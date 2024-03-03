@@ -107,6 +107,7 @@ Install-Location
 [ ] License stuff. Include license in installer. Display license in help message.
 [ ] Add more verbose messages.
 [ ] Support pointing to existing Archive during installation (Copy existing Archive to installation directory).
+[ ] Support CMake
 -------------------------------------------------
 
 -------------------------------------------------
