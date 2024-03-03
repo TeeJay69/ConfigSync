@@ -233,17 +233,26 @@ int main(int argc, char* argv[]){
         }
 
         else if(argv[3] == "Jackett" || argv[3] == "jackett"){ // Jackett @subparam
+            
+            programconfig jackett("Jackett", exePath); // Initialize class
+            std::vector<std::string> pPaths = jackett.get_config_paths(); // Get program paths
+            
+            analyzer anly(pPaths, "Jackett", exePath); // Initialize class
 
+            std::vector<std::string> jackettSaves = anly
             if(argv[4] == NULL){ // default behavior. Use latest save. No 2subparam provided
 
-                programconfig jackett("Jackett", exePath); // Initialize class
-                std::vector<std::string> pPaths = jackett.get_config_paths(); // Get program paths
-
-                analyzer anly(pPaths, "Jackett", exePath); // Initialize class
-
                 synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
-                sync.restore_config(anly.get_newest_backup_path()); // Restore from newest save
+
+                if(sync.restore_config(anly.get_newest_backup_path()) == 1){ // Restore from newest save
+                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                }
             }
+
+            else if(argv[4] == std::find(v)) // Date of save @2subparam
         }
     }
 

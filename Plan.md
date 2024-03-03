@@ -102,6 +102,7 @@ Install-Location
 [x] Fix hardcoded absolute program location problem. Program needs the absolute location where its stored on the filesystem, not where its run from!
 [x] Check that we keep the copy of the config (because of restore) after program has run --> When restoring we backup to configbackup\programname\temp\. When restoring we copy contents of temp to configbackup\programname\recyclebin.
 [x] Cleanup recyclebin after x
+[ ] Add cleanup to sync and restore parts.
 [ ] Format Help message.
 [ ] License stuff. Include license in installer. Display license in help message.
 [ ] Add more verbose messages.
@@ -121,6 +122,7 @@ Install-Location
 - Write the integer map in database.hpp serialized to a binary file. 
 - Let user change number of saves to keep
 - Let user delete saves
+- Option to change default behavior of restore param (Disable auto default to newest save, instead show save dates for a program. Let user select the date that he wants to restore)
 -------------------------------------------------
 
 

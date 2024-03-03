@@ -146,5 +146,16 @@ class analyzer{
 
             return 1; // config did not change
         }
+
+
+        // Get all saves for the program. Iterates over archivePath and loads all directories into the vector.
+        void get_all_saves(std::vector<std::string>& storageVector){
+
+            for(const auto & item : std::filesystem::directory_iterator(archivePath)){
+                if(item.is_directory()){
+                    storageVector.push_back(item.path().filename().string());
+                }
+            }
+        }
 };
 #endif

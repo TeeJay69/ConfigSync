@@ -15,7 +15,7 @@ class organizer{
     public:
 
         void limit_enforcer_configarchive(const int& maxdirs, std::string& savepath){
-            // count the number of saved configs
+            //// count the number of saved configs
             std::vector<std::filesystem::path> itemList;
             
             for(const auto& item : std::filesystem::directory_iterator(savepath)){ // Iterate over date dirs
