@@ -123,6 +123,7 @@ Install-Location
 - Let user change number of saves to keep
 - Let user delete saves
 - Option to change default behavior of restore param (Disable auto default to newest save, instead show save dates for a program. Let user select the date that he wants to restore)
+- Option to identify specific save date with an alias (Like '12.November')
 -------------------------------------------------
 
 

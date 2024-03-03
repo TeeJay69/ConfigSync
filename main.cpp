@@ -239,7 +239,9 @@ int main(int argc, char* argv[]){
             
             analyzer anly(pPaths, "Jackett", exePath); // Initialize class
 
-            std::vector<std::string> jackettSaves = anly
+            std::vector<std::string> jackettSaves;
+            anly.get_all_saves(jackettSaves);
+
             if(argv[4] == NULL){ // default behavior. Use latest save. No 2subparam provided
 
                 synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
@@ -252,7 +254,21 @@ int main(int argc, char* argv[]){
                 }
             }
 
-            else if(argv[4] == std::find(v)) // Date of save @2subparam
+            else if(std::find(jackettSaves.begin(), jackettSaves.end(), std::string(argv[4])) != jackettSaves.end()){ // Specific save date @2subparam. Check if date is valid.
+
+                synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
+
+                if(sync.restore_config(std::string(argv[4])) == 1){ // Restore from user defined save date
+                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+
+            else{ // Invalid 2subparameter (not null and not valid --> invalid)
+                // TODO print message
+            }
         }
     }
 
