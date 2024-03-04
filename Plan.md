@@ -103,7 +103,7 @@ Install-Location
 [x] Check that we keep the copy of the config (because of restore) after program has run --> When restoring we backup to configbackup\programname\temp\. When restoring we copy contents of temp to configbackup\programname\recyclebin.
 [x] Cleanup recyclebin after x
 [ ] Add cleanup to sync and restore parts.
-[ ] Format Help message.
+[ ] Format --help message.
 [ ] License stuff. Include license in installer. Display license in help message.
 [ ] Add more verbose messages.
 [ ] Support pointing to existing Archive during installation (Copy existing Archive to installation directory).

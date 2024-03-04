@@ -198,7 +198,7 @@ class synchronizer{
         
 
 
-        int restore_config(const std::string dateDir){ // Main function for restoring. Uses generate_UUID, timestamp_objects, backup_config_for_restore, backup_config_for_restore, rebuild_from_backup
+        int restore_config(const std::string dateDir, const int& recyclebinlimit){ // Main function for restoring. Uses generate_UUID, timestamp_objects, backup_config_for_restore, backup_config_for_restore, rebuild_from_backup
             // Check if programPaths exist
             for(const auto& item : programPaths){
                 if(!std::filesystem::exists(std::filesystem::path(item))){
@@ -217,13 +217,19 @@ class synchronizer{
                 
                 for(const auto& item : std::filesystem::directory_iterator(backupDir + "\\temp")){
                     const std::string newPath = backupDir + "\\RecycleBin\\" + item.path().filename().string();
-                    std::filesystem::rename(item, newPath); // Move item
+                    std::filesystem::rename(item, newPath); // Move item to recyclebin
                     timestamp_objects(recycleMap, newPath); // Timestamp and load into map                                       
                 }
 
-                db.storeIntMap(recycleMap); // Store map as file
+                // Clean recyclebin
+                std::string mapPath = backupDir + "\\RecycleBin\\RecycleMap.bin";
+                organizer janitor;
+                janitor.recyclebin_cleaner(recyclebinlimit, recycleMap, mapPath); // Clean recycle bin and store recycle map as file
+
+
+                //// db.storeIntMap(recycleMap); // Store recycle map as file
             }
-            
+
             std::cout << ANSI_COLOR_YELLOW << "Backing up program config, in case of plan B..." << ANSI_COLOR_RESET << std::endl; // Verbose
             backup_config_for_restore(dirUUID); // Backup to temp directory
 

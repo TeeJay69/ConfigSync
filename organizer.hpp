@@ -13,8 +13,9 @@
 
 class organizer{
     public:
-
-        void limit_enforcer_configarchive(const int& maxdirs, std::string& savepath){
+        
+        // Limit number of saves inside the config archive.
+        void limit_enforcer_configarchive(const int& maxdirs, const std::string& savepath){
             //// count the number of saved configs
             std::vector<std::filesystem::path> itemList;
             
@@ -43,6 +44,9 @@ class organizer{
         }
 
 
+        // Limit number of items in the recyclebin of the temp directory for configBackups.
+        // All dirs inside RecycleBin are accounted for in the RecycleBinMap file.
+        // Checks for the limit and removes when necessary both the directory from the filesystem and the map.
         void recyclebin_cleaner(const int& maxdirs, std::map<unsigned long long, std::string>& map, const std::string& mapPath){
             if(map.size() > maxdirs){
 
