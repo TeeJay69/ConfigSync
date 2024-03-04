@@ -39,16 +39,23 @@
         - defaults to most recent save.
         - --All restores all programs config
 
-    + show [program name]
-        - Show last save date
-        - Show number of saves
+    + show [program name]--default:all
+        - Show all saves
+        - Show number of saves 
 
-    + status
+
+    + status [program name]--default:all
+        - Check if config is up to date.
+        - Display list of the programs, along with their last save date
+        - If program specified, display last save date, along with if the config is up to date.
+        
 
     + settings
         - Scheduled task On/Off 
             - No intervall provided: default:xxx
         - Change Intervall of scheduled task
+        - Show never synced apps in 'status'
+    
     + list
         - displays all supported programs
     
@@ -104,6 +111,7 @@ Install-Location
 [x] Cleanup recyclebin after x
 [x] Verify that save dir system supports multiple saves on the same day.
 [ ] Add cleanup to sync and restore parts.
+[ ] Check if a save exists before restoring 
 [ ] Format --help message.
 [ ] License stuff. Include license in installer. Display license in help message.
 [ ] Add more verbose messages.
@@ -115,7 +123,9 @@ Install-Location
 # Reevaluate:
 
 // TODO: Make database path copy function self referencing with error message parameter. Use only this function wherever you copy database paths
-- Sync arguments default not all programs. 'sync --all' for synchronizing all programs 
+- Sync argument shouldnt default to all programs. 'sync --all' for synchronizing all programs 
+- Message 'Config is in sync' instead of 'Config is up to date'
+- Display last save for every program, 'cfgs status' --default 
 -------------------------------------------------
 
 -------------------------------------------------
@@ -132,6 +142,8 @@ Install-Location
 
 -------------------------------------------------
 # Trashcan:
+
+<!-- - Combine show and status arguments' -->
 
 <!-- 
 restore config:

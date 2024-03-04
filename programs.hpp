@@ -15,10 +15,24 @@ class programconfig{
     public:
         programconfig(const std::string& name, const std::string& executableLocation) : programName(name), exeLocation(executableLocation) {} // Constructor
         
+        
+        // Returns a vector containing supported programs.
+        static const std::vector<std::string> get_support_list(){           
+            std::vector<std::string> list = {
+                "Jackett",
+                "Prowlarr",
+                "qBittorrent"
+            };
+            
+            return list;
+        }
+
+
         std::string getUsername(){
             std::string x = std::getenv("username");
             return x;
         }
+
 
         std::vector<std::string> get_config_paths(){
             
@@ -76,6 +90,8 @@ class programconfig{
             // ...
 
         }
+
+
 };
 
 #endif

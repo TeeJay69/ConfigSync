@@ -6,6 +6,7 @@
 #include <map>
 #include <chrono>
 #include <thread>
+#include <set>
 #include <boost\uuid\uuid.hpp>
 #include <boost\uuid\uuid_generators.hpp>
 #include <boost\filesystem\operations.hpp>
@@ -275,7 +276,7 @@ int main(int argc, char* argv[]){
             
             std::vector<std::string> failList;
 
-            // Restore Jackett:
+            // @section Jackett:
             programconfig jackett("Jackett", exePath); // Initialize class
             std::vector<std::string> pPaths = jackett.get_config_paths(); // Get program paths
             
@@ -297,7 +298,7 @@ int main(int argc, char* argv[]){
             }
             
 
-            // Restore Prowlarr
+            // @section Prowlarr
             programconfig prowlarr("Prowlarr", exePath); // Initialize class
             std::vector<std::string> pPaths = prowlarr.get_config_paths(); // Get program paths
             
@@ -319,7 +320,7 @@ int main(int argc, char* argv[]){
             }
 
 
-            // Restore qBittorrent
+            // @section qBittorrent
             programconfig qbittorrent("qBittorrent", exePath); // Initialize class
             std::vector<std::string> pPaths = qbittorrent.get_config_paths(); // Get program paths
             
@@ -480,8 +481,123 @@ int main(int argc, char* argv[]){
                 std::cout << "To view all save dates use 'cfgs --show qbittorrent'" << std::endl;
             }
         }
+    }
+
+    else if(argv[2] == "status" || argv[2] == "--status"){
+
+        if(argv[3] == NULL || argv[3] == "--all"){ // default: all. No subparam
+
+            std::set<std::string> neverSaveList;
+            std::set<std::string> outofSyncList;
+            std::set<std::string> inSyncList;
 
 
+            for(const auto& app : programconfig::get_support_list()){ // Fetch status
+
+                programconfig pcfg(app, exePath); // Init class
+                analyzer anly(pcfg.get_config_paths(), app, exePath); // Init class
+
+                if(anly.is_archive_empty() == 1){ // Check for previous save
+                    neverSaveList.insert(app);
+                }
+                else{ // Save exists
+                    
+                    if(anly.is_identical_config() == 1){
+                        inSyncList.insert(app);
+                    }
+                    else{
+                        outofSyncList.insert(app);
+                    }
+                }
+            }
+
+            std::cout << "Status:" << std::endl;
+            
+            for(const auto& app : inSyncList){ // Up to date apps
+                std::cout << ANSI_COLOR_GREEN << "In sync: " << app << ANSI_COLOR_RESET << std::endl;
+            }
+
+            for(const auto& app : outofSyncList){ // Out of sync apps
+                std::cout << ANSI_COLOR_YELLOW << "Out of sync: " << app << ANSI_COLOR_RESET << std::endl;
+            }
+
+            for(const auto& app : neverSaveList){ // Never synced apps
+                std::cout << ANSI_COLOR_RED << "Never synced: " << app << ANSI_COLOR_RESET << std::endl;
+            }
+
+        }
+
+
+        else if(argv[3] == "Jackett" || argv[3] == "jackett"){ // Jackett @subparam
+
+            programconfig pcfg("Jackett", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "Jackett", exePath); // Init class
+            
+            std::cout << "Program: Jackett" << std::endl;
+            std::cout << "Last Save: " << anly.get_newest_backup_path() << std::endl;
+            
+            
+            if(anly.is_archive_empty() == 1){ // Check if save exists
+                std::cout << "Error: No previous save exists for Jackett." << std::endl;
+            }
+            else{ // Save exists
+
+                if(anly.is_identical_config() == 1){ // Compare config
+                    std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cout << ANSI_COLOR_RED << "Config is out of sync!" << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+        }
+
+
+        else if(argv[3] == "Prowlarr" || argv[3] == "prowlarr"){ // Prowlarr @subparam
+
+            programconfig pcfg("Prowlarr", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "Prowlarr", exePath); // Init class
+            
+            std::cout << "Program: Prowlarr" << std::endl;
+            std::cout << "Last Save: " << anly.get_newest_backup_path() << std::endl;
+            
+            
+            if(anly.is_archive_empty() == 1){ // Check if save exists
+                std::cout << "Error: No previous save exists for Prowlarr." << std::endl;
+            }
+            else{ // Save exists
+
+                if(anly.is_identical_config() == 1){ // Compare config
+                    std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cout << ANSI_COLOR_RED << "Config is out of sync!" << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+        }
+
+
+        else if(argv[3] == "qBittorrent" || argv[3] == "qbittorrent"){ // qBittorrent @subparam
+
+            programconfig pcfg("qBittorrent", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "qBittorrent", exePath); // Init class
+            
+            std::cout << "Program: qBittorrent" << std::endl;
+            std::cout << "Last Save: " << anly.get_newest_backup_path() << std::endl;
+            
+            
+            if(anly.is_archive_empty() == 1){ // Check if save exists
+                std::cout << "Error: No previous save exists for qBittorrent." << std::endl;
+            }
+            else{ // Save exists
+
+                if(anly.is_identical_config() == 1){ // Compare config
+                    std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cout << ANSI_COLOR_RED << "Config is out of sync!" << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+        }
     }
 
     
