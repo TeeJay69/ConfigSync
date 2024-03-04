@@ -108,12 +108,14 @@ Install-Location
 [ ] Add more verbose messages.
 [ ] Support pointing to existing Archive during installation (Copy existing Archive to installation directory).
 [ ] Support CMake
+[ ] Verify that save dir system supports multiple saves on the same day.
 -------------------------------------------------
 
 -------------------------------------------------
 # Reevaluate:
 
 // TODO: Make database path copy function self referencing with error message parameter. Use only this function wherever you copy database paths
+- Sync arguments default not all programs. 'sync --all' for synchronizing all programs 
 -------------------------------------------------
 
 -------------------------------------------------

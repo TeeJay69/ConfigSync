@@ -43,10 +43,14 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
     if(path_check(programPaths) == 1){ // Verify program paths        
         
         analyzer configAnalyzer(programPaths, program, exelocation);
-
-        if(configAnalyzer.is_identical_config()){ // Config identical    
+        
+        if(configAnalyzer.is_archive_empty() == 1){
+            std::cout << "First synchronization of " << program << "." << std::endl;
+            
+        }
+        if(configAnalyzer.is_identical_config()){ // Compare last save to current config    
             std::cout << program + " config did not change, updating save date..." << std::endl;
-
+            
             std::filesystem::path newestPath = configAnalyzer.get_newest_backup_path();
             std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
 
@@ -258,6 +262,29 @@ int main(int argc, char* argv[]){
             std::cout << "For usage see 'cfgs --help'" << std::endl;
         }
 
+        
+        else if(argv[3] == "all" || argv[3] == "--all"){ // '--all' @subparam
+            std::cout << ANSI_COLOR_YELLOW << "Restoring all supported programs with latest save..." << ANSI_COLOR_RESET << std::endl;
+            
+            // Restore Jackett:
+            programconfig jackett("Jackett", exePath); // Initialize class
+            std::vector<std::string> pPaths = jackett.get_config_paths(); // Get program paths
+            
+            analyzer anly(pPaths, "Jackett", exePath); // Initialize class
+
+            std::vector<std::string> jackettSaves;
+            anly.get_all_saves(jackettSaves);
+
+            synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
+
+                if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                }
+        }
+
 
         else if(argv[3] == "Jackett" || argv[3] == "jackett"){ // Jackett @subparam
             
@@ -286,7 +313,7 @@ int main(int argc, char* argv[]){
 
                 synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
 
-                if(sync.restore_config(std::string(argv[4]), RECYCLELIMIT) == 1){ // Restore from user defined save date
+                if(sync.restore_config(std::string(argv[4]), RECYCLELIMIT) == 1){ // Restore from user defined save date<
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{

@@ -64,7 +64,7 @@ class synchronizer{
 
         int copy_config(const std::string& archivePathAbs, const std::string& dateDir){ // archivePathAbs = programs directory containing the date directories
 
-            // create date folder if it doesnt exist yet
+            // create first date folder if it doesnt exist yet
             if(std::filesystem::is_empty(std::filesystem::path(archivePathAbs))){
 
                 char* date = ymd_date_cstyle();
@@ -72,6 +72,16 @@ class synchronizer{
                 std::filesystem::create_directory(exeLocation + "\\" + "ConfigArchive\\" + programName + "\\" + date); // Create archive dir and the subdir "dateDir"
             }
             
+
+            if(!std::filesystem::exists(archivePathAbs + "\\" + dateDir)){ // If date dir doesnt exist, create it.
+                std::filesystem::create_directories(archivePathAbs + "\\" + dateDir);
+            }
+            else if(!std::filesystem::is_empty(archivePathAbs + "\\" + dateDir)){ // If date dir exists and is not empty, remove dir and recreate it. Handles cases where  user runs sync command multiple times on the same day.
+                std::filesystem::remove(archivePathAbs + "\\" + dateDir);
+                std::filesystem::create_directories(archivePathAbs + "\\" + dateDir);
+            }
+
+
             // PathDatabase location is inside the dateDir
             std::string databasePath = archivePathAbs + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin";
             std::map<std::string, std::string> pathMap;

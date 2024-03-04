@@ -78,6 +78,15 @@ class analyzer{
             }
         }
 
+        // Check if a programs archive is empty
+        int is_archive_empty(){
+            if(std::filesystem::is_empty(archivePath)){
+                return 1;
+            }
+            
+            return 0;
+        }
+
 
         std::string get_newest_backup_path(){
             const std::filesystem::path archivePathFs = archivePath;
@@ -120,7 +129,7 @@ class analyzer{
 
 
         int is_identical_config(){ // Main function of this class
-
+            
             // Get saved config items
             std::vector<std::string> configItemsSaved;
             get_config_items_saved(configItemsSaved);
