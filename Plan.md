@@ -102,13 +102,13 @@ Install-Location
 [x] Fix hardcoded absolute program location problem. Program needs the absolute location where its stored on the filesystem, not where its run from!
 [x] Check that we keep the copy of the config (because of restore) after program has run --> When restoring we backup to configbackup\programname\temp\. When restoring we copy contents of temp to configbackup\programname\recyclebin.
 [x] Cleanup recyclebin after x
+[x] Verify that save dir system supports multiple saves on the same day.
 [ ] Add cleanup to sync and restore parts.
 [ ] Format --help message.
 [ ] License stuff. Include license in installer. Display license in help message.
 [ ] Add more verbose messages.
 [ ] Support pointing to existing Archive during installation (Copy existing Archive to installation directory).
 [ ] Support CMake
-[ ] Verify that save dir system supports multiple saves on the same day.
 -------------------------------------------------
 
 -------------------------------------------------

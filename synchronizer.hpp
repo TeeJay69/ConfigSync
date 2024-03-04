@@ -62,6 +62,8 @@ class synchronizer{
         }
 
 
+        // Saves a programs config to the respective archive.
+        // Date dir creation handled automatically.
         int copy_config(const std::string& archivePathAbs, const std::string& dateDir){ // archivePathAbs = programs directory containing the date directories
 
             // create first date folder if it doesnt exist yet
@@ -76,7 +78,7 @@ class synchronizer{
             if(!std::filesystem::exists(archivePathAbs + "\\" + dateDir)){ // If date dir doesnt exist, create it.
                 std::filesystem::create_directories(archivePathAbs + "\\" + dateDir);
             }
-            else if(!std::filesystem::is_empty(archivePathAbs + "\\" + dateDir)){ // If date dir exists and is not empty, remove dir and recreate it. Handles cases where  user runs sync command multiple times on the same day.
+            else if(!std::filesystem::is_empty(archivePathAbs + "\\" + dateDir)){ // If exists but not empty, remove dir and recreate it. Handles cases where user runs sync command multiple times on the same day.
                 std::filesystem::remove(archivePathAbs + "\\" + dateDir);
                 std::filesystem::create_directories(archivePathAbs + "\\" + dateDir);
             }

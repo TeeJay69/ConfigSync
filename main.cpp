@@ -44,26 +44,33 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
         
         analyzer configAnalyzer(programPaths, program, exelocation);
         
-        if(configAnalyzer.is_archive_empty() == 1){
+        if(configAnalyzer.is_archive_empty() == 1){ // First ever save.
             std::cout << "First synchronization of " << program << "." << std::endl;
-            
-        }
-        if(configAnalyzer.is_identical_config()){ // Compare last save to current config    
-            std::cout << program + " config did not change, updating save date..." << std::endl;
-            
-            std::filesystem::path newestPath = configAnalyzer.get_newest_backup_path();
-            std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
-
-            return 1;
-        }
-        else{ // Config changed
-            std::cout << program << " config changed.\nSynchronizing " << program << "..." << std::endl;
-
             synchronizer sync(programPaths, program, exelocation); // initialize class
 
             if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
                 std::cerr << "Error synchronizing " + program << "." << std::endl; // copy_config returned 0
                 return 0;
+            }
+        }
+        else{
+            if(configAnalyzer.is_identical_config()){ // Compare last save to current config
+                std::cout << program + " config did not change, updating save date..." << std::endl;
+                
+                std::filesystem::path newestPath = configAnalyzer.get_newest_backup_path();
+                std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
+
+                return 1;
+            }
+            else{ // Config changed
+                std::cout << program << " config changed.\nSynchronizing " << program << "..." << std::endl;
+
+                synchronizer sync(programPaths, program, exelocation); // initialize class
+
+                if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
+                    std::cerr << "Error synchronizing " + program << "." << std::endl; // copy_config returned 0
+                    return 0;
+                }
             }
         }
     }
@@ -266,6 +273,8 @@ int main(int argc, char* argv[]){
         else if(argv[3] == "all" || argv[3] == "--all"){ // '--all' @subparam
             std::cout << ANSI_COLOR_YELLOW << "Restoring all supported programs with latest save..." << ANSI_COLOR_RESET << std::endl;
             
+            std::vector<std::string> failList;
+
             // Restore Jackett:
             programconfig jackett("Jackett", exePath); // Initialize class
             std::vector<std::string> pPaths = jackett.get_config_paths(); // Get program paths
@@ -277,12 +286,75 @@ int main(int argc, char* argv[]){
 
             synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
 
-                if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
-                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+            int jackettState = 0;
+            if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                std::cout << ANSI_COLOR_GREEN << "Jackett rollback successfull!" << ANSI_COLOR_RESET << std::endl;
+                jackettState = 1;
+            }
+            else{
+                std::cerr << ANSI_COLOR_RED << "Jackett rollback failed." << ANSI_COLOR_RESET << std::endl;
+                failList.push_back("Jackett");
+            }
+            
+
+            // Restore Prowlarr
+            programconfig prowlarr("Prowlarr", exePath); // Initialize class
+            std::vector<std::string> pPaths = prowlarr.get_config_paths(); // Get program paths
+            
+            analyzer anly(pPaths, "Prowlarr", exePath); // Initialize class
+
+            std::vector<std::string> prowlarrSaves;
+            anly.get_all_saves(prowlarrSaves);
+
+            synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
+
+            int prowlarrState = 0;
+            if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                std::cout << ANSI_COLOR_GREEN << "Prowlarr rollback successfull!" << ANSI_COLOR_RESET << std::endl;
+                prowlarrState = 1;
+            }
+            else{
+                std::cerr << ANSI_COLOR_RED << "Prowlarr rollback failed." << ANSI_COLOR_RESET << std::endl;
+                failList.push_back("Prowlarr");
+            }
+
+
+            // Restore qBittorrent
+            programconfig qbittorrent("qBittorrent", exePath); // Initialize class
+            std::vector<std::string> pPaths = qbittorrent.get_config_paths(); // Get program paths
+            
+            analyzer anly(pPaths, "qBittorrent", exePath); // Initialize class
+
+            std::vector<std::string> qbittorrentSaves;
+            anly.get_all_saves(qbittorrentSaves);
+
+            synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
+            
+            int qbitState = 0;
+            if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                std::cout << ANSI_COLOR_GREEN << "qBittorrent rollback successfull!" << ANSI_COLOR_RESET << std::endl;
+                qbitState = 1;
+            }
+            else{
+                std::cerr << ANSI_COLOR_RED << "qBittorrent rollback failed." << ANSI_COLOR_RESET << std::endl;
+                failList.push_back("qBittorrent");
+            }
+
+            
+            // User info
+            if(jackettState == 1 && prowlarrState == 1 && qbitState == 1){ // All success
+                std::cout << ANSI_COLOR_GREEN << "Rollback complete!" << ANSI_COLOR_RESET << std::endl; 
+            }
+            else if(jackettState == 1 || prowlarrState == 1 || qbitState == 1){ // Partial success
+                std::cout << ANSI_COLOR_YELLOW << "Rollback complete!." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_RED << "Failed to restore:" << ANSI_COLOR_RESET << std::endl;
+                
+                int i = 1;
+                for(const auto& app : failList){ // Display failed rollbacks
+                    std::cout << ANSI_COLOR_RED << i << ".  " << app << ANSI_COLOR_RESET << std::endl;
+                    i++;
                 }
-                else{
-                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
-                }
+            }
         }
 
 
