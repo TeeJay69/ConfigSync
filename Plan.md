@@ -110,8 +110,8 @@ Install-Location
 [x] Check that we keep the copy of the config (because of restore) after program has run --> When restoring we backup to configbackup\programname\temp\. When restoring we copy contents of temp to configbackup\programname\recyclebin.
 [x] Cleanup recyclebin after x
 [x] Verify that save dir system supports multiple saves on the same day.
+[x] Check if a save exists before restoring 
 [ ] Add cleanup to sync and restore parts.
-[ ] Check if a save exists before restoring 
 [ ] Format --help message.
 [ ] License stuff. Include license in installer. Display license in help message.
 [ ] Add more verbose messages.
@@ -126,6 +126,7 @@ Install-Location
 - Sync argument shouldnt default to all programs. 'sync --all' for synchronizing all programs 
 - Message 'Config is in sync' instead of 'Config is up to date'
 - Display last save for every program, 'cfgs status' --default 
+- Change 'Rollback complete' to 'Successfully restored <program name>' or 'Restored <programname> successfully'
 -------------------------------------------------
 
 -------------------------------------------------

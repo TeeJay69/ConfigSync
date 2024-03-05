@@ -280,43 +280,47 @@ int main(int argc, char* argv[]){
             programconfig jackett("Jackett", exePath); // Initialize class
             std::vector<std::string> pPaths = jackett.get_config_paths(); // Get program paths
             
-            analyzer anly(pPaths, "Jackett", exePath); // Initialize class
-
-            std::vector<std::string> jackettSaves;
-            anly.get_all_saves(jackettSaves);
-
-            synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
+            analyzer anlyJackett(pPaths, "Jackett", exePath); // Initialize class
+            synchronizer syncJackett(pPaths, "Jackett", exePath); // Initialize class
 
             int jackettState = 0;
-            if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
-                std::cout << ANSI_COLOR_GREEN << "Jackett rollback successfull!" << ANSI_COLOR_RESET << std::endl;
-                jackettState = 1;
-            }
-            else{
-                std::cerr << ANSI_COLOR_RED << "Jackett rollback failed." << ANSI_COLOR_RESET << std::endl;
+            if(anlyJackett.is_archive_empty() == 1){ // Archive is empty
+                std::cout << "Skipping Jackett, not synced..." << std::endl;
                 failList.push_back("Jackett");
             }
-            
+            else{ // Archive not empty
+                if(syncJackett.restore_config(anlyJackett.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                    std::cout << ANSI_COLOR_GREEN << "Jackett rollback successfull!" << ANSI_COLOR_RESET << std::endl;
+                    jackettState = 1;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Jackett rollback failed." << ANSI_COLOR_RESET << std::endl;
+                    failList.push_back("Jackett");
+                }
+            }
 
+            
             // @section Prowlarr
             programconfig prowlarr("Prowlarr", exePath); // Initialize class
             std::vector<std::string> pPaths = prowlarr.get_config_paths(); // Get program paths
             
-            analyzer anly(pPaths, "Prowlarr", exePath); // Initialize class
-
-            std::vector<std::string> prowlarrSaves;
-            anly.get_all_saves(prowlarrSaves);
-
-            synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
+            analyzer anlyProw(pPaths, "Prowlarr", exePath); // Initialize class
+            synchronizer syncProw(pPaths, "Prowlarr", exePath); // Initialize class
 
             int prowlarrState = 0;
-            if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
-                std::cout << ANSI_COLOR_GREEN << "Prowlarr rollback successfull!" << ANSI_COLOR_RESET << std::endl;
-                prowlarrState = 1;
-            }
-            else{
-                std::cerr << ANSI_COLOR_RED << "Prowlarr rollback failed." << ANSI_COLOR_RESET << std::endl;
+            if(anlyProw.is_archive_empty() == 1){ // Archive empty
+                std::cout << "Skipping Prowlarr, not synced..." << std::endl;
                 failList.push_back("Prowlarr");
+            }
+            else{ // Archive not empty
+                if(syncProw.restore_config(anlyProw.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                    std::cout << ANSI_COLOR_GREEN << "Prowlarr rollback successfull!" << ANSI_COLOR_RESET << std::endl;
+                    prowlarrState = 1;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Prowlarr rollback failed." << ANSI_COLOR_RESET << std::endl;
+                    failList.push_back("Prowlarr");
+                }
             }
 
 
@@ -324,21 +328,23 @@ int main(int argc, char* argv[]){
             programconfig qbittorrent("qBittorrent", exePath); // Initialize class
             std::vector<std::string> pPaths = qbittorrent.get_config_paths(); // Get program paths
             
-            analyzer anly(pPaths, "qBittorrent", exePath); // Initialize class
-
-            std::vector<std::string> qbittorrentSaves;
-            anly.get_all_saves(qbittorrentSaves);
-
-            synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
+            analyzer anlyQbit(pPaths, "qBittorrent", exePath); // Initialize class
+            synchronizer syncQbit(pPaths, "qBittorrent", exePath); // Initialize class
             
             int qbitState = 0;
-            if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
-                std::cout << ANSI_COLOR_GREEN << "qBittorrent rollback successfull!" << ANSI_COLOR_RESET << std::endl;
-                qbitState = 1;
-            }
-            else{
-                std::cerr << ANSI_COLOR_RED << "qBittorrent rollback failed." << ANSI_COLOR_RESET << std::endl;
+            if(anlyQbit.is_archive_empty() == 1){ // Archive empty
+                std::cout << "Skipping qBittorrent, not synced..." << std::endl;
                 failList.push_back("qBittorrent");
+            }
+            else{ // Archive not empty
+                if(syncQbit.restore_config(anlyQbit.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                    std::cout << ANSI_COLOR_GREEN << "qBittorrent rollback successfull!" << ANSI_COLOR_RESET << std::endl;
+                    qbitState = 1;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "qBittorrent rollback failed." << ANSI_COLOR_RESET << std::endl;
+                    failList.push_back("qBittorrent");
+                }
             }
 
             
@@ -372,15 +378,23 @@ int main(int argc, char* argv[]){
 
             if(argv[4] == NULL){ // default behavior. Use latest save. No 2subparam provided
 
-                synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
-
-                if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
-                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
+                    std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
                 }
-                else{
-                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                else{ // Archive not empty
+                    synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
+
                 }
             }
+
 
             else if(std::find(jackettSaves.begin(), jackettSaves.end(), std::string(argv[4])) != jackettSaves.end()){ // Specific save date @2subparam. Check if date is valid.
 
@@ -413,15 +427,22 @@ int main(int argc, char* argv[]){
 
             if(argv[4] == NULL){ // default behavior. Use latest save. No 2subparam provided
 
-                synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
-
-                if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
-                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of Prowlarr." << std::endl;
+                    std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
                 }
-                else{
-                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                else{ // Archive not empty
+                    synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
                 }
             }
+
 
             else if(std::find(prowlarrSaves.begin(), prowlarrSaves.end(), std::string(argv[4])) != prowlarrSaves.end()){ // Specific save date @2subparam. Check if date is valid.
 
@@ -454,15 +475,22 @@ int main(int argc, char* argv[]){
 
             if(argv[4] == NULL){ // default behavior. Use latest save. No 2subparam provided
 
-                synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
-
-                if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
-                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
+                    std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
                 }
-                else{
-                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                else{ // Archive not empty
+                    synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
                 }
             }
+
 
             else if(std::find(qbittorrentSaves.begin(), qbittorrentSaves.end(), std::string(argv[4])) != qbittorrentSaves.end()){ // Specific save date @2subparam. Check if date is valid.
 
@@ -622,7 +650,7 @@ int main(int argc, char* argv[]){
             }
             else{
                 std::vector<std::string> saveList;
-                anly.get_config_items_saved(saveList);
+                anly.get_all_saves(saveList);
                 anly.sortby_filename(saveList);
     
                 std::cout << "Showing Jackett:" << std::endl;
@@ -649,7 +677,7 @@ int main(int argc, char* argv[]){
             }
             else{
                 std::vector<std::string> saveList;
-                anly.get_config_items_saved(saveList);
+                anly.get_all_saves(saveList);
                 anly.sortby_filename(saveList);
     
                 std::cout << "Showing Prowlarr:" << std::endl;
@@ -676,7 +704,7 @@ int main(int argc, char* argv[]){
             }
             else{ // Archive not empty
                 std::vector<std::string> saveList;
-                anly.get_config_items_saved(saveList);
+                anly.get_all_saves(saveList);
                 anly.sortby_filename(saveList);
     
                 std::cout << "Showing qBittorrent:" << std::endl;
