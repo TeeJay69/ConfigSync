@@ -111,7 +111,8 @@ Install-Location
 [x] Cleanup recyclebin after x
 [x] Verify that save dir system supports multiple saves on the same day.
 [x] Check if a save exists before restoring 
-[ ] Add cleanup to sync and restore parts.
+[x] Add cleanup to sync and restore parts.
+[ ] Support restore on machine that has a different user name (Paths from maps...)
 [ ] Format --help message.
 [ ] License stuff. Include license in installer. Display license in help message.
 [ ] Add more verbose messages.

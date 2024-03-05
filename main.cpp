@@ -720,6 +720,18 @@ int main(int argc, char* argv[]){
         }
     }
 
+
+    else if(argv[2] == "list" || argv[2] == "--list"){ // 'list' @param
+
+        std::cout << "Supported Programs: " << std::endl;
+
+        unsigned int i = 1;
+        for(const auto& app : programconfig::get_support_list()){
+            std::cout << i << ". " << app << std::endl;
+            i++;
+        }
+    }
+
     
     return 0;
 }

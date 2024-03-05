@@ -209,7 +209,8 @@ class synchronizer{
         }
         
 
-
+        // Restores config from a save.
+        // Recyclebin management.
         int restore_config(const std::string dateDir, const int& recyclebinlimit){ // Main function for restoring. Uses generate_UUID, timestamp_objects, backup_config_for_restore, backup_config_for_restore, rebuild_from_backup
             // Check if programPaths exist
             for(const auto& item : programPaths){
