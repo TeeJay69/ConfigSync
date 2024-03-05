@@ -483,9 +483,10 @@ int main(int argc, char* argv[]){
         }
     }
 
-    else if(argv[2] == "status" || argv[2] == "--status"){
 
-        if(argv[3] == NULL || argv[3] == "--all"){ // default: all. No subparam
+    else if(argv[2] == "status" || argv[2] == "--status"){ // 'status' @param
+
+        if(argv[3] == NULL || argv[3] == "--all"){ // default: all. @subparam
 
             std::set<std::string> neverSaveList;
             std::set<std::string> outofSyncList;
@@ -577,7 +578,7 @@ int main(int argc, char* argv[]){
 
 
         else if(argv[3] == "qBittorrent" || argv[3] == "qbittorrent"){ // qBittorrent @subparam
-
+ 
             programconfig pcfg("qBittorrent", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "qBittorrent", exePath); // Init class
             
@@ -596,6 +597,97 @@ int main(int argc, char* argv[]){
                 else{
                     std::cout << ANSI_COLOR_RED << "Config is out of sync!" << ANSI_COLOR_RESET << std::endl;
                 }
+            }
+        }
+    }
+
+
+    else if(argv[2] == "show" || argv[2] == "--show"){ // 'show' @param
+        
+        if(argv[3] == NULL){ // default. No subparam provided
+            std::cerr << "Fatal: missing program argument." << std::endl;
+            std::cout << "See 'cfgs --help'." << std::endl;
+        }
+
+        
+        else if(argv[3] == "Jackett" || argv[3] == "jackett"){ // Jackett @subparam
+
+            programconfig pcfg("Jackett", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "Jackett", exePath); // Init class
+
+            
+            if(anly.is_archive_empty() == 1) {
+                std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
+                std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
+            }
+            else{
+                std::vector<std::string> saveList;
+                anly.get_config_items_saved(saveList);
+                anly.sortby_filename(saveList);
+    
+                std::cout << "Showing Jackett:" << std::endl;
+                
+                int i = 1;
+                for(const auto& save : saveList){ // Show all saves
+                    std::cout << i << ". " << save << std::endl;
+                    i++;
+                }
+                
+                std::cout << "Found " << saveList.size() << " saves;" << std::endl;
+            }
+        }
+
+
+        else if(argv[3] == "Prowlarr" || argv[3] == "prowlarr"){ // Prowlarr @subparam
+            programconfig pcfg("Prowlarr", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "Prowlarr", exePath); // Init class
+
+            
+            if(anly.is_archive_empty() == 1) {
+                std::cout << "Archive does not contain previous saves of Prowlarr." << std::endl;
+                std::cout << "Use 'cfgs --sync prowlarr' to create one." << std::endl;
+            }
+            else{
+                std::vector<std::string> saveList;
+                anly.get_config_items_saved(saveList);
+                anly.sortby_filename(saveList);
+    
+                std::cout << "Showing Prowlarr:" << std::endl;
+                
+                int i = 1;
+                for(const auto& save : saveList){ // Show all saves
+                    std::cout << i << ". " << save << std::endl;
+                    i++;
+                }
+                
+                std::cout << "Found " << saveList.size() << " saves;" << std::endl;
+            }
+        }
+
+
+        else if(argv[3] == "qBittorrent" || argv[3] == "qbittorrent"){ // qBittorrent @subparam
+            programconfig pcfg("qBittorrent", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "qBittorrent", exePath); // Init class
+
+            
+            if(anly.is_archive_empty() == 1) { // Archive empty
+                std::cout << "Archive does not contain previous saves of qBittorrent." << std::endl;
+                std::cout << "Use 'cfgs --sync qbittorrent' to create a save." << std::endl;
+            }
+            else{ // Archive not empty
+                std::vector<std::string> saveList;
+                anly.get_config_items_saved(saveList);
+                anly.sortby_filename(saveList);
+    
+                std::cout << "Showing qBittorrent:" << std::endl;
+                
+                int i = 1;
+                for(const auto& save : saveList){ // Show all saves
+                    std::cout << i << ". " << save << std::endl;
+                    i++;
+                }
+                
+                std::cout << "Found " << saveList.size() << " saves;" << std::endl;
             }
         }
     }
