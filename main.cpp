@@ -11,6 +11,8 @@
 #include <boost\uuid\uuid_generators.hpp>
 #include <boost\filesystem\operations.hpp>
 #include <boost\filesystem\path.hpp>
+#include <boost\property_tree\ptree.hpp>
+#include <boost\property_tree\json_parser.hpp>
 #include "analyzer.hpp"
 #include "programs.hpp"
 #include "synchronizer.hpp"
@@ -23,8 +25,7 @@
 #define DEBUG_MODE 0
 #endif
 
-#define SAVELIMIT 3
-#define RECYCLELIMIT 3
+#define SETTINGS_ID 1
 #define VERSION "v0.1.0"
 
 
@@ -91,6 +92,43 @@ int main(int argc, char* argv[]){
     exePathBfs = (boost::filesystem::system_complete(boost::filesystem::path(argv[0])));
     std::string exePath = exePathBfs.string();
     
+
+    // Settings @section
+    boost::property_tree::ptree pt;
+    
+    if(std::filesystem::exists("config.json") == false){ // Create default settings
+        
+        pt.put("settingsID", SETTINGS_ID); // Settings identifier for updates
+
+        pt.put("RECYCLELIMIT", 3);
+        pt.put("SAVELIMIT", 3);
+        
+        boost::property_tree::write_json("config.json", pt);
+
+        
+
+    }
+    else{ // Settings file exists
+        //! handle settings across updates
+        // After an update, the first time we run the program, it will go to this section.
+        
+        boost::property_tree::read_json("config.json", pt); // read config
+        int settingsID = pt.get<int>("settingsID");
+
+
+        if(settingsID == SETTINGS_ID){ // Matching settingsID
+            // Do nothing, pt contains correct config
+        }
+
+        else{ // Differing settingsID
+            //! merge config.
+            // Write this section when you create a version that made changes to the config file.
+            // Create the new config file after merging.
+        }
+    }
+
+    
+    
     // Parse command line options:
     if(argv[1] == NULL){ // No params, display Copyright Notice
         std::cout << "ConfigSync (TJ-coreutils) " << VERSION << std::endl;
@@ -153,7 +191,7 @@ int main(int argc, char* argv[]){
                 syncedList.push_back("Jackett");
 
                 // Limit number of saves
-                janitor.limit_enforcer_configarchive(SAVELIMIT, jackett.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), jackett.get_archive_path().string()); // Cleanup
             }
 
             // Sync Prowlarr
@@ -163,7 +201,7 @@ int main(int argc, char* argv[]){
                 syncedList.push_back("Prowlarr");
 
                 // Limit number of saves
-                janitor.limit_enforcer_configarchive(SAVELIMIT, prowlarr.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), prowlarr.get_archive_path().string()); // Cleanup
             }
 
             // Sync qBittorrent
@@ -173,7 +211,7 @@ int main(int argc, char* argv[]){
                 syncedList.push_back("qBittorrent");
 
                 // Limit number of saves
-                janitor.limit_enforcer_configarchive(SAVELIMIT, qbittorrent.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), qbittorrent.get_archive_path().string()); // Cleanup
             };
             
 
@@ -202,7 +240,7 @@ int main(int argc, char* argv[]){
             if(create_save(pPaths, "Jackett", jackett.get_archive_path().string(), exePath) == 1){ // save config
                 // Limit num of saves
                 organizer janitor;
-                janitor.limit_enforcer_configarchive(SAVELIMIT, jackett.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), jackett.get_archive_path().string()); // Cleanup
 
                 std::cout << ANSI_COLOR_GREEN << "Synchronization of Jackett finished." << ANSI_COLOR_RESET << std::endl;
             }
@@ -224,7 +262,7 @@ int main(int argc, char* argv[]){
             if(create_save(pPaths, "Prowlarr", prowlarr.get_archive_path().string(), exePath) == 1){
                 // Limit num of saves
                 organizer janitor;
-                janitor.limit_enforcer_configarchive(SAVELIMIT, prowlarr.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), prowlarr.get_archive_path().string()); // Cleanup
 
                 std::cout << ANSI_COLOR_GREEN << "Synchronization of Prowlarr finished." << ANSI_COLOR_RESET << std::endl;
 
@@ -247,7 +285,7 @@ int main(int argc, char* argv[]){
             if(create_save(pPaths, "qBittorrent", qbittorrent.get_archive_path().string(), exePath) == 1){
                 // Limit num of saves
                 organizer janitor;
-                janitor.limit_enforcer_configarchive(SAVELIMIT, qbittorrent.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), qbittorrent.get_archive_path().string()); // Cleanup
 
                 std::cout << ANSI_COLOR_GREEN << "Synchronization of qBittorrent finished." << ANSI_COLOR_RESET << std::endl;
 
@@ -289,7 +327,7 @@ int main(int argc, char* argv[]){
                 failList.push_back("Jackett");
             }
             else{ // Archive not empty
-                if(syncJackett.restore_config(anlyJackett.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                if(syncJackett.restore_config(anlyJackett.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
                     std::cout << ANSI_COLOR_GREEN << "Jackett rollback successfull!" << ANSI_COLOR_RESET << std::endl;
                     jackettState = 1;
                 }
@@ -313,7 +351,7 @@ int main(int argc, char* argv[]){
                 failList.push_back("Prowlarr");
             }
             else{ // Archive not empty
-                if(syncProw.restore_config(anlyProw.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                if(syncProw.restore_config(anlyProw.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
                     std::cout << ANSI_COLOR_GREEN << "Prowlarr rollback successfull!" << ANSI_COLOR_RESET << std::endl;
                     prowlarrState = 1;
                 }
@@ -337,7 +375,7 @@ int main(int argc, char* argv[]){
                 failList.push_back("qBittorrent");
             }
             else{ // Archive not empty
-                if(syncQbit.restore_config(anlyQbit.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                if(syncQbit.restore_config(anlyQbit.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
                     std::cout << ANSI_COLOR_GREEN << "qBittorrent rollback successfull!" << ANSI_COLOR_RESET << std::endl;
                     qbitState = 1;
                 }
@@ -385,7 +423,7 @@ int main(int argc, char* argv[]){
                 else{ // Archive not empty
                     synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
 
-                    if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                     }
                     else{
@@ -400,7 +438,7 @@ int main(int argc, char* argv[]){
 
                 synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
 
-                if(sync.restore_config(std::string(argv[4]), RECYCLELIMIT) == 1){ // Restore from user defined save date<
+                if(sync.restore_config(std::string(argv[4]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date<
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -434,7 +472,7 @@ int main(int argc, char* argv[]){
                 else{ // Archive not empty
                     synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
 
-                    if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                     }
                     else{
@@ -448,7 +486,7 @@ int main(int argc, char* argv[]){
 
                 synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
 
-                if(sync.restore_config(std::string(argv[4]), RECYCLELIMIT) == 1){ // Restore from user defined save date
+                if(sync.restore_config(std::string(argv[4]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -482,7 +520,7 @@ int main(int argc, char* argv[]){
                 else{ // Archive not empty
                     synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
 
-                    if(sync.restore_config(anly.get_newest_backup_path(), RECYCLELIMIT) == 1){ // Restore from newest save
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                     }
                     else{
@@ -496,7 +534,7 @@ int main(int argc, char* argv[]){
 
                 synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
 
-                if(sync.restore_config(std::string(argv[4]), RECYCLELIMIT) == 1){ // Restore from user defined save date
+                if(sync.restore_config(std::string(argv[4]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -732,6 +770,12 @@ int main(int argc, char* argv[]){
         }
     }
 
+
+    else if(argv[2] == "settings" || argv[2] == "--settings"){ // 'settings' @param 
+        
+        std::cout << ANSI_COLOR_YELLOW << "Settings: " << ANSI_COLOR_RESET << std::endl;
+        
+    }
     
     return 0;
 }

@@ -51,7 +51,8 @@
         
 
     + settings
-        - Scheduled task On/Off 
+        - --default reset settings.
+        - Scheduled task On/Off
             - No intervall provided: default:xxx
         - Change Intervall of scheduled task
         - Show never synced apps in 'status'
@@ -78,6 +79,23 @@
 - Support running program through explorer
 
 - Option to install on a USB stick, so that the archive is on the flash drive and restoring on a new pc is easier.
+
+
+
+When your application initializes:
+
+Load the existing configuration file, regardless of its version.
+If the version does not match what's current for the application:
+Create a new blank property tree for the new configuration
+For each node in the tree, have a set of expected property names, and a function pointer or similar to get this setting if it's absent in the old file's tree. If a setting changes its format, give it a new name.
+Search for each setting in the old tree, copying it if it's found, and using the result of the supplied function if it's not.
+Save your new settings file.
+Your "missing setting" functions can:
+
+Return a constant default value.
+Query the tree for a different setting and convert it (with a default value if the old setting isn't found either)
+Ask the user
+
 
 - Structure:
 
@@ -124,7 +142,7 @@ Install-Location
 # Reevaluate:
 
 // TODO: Make database path copy function self referencing with error message parameter. Use only this function wherever you copy database paths
-- Sync argument shouldnt default to all programs. 'sync --all' for synchronizing all programs 
+- Sync argument shouldnt default to all programs. 'sync --all' for synchronizing all programs
 - Message 'Config is in sync' instead of 'Config is up to date'
 - Display last save for every program, 'cfgs status' --default 
 - Change 'Rollback complete' to 'Successfully restored <program name>' or 'Restored <programname> successfully'
