@@ -51,7 +51,9 @@
         
 
     + settings
-        - --default reset settings.
+        - --show-default, shows default settings.
+        - --json, opens config file
+        - 
         - Scheduled task On/Off
             - No intervall provided: default:xxx
         - Change Intervall of scheduled task

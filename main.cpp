@@ -109,9 +109,6 @@ int main(int argc, char* argv[]){
 
     }
     else{ // Settings file exists
-        //! handle settings across updates
-        // After an update, the first time we run the program, it will go to this section.
-        
         boost::property_tree::read_json("config.json", pt); // read config
         int settingsID = pt.get<int>("settingsID");
 
@@ -119,7 +116,6 @@ int main(int argc, char* argv[]){
         if(settingsID == SETTINGS_ID){ // Matching settingsID
             // Do nothing, pt contains correct config
         }
-
         else{ // Differing settingsID
             //! merge config.
             // Write this section when you create a version that made changes to the config file.
@@ -137,12 +133,12 @@ int main(int argc, char* argv[]){
         std::exit(EXIT_SUCCESS);
     }
 
-    if(argv[2] == "version" || argv[2] == "--version"){ // Version @param
+    if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version"){ // Version @param
         std::cout << "ConfigSync " << VERSION << std::endl;
         std::exit(EXIT_SUCCESS);
     }
 
-    if(argv[2] == "help" || argv[2] == "--help"){ // Help message @param
+    if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help"){ // Help message @param
         std::cout << "ConfigSync (TJ-coreutils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
         std::cout << "The Config-Synchronizer utility enables saving, restoring of programs configuration files.\n" << std::endl;
@@ -151,9 +147,9 @@ int main(int argc, char* argv[]){
     }
 
 
-    if(argv[2] == "sync" || argv[2] == "--sync" || argv[2] == "save" || argv[2] == "--save"){ // Sync @param
+    if(std::string(argv[1]) == "sync" || std::string(argv[1]) == "--sync" || std::string(argv[1]) == "save" || std::string(argv[1]) == "--save"){ // Sync @param
 
-        if(argv[3] == NULL){ // Default behavior. Create a save of all supported, installed programs. No subparam provided
+        if(argv[2] == NULL){ // Default behavior. Create a save of all supported, installed programs. No subparam provided
             
             // Get program paths
             programconfig jackett("Jackett", exePath);
@@ -226,7 +222,7 @@ int main(int argc, char* argv[]){
             }
         }
 
-        else if(argv[3] == "jackett" || argv[3] == "Jackett"){ // Jackett sync @subparam
+        else if(std::string(argv[2]) == "jackett" || std::string(argv[2]) == "Jackett"){ // Jackett sync @subparam
             // Get program path
             programconfig jackett("Jackett", exePath);
             std::vector<std::string> pPaths = jackett.get_config_paths();
@@ -249,7 +245,7 @@ int main(int argc, char* argv[]){
             }
         }
 
-        else if(argv[3] == "prowlarr" || argv[3] == "Prowlarr"){ // Prowlarr sync @subparam
+        else if(std::string(argv[2]) == "prowlarr" || std::string(argv[2]) == "Prowlarr"){ // Prowlarr sync @subparam
             // Get program paths
             programconfig prowlarr("Prowlarr", exePath);
             std::vector<std::string> pPaths = prowlarr.get_config_paths();
@@ -272,7 +268,7 @@ int main(int argc, char* argv[]){
             }
         }
 
-        else if(argv[3] == "qBittorrent" || argv[3] == "qbittorrent"){  // qBittorrent sync @subparam
+        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){  // qBittorrent sync @subparam
             // Get program paths
             programconfig qbittorrent("qBittorrent", exePath);
             std::vector<std::string> pPaths = qbittorrent.get_config_paths();
@@ -296,20 +292,20 @@ int main(int argc, char* argv[]){
         }
 
         else{ // Invalid subparam provided
-            std::cerr << "'" << argv[3] << "' is not a configsync command. See 'cfgs --help'." << std::endl;
+            std::cerr << "'" << argv[2] << "' is not a configsync command. See 'cfgs --help'." << std::endl;
         }
     }
 
 
-    else if(argv[2] == "restore" || argv[2] == "--restore"){ // Restore @param
+    else if(std::string(argv[1]) == "restore" || std::string(argv[1]) == "--restore"){ // Restore @param
 
-        if(argv[3] == NULL){ // No program provided. Display advice. No subparam provided.
+        if(argv[2] == NULL){ // No program provided. Display advice. No subparam provided.
             std::cout << "Fatal: Missing program or restore argument." << std::endl;
             std::cout << "For usage see 'cfgs --help'" << std::endl;
         }
 
         
-        else if(argv[3] == "all" || argv[3] == "--all"){ // '--all' @subparam
+        else if(std::string(argv[2]) == "all" || std::string(argv[2]) == "--all"){ // '--all' @subparam
             std::cout << ANSI_COLOR_YELLOW << "Restoring all supported programs with latest save..." << ANSI_COLOR_RESET << std::endl;
             
             std::vector<std::string> failList;
@@ -403,7 +399,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(argv[3] == "Jackett" || argv[3] == "jackett"){ // Jackett @subparam
+        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett @subparam
             
             programconfig jackett("Jackett", exePath); // Initialize class
             std::vector<std::string> pPaths = jackett.get_config_paths(); // Get program paths
@@ -414,7 +410,7 @@ int main(int argc, char* argv[]){
             anly.get_all_saves(jackettSaves);
 
 
-            if(argv[4] == NULL){ // default behavior. Use latest save. No 2subparam provided
+            if(argv[3] == NULL){ // default behavior. Use latest save. No 2subparam provided
 
                 if(anly.is_archive_empty() == 1){ // Archive empty
                     std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
@@ -434,11 +430,11 @@ int main(int argc, char* argv[]){
             }
 
 
-            else if(std::find(jackettSaves.begin(), jackettSaves.end(), std::string(argv[4])) != jackettSaves.end()){ // Specific save date @2subparam. Check if date is valid.
+            else if(std::find(jackettSaves.begin(), jackettSaves.end(), std::string(argv[3])) != jackettSaves.end()){ // Specific save date @2subparam. Check if date is valid.
 
                 synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
 
-                if(sync.restore_config(std::string(argv[4]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date<
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date<
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -447,13 +443,13 @@ int main(int argc, char* argv[]){
             }
 
             else{ // Invalid 2subparameter (not null + not valid)
-                std::cerr << "Fatal: '" << argv[4] << "' is not a valid date." << std::endl;
+                std::cerr << "Fatal: '" << argv[3] << "' is not a valid date." << std::endl;
                 std::cout << "To view all save dates use 'cfgs --show jackett'" << std::endl;
             }
         }
 
 
-        else if(argv[3] == "Prowlarr" || argv[3] == "prowlarr"){ // Prowlarr @subparam
+        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr @subparam
             programconfig prowlarr("Prowlarr", exePath); // Initialize class
             std::vector<std::string> pPaths = prowlarr.get_config_paths(); // Get program paths
             
@@ -463,7 +459,7 @@ int main(int argc, char* argv[]){
             anly.get_all_saves(prowlarrSaves);
 
 
-            if(argv[4] == NULL){ // default behavior. Use latest save. No 2subparam provided
+            if(argv[3] == NULL){ // default behavior. Use latest save. No 2subparam provided
 
                 if(anly.is_archive_empty() == 1){ // Archive empty
                     std::cout << "Archive does not contain previous saves of Prowlarr." << std::endl;
@@ -482,11 +478,11 @@ int main(int argc, char* argv[]){
             }
 
 
-            else if(std::find(prowlarrSaves.begin(), prowlarrSaves.end(), std::string(argv[4])) != prowlarrSaves.end()){ // Specific save date @2subparam. Check if date is valid.
+            else if(std::find(prowlarrSaves.begin(), prowlarrSaves.end(), std::string(argv[3])) != prowlarrSaves.end()){ // Specific save date @2subparam. Check if date is valid.
 
                 synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
 
-                if(sync.restore_config(std::string(argv[4]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -495,13 +491,13 @@ int main(int argc, char* argv[]){
             }
 
             else{ // Invalid 2subparameter (not null + not valid)
-                std::cerr << "Fatal: '" << argv[4] << "' is not a valid date." << std::endl;
+                std::cerr << "Fatal: '" << argv[3] << "' is not a valid date." << std::endl;
                 std::cout << "To view all save dates use 'cfgs --show prowlarr'" << std::endl;
             }
         }
         
 
-        else if(argv[3] == "qBittorrent" || argv[3] == "qbittorrent"){ // qBittorrent @subparam
+        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent @subparam
             programconfig qbittorrent("qBittorrent", exePath); // Initialize class
             std::vector<std::string> pPaths = qbittorrent.get_config_paths(); // Get program paths
             
@@ -511,7 +507,7 @@ int main(int argc, char* argv[]){
             anly.get_all_saves(qbittorrentSaves);
 
 
-            if(argv[4] == NULL){ // default behavior. Use latest save. No 2subparam provided
+            if(argv[3] == NULL){ // default behavior. Use latest save. No 2subparam provided
 
                 if(anly.is_archive_empty() == 1){ // Archive empty
                     std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
@@ -530,11 +526,11 @@ int main(int argc, char* argv[]){
             }
 
 
-            else if(std::find(qbittorrentSaves.begin(), qbittorrentSaves.end(), std::string(argv[4])) != qbittorrentSaves.end()){ // Specific save date @2subparam. Check if date is valid.
+            else if(std::find(qbittorrentSaves.begin(), qbittorrentSaves.end(), std::string(argv[3])) != qbittorrentSaves.end()){ // Specific save date @2subparam. Check if date is valid.
 
                 synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
 
-                if(sync.restore_config(std::string(argv[4]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -543,16 +539,16 @@ int main(int argc, char* argv[]){
             }
 
             else{ // Invalid 2subparameter (not null + not valid)
-                std::cerr << "Fatal: '" << argv[4] << "' is not a valid date." << std::endl;
+                std::cerr << "Fatal: '" << argv[3] << "' is not a valid date." << std::endl;
                 std::cout << "To view all save dates use 'cfgs --show qbittorrent'" << std::endl;
             }
         }
     }
 
 
-    else if(argv[2] == "status" || argv[2] == "--status"){ // 'status' @param
+    else if(std::string(argv[1]) == "status" || std::string(argv[1]) == "--status"){ // 'status' @param
 
-        if(argv[3] == NULL || argv[3] == "--all"){ // default: all. @subparam
+        if(argv[2] == NULL || std::string(argv[2]) == "--all"){ // default: all. @subparam
 
             std::set<std::string> neverSaveList;
             std::set<std::string> outofSyncList;
@@ -595,7 +591,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(argv[3] == "Jackett" || argv[3] == "jackett"){ // Jackett @subparam
+        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett @subparam
 
             programconfig pcfg("Jackett", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "Jackett", exePath); // Init class
@@ -619,7 +615,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(argv[3] == "Prowlarr" || argv[3] == "prowlarr"){ // Prowlarr @subparam
+        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr @subparam
 
             programconfig pcfg("Prowlarr", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "Prowlarr", exePath); // Init class
@@ -643,7 +639,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(argv[3] == "qBittorrent" || argv[3] == "qbittorrent"){ // qBittorrent @subparam
+        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent @subparam
  
             programconfig pcfg("qBittorrent", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "qBittorrent", exePath); // Init class
@@ -668,15 +664,15 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(argv[2] == "show" || argv[2] == "--show"){ // 'show' @param
+    else if(std::string(argv[1]) == "show" || std::string(argv[1]) == "--show"){ // 'show' @param
         
-        if(argv[3] == NULL){ // default. No subparam provided
+        if(argv[2] == NULL){ // default. No subparam provided
             std::cerr << "Fatal: missing program argument." << std::endl;
             std::cout << "See 'cfgs --help'." << std::endl;
         }
 
         
-        else if(argv[3] == "Jackett" || argv[3] == "jackett"){ // Jackett @subparam
+        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett @subparam
 
             programconfig pcfg("Jackett", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "Jackett", exePath); // Init class
@@ -704,7 +700,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(argv[3] == "Prowlarr" || argv[3] == "prowlarr"){ // Prowlarr @subparam
+        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr @subparam
             programconfig pcfg("Prowlarr", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "Prowlarr", exePath); // Init class
 
@@ -731,7 +727,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(argv[3] == "qBittorrent" || argv[3] == "qbittorrent"){ // qBittorrent @subparam
+        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent @subparam
             programconfig pcfg("qBittorrent", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "qBittorrent", exePath); // Init class
 
@@ -759,7 +755,7 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(argv[2] == "list" || argv[2] == "--list"){ // 'list' @param
+    else if(std::string(argv[1]) == "list" || std::string(argv[1]) == "--list"){ // 'list' @param
 
         std::cout << "Supported Programs: " << std::endl;
 
@@ -771,9 +767,36 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(argv[2] == "settings" || argv[2] == "--settings"){ // 'settings' @param 
+    else if(std::string(argv[1]) == "settings" || std::string(argv[1]) == "--settings"){ // 'settings' @param 
         
-        std::cout << ANSI_COLOR_YELLOW << "Settings: " << ANSI_COLOR_RESET << std::endl;
+        if(argv[2] == NULL){ //* Default. No subparam provided.
+            std::cout << ANSI_COLOR_YELLOW << "Settings: " << ANSI_COLOR_RESET << std::endl;
+
+            std::cout << "Config save limit:            " << ANSI_COLOR_50 << pt.get<int>("SAVELIMIT") << std::endl;
+            std::cout << "See 'cfgs settings.save <limit>" << std::endl << std::endl;
+            
+            std::cout << "Backup recycle bin limit:     " << ANSI_COLOR_50 << pt.get<int>("RECYCLELIMIT") << std::endl;
+            std::cout << "See 'cfgs settings.recycle <limit>" << std::endl << std::endl;
+
+            std::cout << "Scheduled Task On/Off:        " << ANSI_COLOR_50 << pt.get<int>("scheduledTask") << std::endl;
+            std::cout << "See 'cfgs settings.task <On/Off>" << std::endl << std::endl;
+
+            std::cout << "Scheduled Task Frequency:     " << ANSI_COLOR_50 << pt.get<int>("scheduledTaskFrequency") << std::endl;
+            std::cout << "See 'cfgs settings.schedule <On/Off>" << std::endl << std::endl;
+
+            std::cout << "For reset, see 'cfgs settings.reset'" << std::endl;
+        }
+
+
+        else if(std::string(argv[2]) == "--json" || std::string(argv[2]) == "json"){ //* 'json' @subparam
+        
+            std::string codeComm = "cmd /c code \"" + exePath + "\\config.json\"";
+
+            if(system(codeComm.c_str()) != 0){ // Open config with vscode
+                std::string notepadComm = "cmd /c notepad \"" + exePath + "\\config.json\"";
+                std::system(notepadComm.c_str()); // Open with notepad
+            }
+        }
         
     }
     
