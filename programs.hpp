@@ -28,7 +28,7 @@ class programconfig{
         }
 
 
-        std::string getUsername(){
+        static std::string get_username(){
             std::string x = std::getenv("username");
             return x;
         }
@@ -36,7 +36,7 @@ class programconfig{
 
         std::vector<std::string> get_config_paths(){
             
-            std::string userName = getUsername();
+            std::string userName = get_username();
 
             // Jackett
             if(programName == "Jackett"){

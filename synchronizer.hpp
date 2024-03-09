@@ -9,9 +9,11 @@
 #include <boost\uuid\uuid.hpp>
 #include <boost\uuid\uuid_generators.hpp>
 #include <boost\uuid\uuid_io.hpp>
+#include <boost\regex.hpp>
 #include <map>
 #include <chrono>
 #include "database.hpp"
+#include "programs.hpp"
 #include "ANSIcolor.hpp"
 
 
@@ -82,10 +84,11 @@ class synchronizer{
                 std::filesystem::remove(archivePathAbs + "\\" + dateDir);
                 std::filesystem::create_directories(archivePathAbs + "\\" + dateDir);
             }
+            
 
 
             // PathDatabase location is inside the dateDir
-            std::string databasePath = archivePathAbs + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin";
+            std::string databasePath = archivePathAbs + "\\" + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin";
             std::map<std::string, std::string> pathMap;
 
             // Copy process
@@ -126,6 +129,12 @@ class synchronizer{
             database db(databasePath);
             db.storeStringMap(pathMap);
 
+            /* Create username file */
+            std::ofstream idfile(archivePathAbs + "\\" + programName + "\\" + dateDir + "\\id.bin");
+            std::string username = programconfig::get_username();
+            database::encodeStringWithPrefix(idfile, username);
+
+            
             return 1;
         }
 
@@ -147,7 +156,7 @@ class synchronizer{
             }
 
             // databasePath inside temp UUID dir 
-            std::string databasePath = backupDir + "\\temp\\" + dirUUID;
+            std::string databasePath = backupDir + "\\temp\\" + dirUUID + "\\" + "ConfigSync-PathDatabase.bin";
             std::map<std::string, std::string> pathMap;
 
             // Backup to UUID directory
@@ -209,8 +218,63 @@ class synchronizer{
         }
         
 
-        // Restores config from a save.
-        // Recyclebin management.
+        /**
+         * @brief Convert username of paths as elements of a map.
+         * @param map Map of type <std::string, std::string> containing paths.
+         * @param newUser The new username.
+         */
+        static void transform_pathmap_new_username(std::map<std::string, std::string>& map, const std::string& newUser){
+            
+            const boost::regex pattern("C:\\\\Users\\\\");
+            const boost::regex repPattern("(?<=C:\\\\Users\\\\)(.+?)\\\\");
+            
+            for(const auto & pair : map){
+                
+                auto keyMatches = boost::smatch{};
+                auto valueMatches = boost::smatch{};
+
+                std::string newKey;
+                std::string newValue;
+
+                
+                /* Check key */
+                if(boost::regex_search(pair.first, keyMatches, pattern)){
+                    
+                    newKey = boost::regex_replace(pair.first, repPattern, newUser);
+
+                    /* Search value */
+                    if(boost::regex_search(pair.second, valueMatches, pattern)){
+                        
+                        newValue = boost::regex_replace(pair.second, repPattern, newUser);    
+
+                        /* Replace map element */
+                        map.erase(pair.first); // Remove key value pair
+                        map.insert(std::make_pair(newKey, newValue));
+                    }
+                    else{ // Replace key when value did not contain username
+
+                        map.erase(pair.first);
+                        map.insert(std::make_pair(newKey, pair.second));
+                    }
+                }
+
+                /* Check value when key did not contain username */
+                else if(boost::regex_search(pair.second, valueMatches, pattern)){
+                    newValue = boost::regex_replace(pair.second, repPattern, newUser);
+
+                    /* Replace value  */
+                    map[pair.first] = newValue;
+                }
+            }
+        }
+
+
+        /**
+         * @brief Replace a programs config with a save from the config archive.
+         * @param dateDir Date to identify the save.
+         * @param recyclebinlimit Amount of backups to keep of a single programs config, resulting from the restore process (backup_config_for_restore function).
+         * @note The recycle bin management occurs automatically.
+         */
         int restore_config(const std::string dateDir, const int& recyclebinlimit){ // Main function for restoring. Uses generate_UUID, timestamp_objects, backup_config_for_restore, backup_config_for_restore, rebuild_from_backup
             // Check if programPaths exist
             for(const auto& item : programPaths){
@@ -220,7 +284,7 @@ class synchronizer{
                 }
             }
 
-            // Backup config:
+            /* Create backup of current config */
             std::string backupDir = exeLocation + "\\ConfigBackup\\" + programName;
             std::string dirUUID = generate_UUID();
             std::map<unsigned long long, std::string> recycleMap; // Stores recycleBin items with timestamps
@@ -253,6 +317,17 @@ class synchronizer{
             db.readStringMap(pathMap);
 
 
+            /* Get username file */
+            std::string idPath = exeLocation + "\\ConfigArchive\\" + programName + "\\" + dateDir + "\\id.bin";
+            std::ifstream idFile(idPath);
+            std::string id = database::read_lenght_prefix_encoded_string(idFile);
+
+            if(id != programconfig::get_username()){ // Check if username is still valid
+                transform_pathmap_new_username(pathMap, id); // Update username
+            }
+
+
+            
             // Replace config
             for(const auto& pair : pathMap){
                 try{

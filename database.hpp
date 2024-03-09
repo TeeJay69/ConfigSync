@@ -14,7 +14,7 @@ class database{
         database(const std::string& path) : filePath(path) {}
 
         
-        void encodeStringWithPrefix(std::ofstream& file, std::string& str){
+        static void encodeStringWithPrefix(std::ofstream& file, std::string& str){
             // get length of string
             size_t length = str.length();
 
@@ -24,7 +24,7 @@ class database{
         }
         
 
-        std::string encryptString(std::string str){
+        static std::string encryptString(std::string str){
             std::vector<std::string> keys = {
                 "lsßg8shefayy9zuier10101938949kjsiwwUIEJAPCNrßrprl",
                 "pa0ßßrYfokfjsvqpplmaxncjviibuhbvgzztfcdrrexswyqqe62293",
@@ -42,6 +42,47 @@ class database{
             }
 
             str.assign(charVector.begin(), charVector.end());
+            return str;
+        }
+
+
+        static std::string read_lenght_prefix_encoded_string(std::ifstream& file){
+            if(!file.is_open()){
+                throw std::runtime_error("Failed to open file in, (readStringMap)");
+            }
+            
+            size_t prefix;
+            std::string str;
+
+            // Read string
+            file.read(reinterpret_cast<char*>(&prefix), sizeof(size_t)); // Read length prefix into "size_t prefix" from binary, number of bytes of size_t
+            str.resize(prefix); // adjust string buffer for .read
+            file.read(str.data(), prefix);
+            
+            file.close();
+            
+            return str;
+        }
+
+
+        static std::string read_length_prefix_encoded_encrypted_string(std::ifstream& file){
+            if(!file.is_open()){
+                throw std::runtime_error("Failed to open file in, (readStringMap)");
+            }
+            
+            size_t prefix;
+            std::string str;
+
+            // Read string
+            file.read(reinterpret_cast<char*>(&prefix), sizeof(size_t)); // Read length prefix into "size_t prefix" from binary, number of bytes of size_t
+            str.resize(prefix); // adjust string buffer for .read
+            file.read(str.data(), prefix);
+
+            // Decrypt string
+            str = encryptString(str);
+            
+            file.close();
+            
             return str;
         }
 

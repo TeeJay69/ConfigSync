@@ -1,8 +1,8 @@
 # ConfigSync Development Plan
 
 
--------------------------------------------------.
-# Minimal description:
+
+## Minimal description:
  - Makes restoring the configuration/settings of programs easier when reinstalling them or when moving to a new system etc
     - bckup Compress-Log
     - Cura Slicer
@@ -16,10 +16,9 @@
     - Chrome
     - Firefox
 
--------------------------------------------------.
 
--------------------------------------------------.
-# Feature Dev:
+
+## Feature Dev:
 
 - ~~Per program stores config in extra directory by date.~~
 - ~~Checks if config changed.~~
@@ -77,6 +76,7 @@
         - Notify when new version is not backward compatible. 
             - Ask if user is ok with removing the saves.
             - Option to move current install to configsync.old
+    - Update
 
 - Support running program through explorer
 
@@ -122,48 +122,53 @@ Install-Location
         |       |---327366
         |
         |---Program-2
--------------------------------------------------
-            
--------------------------------------------------
-# Critical ToDo's:
-[x] Fix hardcoded absolute program location problem. Program needs the absolute location where its stored on the filesystem, not where its run from!
-[x] Check that we keep the copy of the config (because of restore) after program has run --> When restoring we backup to configbackup\programname\temp\. When restoring we copy contents of temp to configbackup\programname\recyclebin.
-[x] Cleanup recyclebin after x
-[x] Verify that save dir system supports multiple saves on the same day.
-[x] Check if a save exists before restoring 
-[x] Add cleanup to sync and restore parts.
-[ ] Support restore on machine that has a different user name (Paths from maps...)
-[ ] Format --help message.
-[ ] License stuff. Include license in installer. Display license in help message.
-[ ] Add more verbose messages.
-[ ] Support pointing to existing Archive during installation (Copy existing Archive to installation directory).
-[ ] Support CMake
--------------------------------------------------
 
--------------------------------------------------
-# Reevaluate:
+            
+
+## Critical ToDo's:
+- [x] Fix hardcoded absolute program location problem. Program needs the absolute location where its stored on the filesystem, not where its run from!
+- [x] Check that we keep the copy of the config (because of restore) after program has run --> When restoring we backup to configbackup\programname\temp\. When restoring we copy contents of temp to configbackup\programname\recyclebin.
+- [x] Cleanup recyclebin after x
+- [x] Verify that save dir system supports multiple saves on the same day.
+- [x] Check if a save exists before restoring 
+- [x] Add cleanup to sync and restore parts.
+- [x] Support restore on machine that has a different user name (Paths from maps...)
+- [ ] Format --help message.
+- [ ] License stuff. Include license in installer. Display license in help message.
+- [ ] Add more verbose messages.
+- [ ] Add disclaimer for runas admin before restoring. (Folder access) (something like, may require running from elevated command prompt)
+- [ ] Support pointing to existing Archive during installation (Copy existing Archive to installation directory).
+- [ ] Support CMake
+- [ ] Add logging
+- [ ] Catch `Ctrl + C`
+- [ ] Doxygen comments
+
+
+
+## Reevaluate:
 
 // TODO: Make database path copy function self referencing with error message parameter. Use only this function wherever you copy database paths
 - Sync argument shouldnt default to all programs. 'sync --all' for synchronizing all programs
 - Message 'Config is in sync' instead of 'Config is up to date'
 - Display last save for every program, 'cfgs status' --default 
 - Change 'Rollback complete' to 'Successfully restored <program name>' or 'Restored <programname> successfully'
--------------------------------------------------
-
--------------------------------------------------
-# Feature requests:
-
-- Implement incremental config saves, (storing modified files in vector)
-- Write the integer map in database.hpp serialized to a binary file. 
-- Let user change number of saves to keep
-- Let user delete saves
-- Option to change default behavior of restore param (Disable auto default to newest save, instead show save dates for a program. Let user select the date that he wants to restore)
-- Option to identify specific save date with an alias (Like '12.November')
--------------------------------------------------
 
 
--------------------------------------------------
-# Trashcan:
+
+## Feature requests:
+
+- [ ] Implement incremental config saves, (storing modified files in vector)
+- [ ] Write the integer map in database.hpp serialized to a binary file. 
+- [ ] Let user change number of saves to keep
+- [ ] Let user delete saves
+- [ ] Option to change default behavior of restore param (Disable auto default to newest save, instead show save dates for a program. Let user select the date that he wants to restore)
+- [ ] Option to identify specific save date with an alias (Like '12.November')
+- [ ] Finer control over task frequency
+- [ ] Verbose message showing old setting vs new setting when changing settigns
+- [ ] Backup settings file, in case primary gets corrupted or messed with.
+- [ ] Verify settings file using hash function.
+
+## Trashcan:
 
 <!-- - Combine show and status arguments' -->
 
@@ -181,10 +186,10 @@ restore config:
         - ~~move backup inside the ConfigBackup\\program\\temp directory to ConfigBackup\\program\\RecycleBin~~
         - ~~If RecycleBin has more than x number of items, delete x number of oldest items in RecycleBin directory.~~
         - ~~Inform user that config was restored successfully~~ -->
--------------------------------------------------
 
--------------------------------------------------
-# Parking Lot
+
+
+## Parking Lot
     if(argc <= 1){
         std::cout << "This program is currently CLI only.\nPlease open a command prompt or powershell window and run it from there.\n";
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));

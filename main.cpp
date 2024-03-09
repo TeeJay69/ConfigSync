@@ -7,6 +7,7 @@
 #include <chrono>
 #include <thread>
 #include <set>
+#include <cctype>
 #include <boost\uuid\uuid.hpp>
 #include <boost\uuid\uuid_generators.hpp>
 #include <boost\filesystem\operations.hpp>
@@ -76,7 +77,7 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
             }
         }
     }
-    else{
+    else{   
         std::cerr << "Verification of " << program << " location failed." << std::endl;
         return 0;
     }
@@ -85,47 +86,202 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
 }
 
 
+
+class task{
+    public:
+        /**
+         * @brief Creates a new task in the windows task scheduler.
+         * @param taskname The name for the scheduled task.
+         * @param target The file path to the target of the task.
+         * @param taskfrequency The intervall and frequency of the scheduled task. Ftring format: '<daily/hourly>,<value>'
+         * @return 1 for success. 0 for error.
+         */
+        static const int createtask(const std::string& taskname, const std::string& target, const std::string& taskfrequency){
+            
+            std::stringstream ss(taskfrequency);
+            std::string token;
+
+            const std::string timeframe;
+            const std::string intervall;
+            std::vector<std::string> list;
+
+            while(getline(ss, token, ',')){
+                list.push_back(token);
+            }
+
+            const std::string com = "cmd /c \"schtasks /create /tn \"" + taskname + "\" /tr \"\\\"" + target + "\\\"sync\" /sc " + list[0] + " /mo " + list[1] + "\""; 
+
+            if(std::system(com.c_str()) != 0){
+                return 0;
+            }
+
+            return 1;
+        }
+
+
+        /**
+         * @brief Removes a task from the windows task scheduler.
+         * @param taskname The name as identifier for the task.
+         * @return 1 for success. 0 for error.
+         */
+        static const int removetask(const std::string& taskname){
+
+            std::string com = "cmd /c \"schtasks /delete /tn " + taskname + "\"";
+
+            if(std::system(com.c_str()) != 0){
+                return 0;
+            }
+
+            return 1;
+        }
+
+        /**
+         * @brief Status check for scheduled tasks.
+         * @param taskname The name as identifier for the task.
+         * @return 1 if the task exists, 0 if it does not exist.
+         */
+        static const int exists(const std::string& taskname){
+
+            const std::string com = "cmd /c \"schtasks /query /tn " + taskname + "\"";
+
+            if(std::system(com.c_str()) != 0){
+                return 0;
+            }
+            
+            return 1;
+        }
+};
+
+/** 
+ * Default setting values
+ * Strings must be lowercase.
+ *
+ */
+class defaultsetting{
+    public:
+
+        static const int savelimit(){
+            return 3;
+        }
+
+        static const int recyclelimit(){
+            return 3;
+        }
+
+        static const bool task(){
+            return false;
+        }
+
+        static const std::string taskfrequency(){
+            return "daily,1";
+        }
+
+
+        /**
+         * @brief Verify the integrity of the settings file.
+        */
+        static const int integrity_check(const std::string& path){
+            
+        }
+};
+
+
 int main(int argc, char* argv[]){
 
     // Get location of exe
     boost::filesystem::path exePathBfs(boost::filesystem::initial_path<boost::filesystem::path>());
     exePathBfs = (boost::filesystem::system_complete(boost::filesystem::path(argv[0])));
-    std::string exePath = exePathBfs.string();
+
+    const std::string exePath = exePathBfs.string();
+    const std::string settingsPath = exePath + "\\settings.json";
+    const std::string batPath = exePath + "\\cfgs.bat";
+    const std::string taskName = "ConfigSyncTask";
     
 
     // Settings @section
     boost::property_tree::ptree pt;
-    
-    if(std::filesystem::exists("config.json") == false){ // Create default settings
+
+    try{ // Try loading the file. Its at the same time a validity check
+        boost::property_tree::read_json(settingsPath, pt); // read config
+    }
+
+    catch(const boost::property_tree::json_parser_error& readError){ // Create default settings file.
+        
+        if(!std::filesystem::exists(settingsPath)){
+            std::cout << "Creating settingsfile..." << std::endl;
+        }
+        else{
+            std::cerr << "Warning: error while parsing settings file (" << readError.what() << "). Restoring default settings..." << std::endl;
+        }
         
         pt.put("settingsID", SETTINGS_ID); // Settings identifier for updates
-
-        pt.put("RECYCLELIMIT", 3);
-        pt.put("SAVELIMIT", 3);
-        
-        boost::property_tree::write_json("config.json", pt);
-
-        
-
-    }
-    else{ // Settings file exists
-        boost::property_tree::read_json("config.json", pt); // read config
-        int settingsID = pt.get<int>("settingsID");
+        pt.put("recyclelimit", defaultsetting::recyclelimit());
+        pt.put("savelimit", defaultsetting::savelimit());
+        pt.put("task", defaultsetting::task());
+        pt.put("taskfrequency", defaultsetting::taskfrequency());
 
 
-        if(settingsID == SETTINGS_ID){ // Matching settingsID
-            // Do nothing, pt contains correct config
+        try{
+            std::cout << "Writing settings file..." << std::endl;
+            boost::property_tree::write_json(settingsPath, pt);
         }
-        else{ // Differing settingsID
-            //! merge config.
-            // Write this section when you create a version that made changes to the config file.
-            // Create the new config file after merging.
+        catch(const boost::property_tree::json_parser_error& writeError){
+            std::cerr << "Error: Writing default settings to file failed! (" << writeError.what() << "). Terminating program!" << std::endl;
+            std::exit(EXIT_FAILURE);
+        }
+        
+        try{ // Writing was successfull, now we read them back.
+            boost::property_tree::read_json(settingsPath, pt); // read config
+        }
+        catch(const boost::property_tree::json_parser_error& doubleReadError){
+            std::cerr << "Error: Reading from file after writing default settings failed! [" << __FILE__ << "] [" << __LINE__ << "]. (" << doubleReadError.what() << "). Terminating program!" << std::endl;
+            std::exit(EXIT_FAILURE);
         }
     }
 
     
+
+    int settingsID = pt.get<int>("settingsID");
+
+    if(settingsID == NULL){ // Failed to retrieve settingsID (file might be corrupt)
+        std::cerr << "Error: Failed to extract settingsID from " << settingsPath << std::endl;
+        std::cout << "Restoring settings file..." << std::endl;
+        
+        pt.put("settingsID", SETTINGS_ID); // Settings identifier
+
+        pt.put("recyclelimit", defaultsetting::recyclelimit());
+        pt.put("savelimit", defaultsetting::savelimit());
+        pt.put("task", defaultsetting::task());
+        pt.put("taskfrequency", defaultsetting::taskfrequency());
+
+    }
+
+    else if(settingsID != SETTINGS_ID){ // Differing settingsID
+        //! merge config.
+        // Write this section when you create a version that made changes to the config file.
+        // Create the new config file after merging.
+    }
+    else{
+        // Do nothing, pt contains correct config
+    }
+
     
-    // Parse command line options:
+    /* Ensure that task setting reflects reality. */
+    if(pt.get<bool>("task") == true && !task::exists(taskName)){ // Task setting is true and task doesnt exist
+        if(task::createtask(taskName, batPath, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);} // Create task
+    }
+
+    else if(pt.get<bool>("task") == false && task::exists(taskName)){ // Task setting is false and task exists
+        if(task::removetask(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);} // Remove existing task
+    }
+    
+    else{
+        std::cerr << "File: [" << __FILE__ << "] Line: [" << __LINE__ << "] This should never happen!\n";
+    }
+
+
+    /* Parse command line options: */
+     
     if(argv[1] == NULL){ // No params, display Copyright Notice
         std::cout << "ConfigSync (TJ-coreutils) " << VERSION << std::endl;
         std::cout << "Synchronize program configurations." << std::endl;
@@ -133,21 +289,22 @@ int main(int argc, char* argv[]){
         std::exit(EXIT_SUCCESS);
     }
 
-    if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version"){ // Version @param
+    else if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version"){ // Version @param
         std::cout << "ConfigSync " << VERSION << std::endl;
         std::exit(EXIT_SUCCESS);
     }
 
-    if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help"){ // Help message @param
+    else if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help"){ // Help message @param
         std::cout << "ConfigSync (TJ-coreutils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
         std::cout << "The Config-Synchronizer utility enables saving, restoring of programs configuration files.\n" << std::endl;
         std::cout << "usage: cfgs [<command>] [<options>]\n" << std::endl;
         std::cout << "Following commands are available:" << std::endl;
+        std::exit(EXIT_SUCCESS);
     }
 
 
-    if(std::string(argv[1]) == "sync" || std::string(argv[1]) == "--sync" || std::string(argv[1]) == "save" || std::string(argv[1]) == "--save"){ // Sync @param
+    else if(std::string(argv[1]) == "sync" || std::string(argv[1]) == "--sync" || std::string(argv[1]) == "save" || std::string(argv[1]) == "--save"){ // Sync @param
 
         if(argv[2] == NULL){ // Default behavior. Create a save of all supported, installed programs. No subparam provided
             
@@ -187,7 +344,7 @@ int main(int argc, char* argv[]){
                 syncedList.push_back("Jackett");
 
                 // Limit number of saves
-                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), jackett.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), jackett.get_archive_path().string()); // Cleanup
             }
 
             // Sync Prowlarr
@@ -197,7 +354,7 @@ int main(int argc, char* argv[]){
                 syncedList.push_back("Prowlarr");
 
                 // Limit number of saves
-                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), prowlarr.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), prowlarr.get_archive_path().string()); // Cleanup
             }
 
             // Sync qBittorrent
@@ -207,7 +364,7 @@ int main(int argc, char* argv[]){
                 syncedList.push_back("qBittorrent");
 
                 // Limit number of saves
-                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), qbittorrent.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), qbittorrent.get_archive_path().string()); // Cleanup
             };
             
 
@@ -236,7 +393,7 @@ int main(int argc, char* argv[]){
             if(create_save(pPaths, "Jackett", jackett.get_archive_path().string(), exePath) == 1){ // save config
                 // Limit num of saves
                 organizer janitor;
-                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), jackett.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), jackett.get_archive_path().string()); // Cleanup
 
                 std::cout << ANSI_COLOR_GREEN << "Synchronization of Jackett finished." << ANSI_COLOR_RESET << std::endl;
             }
@@ -258,7 +415,7 @@ int main(int argc, char* argv[]){
             if(create_save(pPaths, "Prowlarr", prowlarr.get_archive_path().string(), exePath) == 1){
                 // Limit num of saves
                 organizer janitor;
-                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), prowlarr.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), prowlarr.get_archive_path().string()); // Cleanup
 
                 std::cout << ANSI_COLOR_GREEN << "Synchronization of Prowlarr finished." << ANSI_COLOR_RESET << std::endl;
 
@@ -281,7 +438,7 @@ int main(int argc, char* argv[]){
             if(create_save(pPaths, "qBittorrent", qbittorrent.get_archive_path().string(), exePath) == 1){
                 // Limit num of saves
                 organizer janitor;
-                janitor.limit_enforcer_configarchive(pt.get<int>("SAVELIMIT"), qbittorrent.get_archive_path().string()); // Cleanup
+                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), qbittorrent.get_archive_path().string()); // Cleanup
 
                 std::cout << ANSI_COLOR_GREEN << "Synchronization of qBittorrent finished." << ANSI_COLOR_RESET << std::endl;
 
@@ -323,7 +480,7 @@ int main(int argc, char* argv[]){
                 failList.push_back("Jackett");
             }
             else{ // Archive not empty
-                if(syncJackett.restore_config(anlyJackett.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
+                if(syncJackett.restore_config(anlyJackett.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
                     std::cout << ANSI_COLOR_GREEN << "Jackett rollback successfull!" << ANSI_COLOR_RESET << std::endl;
                     jackettState = 1;
                 }
@@ -347,7 +504,7 @@ int main(int argc, char* argv[]){
                 failList.push_back("Prowlarr");
             }
             else{ // Archive not empty
-                if(syncProw.restore_config(anlyProw.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
+                if(syncProw.restore_config(anlyProw.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
                     std::cout << ANSI_COLOR_GREEN << "Prowlarr rollback successfull!" << ANSI_COLOR_RESET << std::endl;
                     prowlarrState = 1;
                 }
@@ -371,7 +528,7 @@ int main(int argc, char* argv[]){
                 failList.push_back("qBittorrent");
             }
             else{ // Archive not empty
-                if(syncQbit.restore_config(anlyQbit.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
+                if(syncQbit.restore_config(anlyQbit.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
                     std::cout << ANSI_COLOR_GREEN << "qBittorrent rollback successfull!" << ANSI_COLOR_RESET << std::endl;
                     qbitState = 1;
                 }
@@ -419,7 +576,7 @@ int main(int argc, char* argv[]){
                 else{ // Archive not empty
                     synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
 
-                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                     }
                     else{
@@ -434,7 +591,7 @@ int main(int argc, char* argv[]){
 
                 synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
 
-                if(sync.restore_config(std::string(argv[3]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date<
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit")) == 1){ // Restore from user defined save date<
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -468,7 +625,7 @@ int main(int argc, char* argv[]){
                 else{ // Archive not empty
                     synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
 
-                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                     }
                     else{
@@ -482,7 +639,7 @@ int main(int argc, char* argv[]){
 
                 synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
 
-                if(sync.restore_config(std::string(argv[3]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit")) == 1){ // Restore from user defined save date
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -516,7 +673,7 @@ int main(int argc, char* argv[]){
                 else{ // Archive not empty
                     synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
 
-                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from newest save
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                     }
                     else{
@@ -530,7 +687,7 @@ int main(int argc, char* argv[]){
 
                 synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
 
-                if(sync.restore_config(std::string(argv[3]), pt.get<int>("RECYCLELIMIT")) == 1){ // Restore from user defined save date
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit")) == 1){ // Restore from user defined save date
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -542,6 +699,11 @@ int main(int argc, char* argv[]){
                 std::cerr << "Fatal: '" << argv[3] << "' is not a valid date." << std::endl;
                 std::cout << "To view all save dates use 'cfgs --show qbittorrent'" << std::endl;
             }
+        }
+
+        
+        else{
+            std::cerr << "Fatal: invalid argument. See 'cfgs --help'.\n";
         }
     }
 
@@ -661,6 +823,11 @@ int main(int argc, char* argv[]){
                 }
             }
         }
+
+        
+        else{
+            std::cerr << "Fatal: invalid argument. See 'cfgs --help'.\n";
+        }
     }
 
 
@@ -752,6 +919,11 @@ int main(int argc, char* argv[]){
                 std::cout << "Found " << saveList.size() << " saves;" << std::endl;
             }
         }
+
+
+        else{
+            std::cerr << "Fatal: invalid argument. See 'cfgs --help'.\n";
+        }
     }
 
 
@@ -772,17 +944,17 @@ int main(int argc, char* argv[]){
         if(argv[2] == NULL){ //* Default. No subparam provided.
             std::cout << ANSI_COLOR_YELLOW << "Settings: " << ANSI_COLOR_RESET << std::endl;
 
-            std::cout << "Config save limit:            " << ANSI_COLOR_50 << pt.get<int>("SAVELIMIT") << std::endl;
-            std::cout << "See 'cfgs settings.save <limit>" << std::endl << std::endl;
+            std::cout << "Config save limit:            " << ANSI_COLOR_50 << pt.get<int>("savelimit") << std::endl;
+            std::cout << "See 'cfgs settings.savelimit <limit>" << std::endl << std::endl;
             
-            std::cout << "Backup recycle bin limit:     " << ANSI_COLOR_50 << pt.get<int>("RECYCLELIMIT") << std::endl;
-            std::cout << "See 'cfgs settings.recycle <limit>" << std::endl << std::endl;
+            std::cout << "Backup recycle bin limit:     " << ANSI_COLOR_50 << pt.get<int>("recyclelimit") << std::endl;
+            std::cout << "See 'cfgs settings.recyclelimit <limit>" << std::endl << std::endl;
 
-            std::cout << "Scheduled Task On/Off:        " << ANSI_COLOR_50 << pt.get<int>("scheduledTask") << std::endl;
-            std::cout << "See 'cfgs settings.task <On/Off>" << std::endl << std::endl;
+            std::cout << "Scheduled Task On/Off:        " << ANSI_COLOR_50 << pt.get<bool>("task") << std::endl;
+            std::cout << "See 'cfgs settings.task <True/False>" << std::endl << std::endl;
 
-            std::cout << "Scheduled Task Frequency:     " << ANSI_COLOR_50 << pt.get<int>("scheduledTaskFrequency") << std::endl;
-            std::cout << "See 'cfgs settings.schedule <On/Off>" << std::endl << std::endl;
+            std::cout << "Scheduled Task Frequency:     " << ANSI_COLOR_50 << pt.get<std::string>("taskfrequency") << std::endl;
+            std::cout << "See 'cfgs settings.taskfrequency <hourly/daily> <hours/days>" << std::endl << std::endl;
 
             std::cout << "For reset, see 'cfgs settings.reset'" << std::endl;
         }
@@ -798,7 +970,261 @@ int main(int argc, char* argv[]){
             }
         }
         
+        else{
+            std::cerr << "Fatal: invalid argument. See 'cfgs --help'.\n";
+        }
     }
+
+
+    else if(std::string(argv[1]) == "settings.reset" || std::string(argv[1]) == "--settings.reset"){ // 'settings.reset` @param
+        
+        if(argv[2] == NULL){ // default. No subparam provided.
+            std::cout << "Fatal: missing value for argument. See 'cfgs --settings'." << std::endl;
+        }
+
+
+        else if(std::string(argv[2]) == "savelimit" || std::string(argv[2]) == "--savelimit"){ // 'savelimit' @subparam 
+
+            std::cout << "SaveLimit reset to default." << std::endl;
+            std::cout << "(" << pt.get<int>("savelimit") << ") ==> (" << defaultsetting::savelimit() << ")" << std::endl;
+
+            pt.put("savelimit", defaultsetting::savelimit()); // Reset
+
+            boost::property_tree::write_json(settingsPath, pt); // Update config file
+        }
+
+        
+        else if(std::string(argv[2]) == "recyclelimit" || std::string(argv[2]) == "--recyclelimit"){ // 'recyclelimit' @subparam
+
+            std::cout << "RecycleLimit reset to default." << std::endl;
+            std::cout << "(" << pt.get<int>("recyclelimit") << ") ==> (" << defaultsetting::recyclelimit() << ")" << std::endl;
+
+            pt.put("recyclelimit", defaultsetting::recyclelimit()); // Reset
+
+            boost::property_tree::write_json(settingsPath, pt); // Update config file
+        }
+
+        
+        else if(std::string(argv[2]) == "task" || std::string(argv[2]) == "--task"){ // 'task' @subparam
+
+            std::cout << "Task reset to default." << std::endl;
+            std::cout << "(" << pt.get<bool>("task") << ") ==> (" << defaultsetting::task() << ")" << std::endl;
+
+            pt.put("task", defaultsetting::task()); // Reset
+            boost::property_tree::write_json(settingsPath, pt); // Update config file
+            
+
+            if(defaultsetting::task() == false && task::exists(taskName) == 1){ // Defaultsetting for 'task' is false and task exists
+                if(task::removetask(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);} // Remove the task
+            }
+
+            else if(defaultsetting::task() == true && task::exists(taskName) == 0){ // Defaultsetting for 'task' is true and task doesnt yet exist.
+                task::createtask(taskName, batPath, defaultsetting::taskfrequency()); // Create the task
+            }
+            else{std::cerr << "File: [" << __FILE__ << "] Line: [" << __LINE__ << "] This should never happen!\n";}
+        }
+
+
+        else if(std::string(argv[2]) == "taskfrequency" || std::string(argv[2]) == "--taskfrequency"){ // 'taskfrequency' @subparam
+
+            std::cout << "TaskFrequency reset to default." << std::endl;
+            std::cout << "(" << pt.get<std::string>("taskfrequency") << ") ==> (" << defaultsetting::taskfrequency() << ")" << std::endl;
+
+            pt.put("taskfrequency", defaultsetting::taskfrequency()); // Reset
+            boost::property_tree::write_json(settingsPath, pt); // Update config file
+
+
+            if(task::exists(taskName) == 1){ // Task exists.
+                if(task::removetask(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);}
+                task::createtask(taskName, batPath, defaultsetting::taskfrequency()); // Create task to apply the reset taskfrequeny
+            }
+            else if(pt.get<bool>("task") == true){ // Task does not exist but tasksetting is on. 
+                task::createtask(taskName, batPath, defaultsetting::taskfrequency()); // Create task
+            }
+            else{std::cerr << "File: [" << __FILE__ << "] Line: [" << __LINE__ << "] This should never happen!\n";}
+        }
+        
+
+        else if(std::string(argv[2]) == "all" || std::string(argv[2]) == "--all"){ // '--all' @subparam
+
+            pt.put("savelimit", defaultsetting::savelimit());
+            pt.put("recyclelimit", defaultsetting::recyclelimit());
+            pt.put("task", defaultsetting::task());
+            pt.put("taskfrequency", defaultsetting::taskfrequency());
+
+            boost::property_tree::write_json(settingsPath, pt); // Update config file
+            
+
+            if(defaultsetting::task() == true && !task::exists(taskName)){ // Task default is 'true' and task doesnt exist.
+
+                task::createtask(taskName, batPath, defaultsetting::taskfrequency()); // Create the task
+            }
+
+            else if(defaultsetting::task() == false && task::exists(taskName)){ // Task default is 'false' and task exists.
+
+                if(task::removetask(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);} // Remove task
+            }
+            else{
+                std::cerr << "File: [" << __FILE__ << "] Line: [" << __LINE__ << "] This should never happen!\n";
+            }
+
+            std::cout << "All settings reset to default!" << std::endl;
+        }
+
+        else{
+            std::cerr << "Fatal: invalid argument. See 'cfgs --settings'.\n";
+        }
+    }
+
+
+    else if(std::string(argv[1]) == "settings.savelimit" || std::string(argv[1]) == "--settings.savelimit"){ // 'settings.savelimit' @param
+
+        if(argv[2] == NULL){ // Default. No subparam.
+            std::cout << "Fatal: missing value for argument. See 'cfgs --settings'" << std::endl;
+        }
+        
+        else if((int)argv[2] <= 400){ // Value provided.
+        
+            pt.put("savelimit", (int)argv[2]); // Assign new limit
+            boost::property_tree::write_json(settingsPath, pt); // Update config file
+        }
+        
+        else{ // Invalid value
+            std::cout << "Fatal: value out of range." << std::endl;
+        }
+    }
+    
+
+    else if(std::string(argv[1]) == "settings.recyclelimit"){ // 'settings.recyclelimit' @param
+
+        if(argv[2] == NULL){ // Default. No subparam.
+            std::cout << "Fatal: missing value for argument. See 'cfgs --settings'" << std::endl;
+        }
+        
+        else if((int)argv[2] <= 400){ // Value provided.
+            pt.put("recyclelimit", (int)argv[2]); // Assign new limit
+            boost::property_tree::write_json(settingsPath, pt); // Update config file
+        }
+        
+        else{ // Invalid value
+            std::cout << "Fatal: value out of range." << std::endl;
+        }
+    }
+
+
+    else if(std::string(argv[1]) == "settings.task"){ // 'settings.task' @param
+        
+        if(argv[2] == NULL){ // Default. No subparam.
+            std::cout << "Fatal: missing value for argument. See 'cfgs --settings'" << std::endl;
+        }
+        
+        else if(std::string(argv[2]) == "true" || std::string(argv[2]) == "True"){ // 'true' @subparam
+
+            if(pt.get<bool>("task") == false){ // Current property is set to 'false'
+                pt.put("task", true); // Set property to true
+                boost::property_tree::write_json(settingsPath, pt); // Update config file
+
+                if(task::exists(taskName)){ // Task exists --> relaunch task
+                    if(task::removetask(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);}
+                    if(task::createtask(taskName, batPath, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);}
+                }
+                else{ // Task doesnt exist --> launch task
+                    if(task::createtask(taskName, batPath, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);}
+                }
+            }
+
+            else{ // Current property is already set to 'true'.
+                std::cout << "settings.task already set to true. Checking task..." << std::endl;
+
+                if(task::exists("task")){ // Task exists.
+                    std::cout << "Task exists, no changes were made." << std::endl;
+                }
+                else{ // Task doesnt exist. --> launch task
+                    std::cout << "Task doesn't exist. Creating task..." << std::endl;
+                    if(task::createtask(taskName, batPath, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);}
+                    std::cout << "Task created!" << std::endl;
+                }
+            }
+        }
+
+        else if(std::string(argv[2]) == "false" || std::string(argv[2]) == "False"){ // 'false' @subparam
+            bool prop = pt.get<bool>("task");
+
+            if(prop == true){ // Current property is set to 'true'
+                pt.put("task", false); // Set property to false
+                boost::property_tree::write_json(settingsPath, pt); // Update config file
+                
+                if(task::exists(taskName)){ // Task exists --> remove task.
+                    if(task::removetask(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);}
+                }
+                else{ // Task doesnt exist --> create task
+                    if(task::createtask(taskName, batPath, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);}
+                }
+            }
+
+            else{ // Current property is set to 'false'
+                std::cout << "settings.task already set to false. Checking task..." << std::endl;
+
+                if(task::exists(taskName)){ // Task exists --> remove task
+                    std::cout << "Task exists. Removing task..." << std::endl;
+                    if(task::removetask(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);}
+                    std::cout << "Task removed!" << std::endl;
+                }
+                else{ // Task doesnt exist
+                    std::cout << "Task doesn't exist, no changes were made." << std::endl;
+                }
+            }
+        }
+        
+        else{ // Invalid argument @subparam
+            std::cerr << "Fatal: invalid argument. See 'cfgs --settings'." << std::endl;
+        }
+    }
+
+
+    else if(std::string(argv[1]) == "settings.taskfrequency"){
+        
+        if(argv[2] == NULL){ // Default. No subparam.
+            std::cout << "Fatal: missing value for argument. See 'cfgs --settings'" << std::endl;
+        }
+        
+
+        else if(std::string(argv[2]) == "daily" || std::string(argv[2]) == "Daily" || std::string(argv[2]) == "hourly" || std::string(argv[2]) == "Hourly"){ // 'daily' or 'hourly' @subparam
+
+            if(argv[3] == NULL){
+                std::cout << "Fatal: missing value for argument. See 'cfgs --settings'" << std::endl;
+            }
+
+            else if((int)argv[3] <= 1000){
+
+                const std::string lcase = (std::string)argv[2]; 
+                std::transform(lcase.begin(), lcase.end(), lcase.begin(), // Convert to lowercase
+                    [](unsigned char c){ return std::tolower(c); });
+                    
+                const std::string tf =  lcase + "," + (std::string)argv[3];
+
+                pt.put("taskfrequency", tf); // Assign new value
+                boost::property_tree::write_json(settingsPath, pt); // Update config file
+
+                if(task::exists(taskName)){
+                    if(task::removetask(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);}
+                    if(task::createtask(taskName, batPath, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);}
+                }
+                else{
+                    // Task doesn exist. do nothing.
+                }
+            }
+            
+            else if((int)argv[3] > 1000){ // Invalid value
+                std::cout << "Fatal: value out of range." << std::endl;
+            }
+            else{
+                std::cerr << "Fatal: invalid argument. See 'cfgs --settings'." << std::endl;
+            }
+        }
+    }
+
+
     
     return 0;
 }
