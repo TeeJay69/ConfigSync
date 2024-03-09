@@ -1,0 +1,15 @@
+Files and directories included in version:
+main.cpp
+programs.hpp
+analyzer.hpp
+synchronizer.hpp
+database.hpp
+organizer.hpp
+ANSIColor.hpp
+----------
+Compile command:
+g++ -std=c++23 -l:libboost_filesystem-mgw13-mt-x64-1_84.a
+----------
+Alias:
+cfgs
+----------

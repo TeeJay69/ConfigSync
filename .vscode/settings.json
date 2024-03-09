@@ -77,6 +77,8 @@
         "strstream": "cpp",
         "complex": "cpp",
         "source_location": "cpp",
-        "typeindex": "cpp"
+        "typeindex": "cpp",
+        "any": "cpp",
+        "future": "cpp"
     }
 }

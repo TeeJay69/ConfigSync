@@ -171,7 +171,7 @@ Install-Location
 ## Trashcan:
 
 <!-- - Combine show and status arguments' -->
-
+<!-- The following commands are available -->
 <!-- 
 restore config:
     - ~~Check if current config exists~~
@@ -190,6 +190,31 @@ restore config:
 
 
 ## Parking Lot
+<!-- 
+    std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
+        std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
+        std::cout << "usage: cfgs [OPTIONS]... [PROGRAM]\n" << std::endl;
+        std::cout << std::endl;
+        std::cout << "The following commands are available:" << std::endl;
+        std::cout << "sync [PROGRAM]            Synchronize configuration files of the specified program.";
+        std::cout << "sync --all                Synchronize configuration files of all supported programs.";
+        std::cout << "restore [PROGRAM] [DATE]  Restore configuration files of the specified program, date.";
+        std::cout << "restore --all             Restore configuration files of all supported programs.";
+        std::cout << "status [PROGRAM]          Display synchronization state. (Default: all)";
+        
+
+        
+    else if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h"){ // Help message param
+        std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
+        std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
+        std::cout << "The Config-Synchronizer utility enables syncing and restoring of programs configuration files.\n" << std::endl;
+        std::cout << "usage: cfgs [command] [options]\n" << std::endl;
+        std::cout << "The following commands are available:" << std::endl;
+        std::cout << "sync [program]        Synchronize a program."
+        std::exit(EXIT_SUCCESS);
+
+
+
     if(argc <= 1){
         std::cout << "This program is currently CLI only.\nPlease open a command prompt or powershell window and run it from there.\n";
         std::this_thread::sleep_for(std::chrono::milliseconds(5000));
@@ -249,4 +274,5 @@ if(path_check(jackettPaths) == 1){ //Program paths verified
                     }
                 }
             }
+ -->
 -------------------------------------------------

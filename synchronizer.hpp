@@ -14,6 +14,7 @@
 #include <chrono>
 #include "database.hpp"
 #include "programs.hpp"
+#include "organizer.hpp"
 #include "ANSIcolor.hpp"
 
 
@@ -47,7 +48,7 @@ class synchronizer{
         
         
         static char* ymd_date_cstyle(){
-            char out[11];
+            char* out = (char *)malloc(11);
             std::time_t t=std::time(NULL);
             std::strftime(out, sizeof(out), "%Y-%m-%d", std::localtime(&t));
             

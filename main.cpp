@@ -109,7 +109,7 @@ class task{
                 list.push_back(token);
             }
 
-            const std::string com = "cmd /c \"schtasks /create /tn \"" + taskname + "\" /tr \"\\\"" + target + "\\\"sync\" /sc " + list[0] + " /mo " + list[1] + "\""; 
+            const std::string com = "cmd /c \"schtasks /create /tn \"" + taskname + "\" /tr \"\\\"" + target + "\\\"sync\" /sc " + list[0] + " /mo " + list[1] + " >NUL 2>&1\"";
 
             if(std::system(com.c_str()) != 0){
                 return 0;
@@ -126,7 +126,7 @@ class task{
          */
         static const int removetask(const std::string& taskname){
 
-            std::string com = "cmd /c \"schtasks /delete /tn " + taskname + "\"";
+            std::string com = "cmd /c \"schtasks /delete /tn " + taskname + " >NUL 2>&1\"";
 
             if(std::system(com.c_str()) != 0){
                 return 0;
@@ -142,12 +142,12 @@ class task{
          */
         static const int exists(const std::string& taskname){
 
-            const std::string com = "cmd /c \"schtasks /query /tn " + taskname + "\"";
+            const std::string com = "cmd /c \"schtasks /query /tn " + taskname + " >NUL 2>&1\"";
 
             if(std::system(com.c_str()) != 0){
                 return 0;
             }
-            
+
             return 1;
         }
 };
@@ -181,7 +181,7 @@ class defaultsetting{
          * @brief Verify the integrity of the settings file.
         */
         static const int integrity_check(const std::string& path){
-            
+            return 1;
         }
 };
 
@@ -192,11 +192,15 @@ int main(int argc, char* argv[]){
     boost::filesystem::path exePathBfs(boost::filesystem::initial_path<boost::filesystem::path>());
     exePathBfs = (boost::filesystem::system_complete(boost::filesystem::path(argv[0])));
 
-    const std::string exePath = exePathBfs.string();
+    const std::string exePath = exePathBfs.parent_path().string();
     const std::string settingsPath = exePath + "\\settings.json";
     const std::string batPath = exePath + "\\cfgs.bat";
     const std::string taskName = "ConfigSyncTask";
-    
+    // std::cout << "exe: " << exePath << std::endl;
+    // std::cout << "settingsPath: " << settingsPath << std::endl;
+    // std::cout << "batPath: " << batPath << std::endl;
+    // std::cout << "taskName: " << taskName << std::endl;
+    // std::exit(EXIT_SUCCESS);
 
     // Settings @section
     boost::property_tree::ptree pt;
@@ -243,7 +247,7 @@ int main(int argc, char* argv[]){
 
     int settingsID = pt.get<int>("settingsID");
 
-    if(settingsID == NULL){ // Failed to retrieve settingsID (file might be corrupt)
+    if(settingsID == 0){ // Failed to retrieve settingsID (file might be corrupt)
         std::cerr << "Error: Failed to extract settingsID from " << settingsPath << std::endl;
         std::cout << "Restoring settings file..." << std::endl;
         
@@ -265,7 +269,7 @@ int main(int argc, char* argv[]){
         // Do nothing, pt contains correct config
     }
 
-    
+
     /* Ensure that task setting reflects reality. */
     if(pt.get<bool>("task") == true && !task::exists(taskName)){ // Task setting is true and task doesnt exist
         if(task::createtask(taskName, batPath, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);} // Create task
@@ -273,6 +277,15 @@ int main(int argc, char* argv[]){
 
     else if(pt.get<bool>("task") == false && task::exists(taskName)){ // Task setting is false and task exists
         if(task::removetask(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);} // Remove existing task
+        std::exit(EXIT_FAILURE);
+    }
+    
+    else if(pt.get<bool>("task") == false && !task::exists(taskName)){
+        // Do nothing.
+    }
+    
+    else if(pt.get<bool>("task") == true && task::exists(taskName)){
+        // Do nothing.
     }
     
     else{
@@ -280,44 +293,71 @@ int main(int argc, char* argv[]){
     }
 
 
+
     /* Parse command line options: */
      
     if(argv[1] == NULL){ // No params, display Copyright Notice
-        std::cout << "ConfigSync (TJ-coreutils) " << VERSION << std::endl;
-        std::cout << "Synchronize program configurations." << std::endl;
+        std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber. All rights reserved." << std::endl;
+        std::cout << "Synchronize program configurations." << std::endl;
+        std::cout << "See 'cfgs --help' for usage." << std::endl;
         std::exit(EXIT_SUCCESS);
     }
 
-    else if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version"){ // Version @param
-        std::cout << "ConfigSync " << VERSION << std::endl;
+    else if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version"){ // Version param
+        std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
+        std::cout << "Copyright (C) 2024 - Jason Weber. All rights reserved." << std::endl;
+        std::cout << "Synchronize program configurations." << std::endl;
         std::exit(EXIT_SUCCESS);
     }
 
-    else if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help"){ // Help message @param
-        std::cout << "ConfigSync (TJ-coreutils) " << VERSION << std::endl;
+    else if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h"){ // Help message param
+        std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
-        std::cout << "The Config-Synchronizer utility enables saving, restoring of programs configuration files.\n" << std::endl;
-        std::cout << "usage: cfgs [<command>] [<options>]\n" << std::endl;
-        std::cout << "Following commands are available:" << std::endl;
+        std::cout << "usage: cfgs [OPTIONS]... [PROGRAM]\n" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Options:\n";
+        std::cout << "sync [PROGRAM]                Create a snapshot of a program's configuration.\n";
+        std::cout << "sync --all                    Create a snapshot for all supported programs.\n";
+        std::cout << "restore [PROGRAM] [DATE]      Restore configuration of the specified program, date.\n";
+        std::cout << "restore --all                 Restore configuration of all supported programs.\n";
+        std::cout << "status [PROGRAM]              Display synchronization state. (Default: all)\n";
+        std::cout << "show [PROGRAM]                List all existing snapshots of a program\n";
+        std::cout << "list --supported              Show all supported programs.\n";
+        std::cout << "settings                      Show settings.\n";
+        std::cout << "settings --json               Show settings (JSON).\n";
+        std::cout << "settings.reset [SETTING]      Reset one or multiple settings.\n";
+        std::cout << "settings.reset --all          Reset all settings to default.\n";
+        std::cout << "settings --help               Show detailed settings info.\n";
+        std::cout << "--help                        Display help message.\n";
+        std::cout << "--version                     Display version and copyright disclaimer.\n";
         std::exit(EXIT_SUCCESS);
     }
+    
 
 
-    else if(std::string(argv[1]) == "sync" || std::string(argv[1]) == "--sync" || std::string(argv[1]) == "save" || std::string(argv[1]) == "--save"){ // Sync @param
+    else if(std::string(argv[1]) == "sync"){ // Sync param
 
-        if(argv[2] == NULL){ // Default behavior. Create a save of all supported, installed programs. No subparam provided
+        if(argv[2] == NULL){ // No subparam provided
+            std::cout << "Fatal: Missing program or restore argument." << std::endl;
+        }
+        
+        else if(argv[2] == "--all"){ // Create a save of all supported, installed programs. No subparam provided
+            std::cout << ANSI_COLOR_160 << "Synchronizing all programs:" << ANSI_COLOR_RESET << std::endl;
             
+            std::cout << ANSI_COLOR_222 << "Fetching paths..." << ANSI_COLOR_RESET << std::endl;
+
             // Get program paths
             programconfig jackett("Jackett", exePath);
             std::vector<std::string> jackettPaths = jackett.get_config_paths();
-
+            
             programconfig prowlarr("Prowlarr", exePath);
             std::vector<std::string> prowlarrPaths = prowlarr.get_config_paths();
 
             programconfig qbittorrent("qBittorrent", exePath);
             std::vector<std::string> qbittorrentPaths = qbittorrent.get_config_paths();
             
+            std::cout << ANSI_COLOR_222 << "Checking archive..." << ANSI_COLOR_RESET << std::endl;
 
             // Create the archive @dir if it does not exist yet
             if(!std::filesystem::exists(jackett.get_archive_path())){
@@ -334,7 +374,8 @@ int main(int argc, char* argv[]){
             
             std::vector<std::string> syncedList; // For sync message
 
-            
+            std::cout << ANSI_COLOR_222 << "Starting synchronization..." << ANSI_COLOR_RESET << std::endl;
+
             organizer janitor; // Initialize class
 
             // Sync Jackett
@@ -367,19 +408,20 @@ int main(int argc, char* argv[]){
                 janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), qbittorrent.get_archive_path().string()); // Cleanup
             };
             
+            std::cout << ANSI_COLOR_222 << "Preparing summary..." << ANSI_COLOR_RESET << std::endl;
 
             // Info
-            std::cout << ANSI_COLOR_GREEN << "Synchronization finished." << ANSI_COLOR_RESET << std::endl;
-            std::cout << "Synced Programs:" << std::endl;
+            std::cout << "Synced programs:" << std::endl;
 
             int i = 1;
             for(const auto& item : syncedList){
                 std::cout << ANSI_COLOR_GREEN << "      " << i << "." << item << ANSI_COLOR_RESET << std::endl;
                 i++;
             }
+            std::cout << ANSI_COLOR_GREEN << "Synchronization finished!" << ANSI_COLOR_RESET << std::endl;
         }
 
-        else if(std::string(argv[2]) == "jackett" || std::string(argv[2]) == "Jackett"){ // Jackett sync @subparam
+        else if(std::string(argv[2]) == "jackett" || std::string(argv[2]) == "Jackett"){ // Jackett sync subparam
             // Get program path
             programconfig jackett("Jackett", exePath);
             std::vector<std::string> pPaths = jackett.get_config_paths();
@@ -402,7 +444,7 @@ int main(int argc, char* argv[]){
             }
         }
 
-        else if(std::string(argv[2]) == "prowlarr" || std::string(argv[2]) == "Prowlarr"){ // Prowlarr sync @subparam
+        else if(std::string(argv[2]) == "prowlarr" || std::string(argv[2]) == "Prowlarr"){ // Prowlarr sync subparam
             // Get program paths
             programconfig prowlarr("Prowlarr", exePath);
             std::vector<std::string> pPaths = prowlarr.get_config_paths();
@@ -425,7 +467,7 @@ int main(int argc, char* argv[]){
             }
         }
 
-        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){  // qBittorrent sync @subparam
+        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){  // qBittorrent sync subparam
             // Get program paths
             programconfig qbittorrent("qBittorrent", exePath);
             std::vector<std::string> pPaths = qbittorrent.get_config_paths();
@@ -454,7 +496,7 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(std::string(argv[1]) == "restore" || std::string(argv[1]) == "--restore"){ // Restore @param
+    else if(std::string(argv[1]) == "restore" || std::string(argv[1]) == "--restore"){ // Restore param
 
         if(argv[2] == NULL){ // No program provided. Display advice. No subparam provided.
             std::cout << "Fatal: Missing program or restore argument." << std::endl;
@@ -462,17 +504,17 @@ int main(int argc, char* argv[]){
         }
 
         
-        else if(std::string(argv[2]) == "all" || std::string(argv[2]) == "--all"){ // '--all' @subparam
+        else if(std::string(argv[2]) == "all" || std::string(argv[2]) == "--all"){ // '--all' subparam
             std::cout << ANSI_COLOR_YELLOW << "Restoring all supported programs with latest save..." << ANSI_COLOR_RESET << std::endl;
             
             std::vector<std::string> failList;
 
             // @section Jackett:
             programconfig jackett("Jackett", exePath); // Initialize class
-            std::vector<std::string> pPaths = jackett.get_config_paths(); // Get program paths
+            std::vector<std::string> jackettPaths = jackett.get_config_paths(); // Get program paths
             
-            analyzer anlyJackett(pPaths, "Jackett", exePath); // Initialize class
-            synchronizer syncJackett(pPaths, "Jackett", exePath); // Initialize class
+            analyzer anlyJackett(jackettPaths, "Jackett", exePath); // Initialize class
+            synchronizer syncJackett(jackettPaths, "Jackett", exePath); // Initialize class
 
             int jackettState = 0;
             if(anlyJackett.is_archive_empty() == 1){ // Archive is empty
@@ -493,10 +535,10 @@ int main(int argc, char* argv[]){
             
             // @section Prowlarr
             programconfig prowlarr("Prowlarr", exePath); // Initialize class
-            std::vector<std::string> pPaths = prowlarr.get_config_paths(); // Get program paths
+            std::vector<std::string> prowlarrPaths = prowlarr.get_config_paths(); // Get program paths
             
-            analyzer anlyProw(pPaths, "Prowlarr", exePath); // Initialize class
-            synchronizer syncProw(pPaths, "Prowlarr", exePath); // Initialize class
+            analyzer anlyProw(prowlarrPaths, "Prowlarr", exePath); // Initialize class
+            synchronizer syncProw(prowlarrPaths, "Prowlarr", exePath); // Initialize class
 
             int prowlarrState = 0;
             if(anlyProw.is_archive_empty() == 1){ // Archive empty
@@ -517,10 +559,10 @@ int main(int argc, char* argv[]){
 
             // @section qBittorrent
             programconfig qbittorrent("qBittorrent", exePath); // Initialize class
-            std::vector<std::string> pPaths = qbittorrent.get_config_paths(); // Get program paths
+            std::vector<std::string> qbittorrentPaths = qbittorrent.get_config_paths(); // Get program paths
             
-            analyzer anlyQbit(pPaths, "qBittorrent", exePath); // Initialize class
-            synchronizer syncQbit(pPaths, "qBittorrent", exePath); // Initialize class
+            analyzer anlyQbit(qbittorrentPaths, "qBittorrent", exePath); // Initialize class
+            synchronizer syncQbit(qbittorrentPaths, "qBittorrent", exePath); // Initialize class
             
             int qbitState = 0;
             if(anlyQbit.is_archive_empty() == 1){ // Archive empty
@@ -556,7 +598,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett @subparam
+        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett subparam
             
             programconfig jackett("Jackett", exePath); // Initialize class
             std::vector<std::string> pPaths = jackett.get_config_paths(); // Get program paths
@@ -587,7 +629,7 @@ int main(int argc, char* argv[]){
             }
 
 
-            else if(std::find(jackettSaves.begin(), jackettSaves.end(), std::string(argv[3])) != jackettSaves.end()){ // Specific save date @2subparam. Check if date is valid.
+            else if(std::find(jackettSaves.begin(), jackettSaves.end(), std::string(argv[3])) != jackettSaves.end()){ // Specific save date 2subparam. Check if date is valid.
 
                 synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
 
@@ -606,7 +648,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr @subparam
+        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr subparam
             programconfig prowlarr("Prowlarr", exePath); // Initialize class
             std::vector<std::string> pPaths = prowlarr.get_config_paths(); // Get program paths
             
@@ -635,7 +677,7 @@ int main(int argc, char* argv[]){
             }
 
 
-            else if(std::find(prowlarrSaves.begin(), prowlarrSaves.end(), std::string(argv[3])) != prowlarrSaves.end()){ // Specific save date @2subparam. Check if date is valid.
+            else if(std::find(prowlarrSaves.begin(), prowlarrSaves.end(), std::string(argv[3])) != prowlarrSaves.end()){ // Specific save date 2subparam. Check if date is valid.
 
                 synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
 
@@ -654,7 +696,7 @@ int main(int argc, char* argv[]){
         }
         
 
-        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent @subparam
+        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent subparam
             programconfig qbittorrent("qBittorrent", exePath); // Initialize class
             std::vector<std::string> pPaths = qbittorrent.get_config_paths(); // Get program paths
             
@@ -683,7 +725,7 @@ int main(int argc, char* argv[]){
             }
 
 
-            else if(std::find(qbittorrentSaves.begin(), qbittorrentSaves.end(), std::string(argv[3])) != qbittorrentSaves.end()){ // Specific save date @2subparam. Check if date is valid.
+            else if(std::find(qbittorrentSaves.begin(), qbittorrentSaves.end(), std::string(argv[3])) != qbittorrentSaves.end()){ // Specific save date 2subparam. Check if date is valid.
 
                 synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
 
@@ -708,9 +750,9 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(std::string(argv[1]) == "status" || std::string(argv[1]) == "--status"){ // 'status' @param
+    else if(std::string(argv[1]) == "status"){ // 'status' param
 
-        if(argv[2] == NULL || std::string(argv[2]) == "--all"){ // default: all. @subparam
+        if(argv[2] == NULL){ // default: all. subparam
 
             std::set<std::string> neverSaveList;
             std::set<std::string> outofSyncList;
@@ -739,7 +781,7 @@ int main(int argc, char* argv[]){
             std::cout << "Status:" << std::endl;
             
             for(const auto& app : inSyncList){ // Up to date apps
-                std::cout << ANSI_COLOR_GREEN << "In sync: " << app << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_GREEN << "Up to date: " << app << ANSI_COLOR_RESET << std::endl;
             }
 
             for(const auto& app : outofSyncList){ // Out of sync apps
@@ -753,7 +795,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett @subparam
+        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett subparam
 
             programconfig pcfg("Jackett", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "Jackett", exePath); // Init class
@@ -777,7 +819,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr @subparam
+        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr subparam
 
             programconfig pcfg("Prowlarr", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "Prowlarr", exePath); // Init class
@@ -801,7 +843,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent @subparam
+        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent subparam
  
             programconfig pcfg("qBittorrent", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "qBittorrent", exePath); // Init class
@@ -831,7 +873,7 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(std::string(argv[1]) == "show" || std::string(argv[1]) == "--show"){ // 'show' @param
+    else if(std::string(argv[1]) == "show" || std::string(argv[1]) == "--show"){ // 'show' param
         
         if(argv[2] == NULL){ // default. No subparam provided
             std::cerr << "Fatal: missing program argument." << std::endl;
@@ -839,7 +881,7 @@ int main(int argc, char* argv[]){
         }
 
         
-        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett @subparam
+        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett subparam
 
             programconfig pcfg("Jackett", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "Jackett", exePath); // Init class
@@ -867,7 +909,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr @subparam
+        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr subparam
             programconfig pcfg("Prowlarr", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "Prowlarr", exePath); // Init class
 
@@ -894,7 +936,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent @subparam
+        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent subparam
             programconfig pcfg("qBittorrent", exePath); // Init class
             analyzer anly(pcfg.get_config_paths(), "qBittorrent", exePath); // Init class
 
@@ -927,7 +969,7 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(std::string(argv[1]) == "list" || std::string(argv[1]) == "--list"){ // 'list' @param
+    else if(std::string(argv[1]) == "list"){ // 'list' param
 
         std::cout << "Supported Programs: " << std::endl;
 
@@ -939,7 +981,7 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(std::string(argv[1]) == "settings" || std::string(argv[1]) == "--settings"){ // 'settings' @param 
+    else if(std::string(argv[1]) == "settings"){ // 'settings' param 
         
         if(argv[2] == NULL){ //* Default. No subparam provided.
             std::cout << ANSI_COLOR_YELLOW << "Settings: " << ANSI_COLOR_RESET << std::endl;
@@ -959,15 +1001,37 @@ int main(int argc, char* argv[]){
             std::cout << "For reset, see 'cfgs settings.reset'" << std::endl;
         }
 
+        else if(std::string(argv[2]) == "--help"){
+            std::cout << "Settings options overview:\n";
+            std::cout << "Usage: settings.[SETTING] [VALUE]\n";
+            std::cout << "task [True/False]                           Snapshot task for all programs.\n";
+            std::cout << "taskfrequency [hourly/daily] [hours/days]   Intervall of scheduled task.\n";
+            std::cout << "savelimit [1-400]                           Maximum retained snapshots.\n";
+            std::cout << "recyclelimit [1-400]                        Maximum retained backup snapshots from restoring.\n";
+        }
 
-        else if(std::string(argv[2]) == "--json" || std::string(argv[2]) == "json"){ //* 'json' @subparam
-        
-            std::string codeComm = "cmd /c code \"" + exePath + "\\config.json\"";
+        else if(std::string(argv[2]) == "--json"){ //* 'json' subparam
+
+            std::cout << "Warning: any changes to the json file could make the file unreadable, please know what you are doing!" << std::endl; // Warning
+            int counter = 2;
+            while(counter != 0){
+                if(counter == 1){
+                    std::cout << "\rProceeding in: " << counter << " second" << std::flush;
+                }
+                std::cout << "\rProceeding in: " << counter << " seconds" << std::flush;
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+                counter--;
+            }
+            
+            const std::string codeComm = "cmd /c code \"" + exePath + "\\config.json\"";
 
             if(system(codeComm.c_str()) != 0){ // Open config with vscode
-                std::string notepadComm = "cmd /c notepad \"" + exePath + "\\config.json\"";
+                const std::string notepadComm = "cmd /c notepad \"" + exePath + "\\config.json\"";
                 std::system(notepadComm.c_str()); // Open with notepad
             }
+
         }
         
         else{
@@ -976,14 +1040,14 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(std::string(argv[1]) == "settings.reset" || std::string(argv[1]) == "--settings.reset"){ // 'settings.reset` @param
+    else if(std::string(argv[1]) == "settings.reset" || std::string(argv[1]) == "--settings.reset"){ // 'settings.reset` param
         
         if(argv[2] == NULL){ // default. No subparam provided.
             std::cout << "Fatal: missing value for argument. See 'cfgs --settings'." << std::endl;
         }
 
 
-        else if(std::string(argv[2]) == "savelimit" || std::string(argv[2]) == "--savelimit"){ // 'savelimit' @subparam 
+        else if(std::string(argv[2]) == "savelimit" || std::string(argv[2]) == "--savelimit"){ // 'savelimit' subparam 
 
             std::cout << "SaveLimit reset to default." << std::endl;
             std::cout << "(" << pt.get<int>("savelimit") << ") ==> (" << defaultsetting::savelimit() << ")" << std::endl;
@@ -994,7 +1058,7 @@ int main(int argc, char* argv[]){
         }
 
         
-        else if(std::string(argv[2]) == "recyclelimit" || std::string(argv[2]) == "--recyclelimit"){ // 'recyclelimit' @subparam
+        else if(std::string(argv[2]) == "recyclelimit" || std::string(argv[2]) == "--recyclelimit"){ // 'recyclelimit' subparam
 
             std::cout << "RecycleLimit reset to default." << std::endl;
             std::cout << "(" << pt.get<int>("recyclelimit") << ") ==> (" << defaultsetting::recyclelimit() << ")" << std::endl;
@@ -1005,7 +1069,7 @@ int main(int argc, char* argv[]){
         }
 
         
-        else if(std::string(argv[2]) == "task" || std::string(argv[2]) == "--task"){ // 'task' @subparam
+        else if(std::string(argv[2]) == "task" || std::string(argv[2]) == "--task"){ // 'task' subparam
 
             std::cout << "Task reset to default." << std::endl;
             std::cout << "(" << pt.get<bool>("task") << ") ==> (" << defaultsetting::task() << ")" << std::endl;
@@ -1025,7 +1089,7 @@ int main(int argc, char* argv[]){
         }
 
 
-        else if(std::string(argv[2]) == "taskfrequency" || std::string(argv[2]) == "--taskfrequency"){ // 'taskfrequency' @subparam
+        else if(std::string(argv[2]) == "taskfrequency" || std::string(argv[2]) == "--taskfrequency"){ // 'taskfrequency' subparam
 
             std::cout << "TaskFrequency reset to default." << std::endl;
             std::cout << "(" << pt.get<std::string>("taskfrequency") << ") ==> (" << defaultsetting::taskfrequency() << ")" << std::endl;
@@ -1045,7 +1109,7 @@ int main(int argc, char* argv[]){
         }
         
 
-        else if(std::string(argv[2]) == "all" || std::string(argv[2]) == "--all"){ // '--all' @subparam
+        else if(std::string(argv[2]) == "--all"){ // '--all' subparam
 
             pt.put("savelimit", defaultsetting::savelimit());
             pt.put("recyclelimit", defaultsetting::recyclelimit());
@@ -1077,15 +1141,15 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(std::string(argv[1]) == "settings.savelimit" || std::string(argv[1]) == "--settings.savelimit"){ // 'settings.savelimit' @param
+    else if(std::string(argv[1]) == "settings.savelimit" || std::string(argv[1]) == "--settings.savelimit"){ // 'settings.savelimit' param
 
         if(argv[2] == NULL){ // Default. No subparam.
             std::cout << "Fatal: missing value for argument. See 'cfgs --settings'" << std::endl;
         }
         
-        else if((int)argv[2] <= 400){ // Value provided.
+        else if(std::stoi(argv[2]) <= 400){ // Value provided.
         
-            pt.put("savelimit", (int)argv[2]); // Assign new limit
+            pt.put("savelimit", std::stoi(argv[2])); // Assign new limit
             boost::property_tree::write_json(settingsPath, pt); // Update config file
         }
         
@@ -1095,14 +1159,14 @@ int main(int argc, char* argv[]){
     }
     
 
-    else if(std::string(argv[1]) == "settings.recyclelimit"){ // 'settings.recyclelimit' @param
+    else if(std::string(argv[1]) == "settings.recyclelimit"){ // 'settings.recyclelimit' param
 
         if(argv[2] == NULL){ // Default. No subparam.
             std::cout << "Fatal: missing value for argument. See 'cfgs --settings'" << std::endl;
         }
         
-        else if((int)argv[2] <= 400){ // Value provided.
-            pt.put("recyclelimit", (int)argv[2]); // Assign new limit
+        else if(std::stoi(argv[2]) <= 400){ // Value provided.
+            pt.put("recyclelimit", std::stoi(argv[2])); // Assign new limit
             boost::property_tree::write_json(settingsPath, pt); // Update config file
         }
         
@@ -1112,13 +1176,13 @@ int main(int argc, char* argv[]){
     }
 
 
-    else if(std::string(argv[1]) == "settings.task"){ // 'settings.task' @param
+    else if(std::string(argv[1]) == "settings.task"){ // 'settings.task' param
         
         if(argv[2] == NULL){ // Default. No subparam.
             std::cout << "Fatal: missing value for argument. See 'cfgs --settings'" << std::endl;
         }
         
-        else if(std::string(argv[2]) == "true" || std::string(argv[2]) == "True"){ // 'true' @subparam
+        else if(std::string(argv[2]) == "true" || std::string(argv[2]) == "True"){ // 'true' subparam
 
             if(pt.get<bool>("task") == false){ // Current property is set to 'false'
                 pt.put("task", true); // Set property to true
@@ -1147,7 +1211,7 @@ int main(int argc, char* argv[]){
             }
         }
 
-        else if(std::string(argv[2]) == "false" || std::string(argv[2]) == "False"){ // 'false' @subparam
+        else if(std::string(argv[2]) == "false" || std::string(argv[2]) == "False"){ // 'false' subparam
             bool prop = pt.get<bool>("task");
 
             if(prop == true){ // Current property is set to 'true'
@@ -1176,7 +1240,7 @@ int main(int argc, char* argv[]){
             }
         }
         
-        else{ // Invalid argument @subparam
+        else{ // Invalid argument subparam
             std::cerr << "Fatal: invalid argument. See 'cfgs --settings'." << std::endl;
         }
     }
@@ -1189,15 +1253,15 @@ int main(int argc, char* argv[]){
         }
         
 
-        else if(std::string(argv[2]) == "daily" || std::string(argv[2]) == "Daily" || std::string(argv[2]) == "hourly" || std::string(argv[2]) == "Hourly"){ // 'daily' or 'hourly' @subparam
+        else if(std::string(argv[2]) == "daily" || std::string(argv[2]) == "Daily" || std::string(argv[2]) == "hourly" || std::string(argv[2]) == "Hourly"){ // 'daily' or 'hourly' subparam
 
             if(argv[3] == NULL){
                 std::cout << "Fatal: missing value for argument. See 'cfgs --settings'" << std::endl;
             }
 
-            else if((int)argv[3] <= 1000){
+            else if(std::stoi(argv[3]) <= 1000){
 
-                const std::string lcase = (std::string)argv[2]; 
+                std::string lcase = (std::string)argv[2]; 
                 std::transform(lcase.begin(), lcase.end(), lcase.begin(), // Convert to lowercase
                     [](unsigned char c){ return std::tolower(c); });
                     
@@ -1215,7 +1279,7 @@ int main(int argc, char* argv[]){
                 }
             }
             
-            else if((int)argv[3] > 1000){ // Invalid value
+            else if(std::stoi(argv[3]) > 1000){ // Invalid value
                 std::cout << "Fatal: value out of range." << std::endl;
             }
             else{

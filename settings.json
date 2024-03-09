@@ -1,0 +1,7 @@
+{
+    "settingsID": "1",
+    "recyclelimit": "3",
+    "savelimit": "3",
+    "task": "false",
+    "taskfrequency": "daily,1"
+}
