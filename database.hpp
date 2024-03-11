@@ -13,7 +13,6 @@ class database{
     public:
         database(const std::string& path) : filePath(path) {}
 
-        
         static void encodeStringWithPrefix(std::ofstream& file, std::string& str){
             // get length of string
             size_t length = str.length();
@@ -197,6 +196,28 @@ class database{
             }
             
             file.close();
+        }
+
+
+        struct hashbase{
+            std::vector<std::string> ha;
+            std::vector<std::string> hb;
+            std::vector<std::string> pa;
+            std::vector<std::string> pb;
+        };
+
+
+        static void storeHashbase(const std::string& path, const hashbase& hb){
+            hashbase h;
+            if(!std::filesystem::exists(path)){
+                throw cfgsexcept((const char*)("Failed to open file: file not found. " + __LINE__));
+            }
+            std::ofstream hf;
+            hf.open(path);
+
+            for(unsigned i = 0; i < h.ha.size(); i++){
+                hf << h.ha[i] << "," << h.hb[i] << "," << h.pa[i] << "," << h.pb[i] << "\n";
+            }
         }
 };
 

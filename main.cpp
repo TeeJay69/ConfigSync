@@ -8,6 +8,8 @@
 #include <thread>
 #include <set>
 #include <cctype>
+#include <csignal>
+#include <windows.h>
 #include <boost\uuid\uuid.hpp>
 #include <boost\uuid\uuid_generators.hpp>
 #include <boost\filesystem\operations.hpp>
@@ -27,38 +29,77 @@
 #endif
 
 #define SETTINGS_ID 1
-#define VERSION "v0.1.0"
+#define VERSION "v1.0.0"
 
+
+volatile sig_atomic_t interrupt = 0;
+
+void enableColors(){
+    DWORD consoleMode;
+    HANDLE outputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (GetConsoleMode(outputHandle, &consoleMode))
+    {
+        SetConsoleMode(outputHandle, consoleMode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    }
+}
+
+void exitSignalHandler(int signum){
+    if(interrupt == 0){
+        interrupt = 1;
+        std::cout << "Warning: Ctrl+C was pressed. Please remain calm and wait for the program to finish.\n";
+        std::signal(SIGINT, exitSignalHandler); // Reset SIGINT flag
+    }
+    else{
+        static int count = 2;
+        std::cout << ANSI_COLOR_226 << "WARNING: Prematurely killing this process can corrupt the targeted programs!" << ANSI_COLOR_RESET << std::endl;
+
+        if(count < 9){
+            std::signal(SIGINT, exitSignalHandler); // Reset SIGINT flag
+        }
+        else{
+            std::exit(signum);
+        }
+    }
+}
 
 int path_check(const std::vector<std::string>& paths){
     for(const auto& item : paths){ // Check if program exist
+        std::cerr << "Debug m9\n";
         if(!std::filesystem::exists(item)){
+            std::cerr << "Debug m10\n";
             // std::cerr << "Program path not found: (" << item << ").\n" << std::endl;
             return 0;
         }
+        std::cerr << "DEBUG m11\n";
     }
-
+    std::cerr << "Debug m 12\n";
     return 1;
 }
 
-
+// TODO: Add optional parameter for the group_id's. 
 int create_save(const std::vector<std::string>& programPaths, const std::string& program, const std::string& pArchivePath, const std::string& exelocation){
     if(path_check(programPaths) == 1){ // Verify program paths        
-        
+        std::cout << "DEBUG m82\n";
         analyzer configAnalyzer(programPaths, program, exelocation);
-        
+        std::cout << "DEBUG m84\n";
+
         if(configAnalyzer.is_archive_empty() == 1){ // First ever save.
+            std::cout << "DEBUG m87\n";
             std::cout << "First synchronization of " << program << "." << std::endl;
             synchronizer sync(programPaths, program, exelocation); // initialize class
 
             if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
+                std::cout << "DEBUG m92\n";
                 std::cerr << "Error synchronizing " + program << "." << std::endl; // copy_config returned 0
                 return 0;
             }
+            std::cout << "DEBUG m96\n";
         }
         else{
+            std::cout << "DEBUG m99\n";
             if(configAnalyzer.is_identical_config()){ // Compare last save to current config
                 std::cout << program + " config did not change, updating save date..." << std::endl;
+                std::cout << "DEBUG m102\n";
                 
                 std::filesystem::path newestPath = configAnalyzer.get_newest_backup_path();
                 std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
@@ -66,11 +107,14 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
                 return 1;
             }
             else{ // Config changed
+                std::cout << "DEBUG m110\n";
                 std::cout << program << " config changed.\nSynchronizing " << program << "..." << std::endl;
 
                 synchronizer sync(programPaths, program, exelocation); // initialize class
 
+                std::cout << "DEBUG m115\n";
                 if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
+                    std::cout << "DEBUG m117\n";
                     std::cerr << "Error synchronizing " + program << "." << std::endl; // copy_config returned 0
                     return 0;
                 }
@@ -82,11 +126,14 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
         return 0;
     }
 
+    std::cout << "DEBUG m129\n";
     return 1;
 }
 
-
-
+/**
+ * @brief Functions for managing scheduled tasks.
+ * 
+ */
 class task{
     public:
         /**
@@ -152,9 +199,10 @@ class task{
         }
 };
 
+
 /** 
- * Default setting values
- * Strings must be lowercase.
+ * @brief Default setting values
+ * @note Strings must be lowercase.
  *
  */
 class defaultsetting{
@@ -188,6 +236,8 @@ class defaultsetting{
 
 int main(int argc, char* argv[]){
 
+    std::signal(SIGINT, exitSignalHandler);
+    enableColors();
     // Get location of exe
     boost::filesystem::path exePathBfs(boost::filesystem::initial_path<boost::filesystem::path>());
     exePathBfs = (boost::filesystem::system_complete(boost::filesystem::path(argv[0])));
@@ -196,11 +246,6 @@ int main(int argc, char* argv[]){
     const std::string settingsPath = exePath + "\\settings.json";
     const std::string batPath = exePath + "\\cfgs.bat";
     const std::string taskName = "ConfigSyncTask";
-    // std::cout << "exe: " << exePath << std::endl;
-    // std::cout << "settingsPath: " << settingsPath << std::endl;
-    // std::cout << "batPath: " << batPath << std::endl;
-    // std::cout << "taskName: " << taskName << std::endl;
-    // std::exit(EXIT_SUCCESS);
 
     // Settings @section
     boost::property_tree::ptree pt;
@@ -212,7 +257,7 @@ int main(int argc, char* argv[]){
     catch(const boost::property_tree::json_parser_error& readError){ // Create default settings file.
         
         if(!std::filesystem::exists(settingsPath)){
-            std::cout << "Creating settingsfile..." << std::endl;
+            std::cout << "Creating settings file..." << std::endl;
         }
         else{
             std::cerr << "Warning: error while parsing settings file (" << readError.what() << "). Restoring default settings..." << std::endl;
@@ -228,6 +273,7 @@ int main(int argc, char* argv[]){
         try{
             std::cout << "Writing settings file..." << std::endl;
             boost::property_tree::write_json(settingsPath, pt);
+            std::cout << "Settings file created.\n" << std::endl;
         }
         catch(const boost::property_tree::json_parser_error& writeError){
             std::cerr << "Error: Writing default settings to file failed! (" << writeError.what() << "). Terminating program!" << std::endl;
@@ -314,7 +360,7 @@ int main(int argc, char* argv[]){
     else if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h"){ // Help message param
         std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
-        std::cout << "usage: cfgs [OPTIONS]... [PROGRAM]\n" << std::endl;
+        std::cout << "usage: cfgs [OPTIONS]... [PROGRAM]" << std::endl;
         std::cout << std::endl;
         std::cout << "Options:\n";
         std::cout << "sync [PROGRAM]                Create a snapshot of a program's configuration.\n";
@@ -342,8 +388,8 @@ int main(int argc, char* argv[]){
             std::cout << "Fatal: Missing program or restore argument." << std::endl;
         }
         
-        else if(argv[2] == "--all"){ // Create a save of all supported, installed programs. No subparam provided
-            std::cout << ANSI_COLOR_160 << "Synchronizing all programs:" << ANSI_COLOR_RESET << std::endl;
+        else if(std::string(argv[2]) == "--all"){ // Create a save of all supported, installed programs. No subparam provided
+            std::cout << ANSI_COLOR_161 << "Synchronizing all programs:" << ANSI_COLOR_RESET << std::endl;
             
             std::cout << ANSI_COLOR_222 << "Fetching paths..." << ANSI_COLOR_RESET << std::endl;
 
@@ -360,6 +406,7 @@ int main(int argc, char* argv[]){
             std::cout << ANSI_COLOR_222 << "Checking archive..." << ANSI_COLOR_RESET << std::endl;
 
             // Create the archive @dir if it does not exist yet
+            std::cout << "DEBUG: 404: \n";
             if(!std::filesystem::exists(jackett.get_archive_path())){
                 std::filesystem::create_directories(jackett.get_archive_path());
             }
@@ -379,13 +426,17 @@ int main(int argc, char* argv[]){
             organizer janitor; // Initialize class
 
             // Sync Jackett
+            std::cout << "DEBUG 424: " << std::endl;
             int jackettSync = 0;
             if(create_save(jackettPaths, "Jackett", jackett.get_archive_path().string(), exePath) == 1){
+                std::cout << "DEBUG 426: " << std::endl;
                 jackettSync = 1;
                 syncedList.push_back("Jackett");
 
                 // Limit number of saves
+                std::cout << "DEBUG 432: " << std::endl;
                 janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), jackett.get_archive_path().string()); // Cleanup
+                std::cout << "DEBUG 434: " << std::endl;
             }
 
             // Sync Prowlarr
@@ -515,9 +566,10 @@ int main(int argc, char* argv[]){
             
             analyzer anlyJackett(jackettPaths, "Jackett", exePath); // Initialize class
             synchronizer syncJackett(jackettPaths, "Jackett", exePath); // Initialize class
-
+            std::cout << "Debug m574\n";
             int jackettState = 0;
             if(anlyJackett.is_archive_empty() == 1){ // Archive is empty
+                std::cout << "Debug m577\n";
                 std::cout << "Skipping Jackett, not synced..." << std::endl;
                 failList.push_back("Jackett");
             }

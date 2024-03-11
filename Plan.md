@@ -142,7 +142,8 @@ Install-Location
 - [ ] Add logging
 - [ ] Catch `Ctrl + C`
 - [ ] Doxygen comments
-
+- [ ] Refactor the way the last save dir is retrieved. A unique Id linked to the date might be helpful.
+- [ ] Use more structs
 
 
 ## Reevaluate:
@@ -152,7 +153,6 @@ Install-Location
 - Message 'Config is in sync' instead of 'Config is up to date'
 - Display last save for every program, 'cfgs status' --default 
 - Change 'Rollback complete' to 'Successfully restored <program name>' or 'Restored <programname> successfully'
-
 
 
 ## Feature requests:
@@ -167,6 +167,9 @@ Install-Location
 - [ ] Verbose message showing old setting vs new setting when changing settigns
 - [ ] Backup settings file, in case primary gets corrupted or messed with.
 - [ ] Verify settings file using hash function.
+- [ ] --force option for sync
+
+
 
 ## Trashcan:
 
@@ -186,11 +189,126 @@ restore config:
         - ~~move backup inside the ConfigBackup\\program\\temp directory to ConfigBackup\\program\\RecycleBin~~
         - ~~If RecycleBin has more than x number of items, delete x number of oldest items in RecycleBin directory.~~
         - ~~Inform user that config was restored successfully~~ -->
+<!-- // if(std::filesystem::is_directory(source)){
+                //     std::cout << "Debug s109\n";
+                //     std::cout << "source debug s111: " << source << std::endl;
+                //     std::cout << "destination debug s112: " << destination << std::endl;
+                //     try{
+                //         // std::filesystem::copy(source, std::filesystem::path(destination), std::filesystem::copy_options::update_existing | std::filesystem::copy_options::recursive);
+                //         std::cout << "Debug s113\n";
+                //     }
+                //     catch(std::filesystem::filesystem_error& copyError){
+                //         std::cout << "Debug s117\n " << copyError.what();
+                //         return 0; // throw std::runtime_error(copyError);
+                //     }
 
+                    // Store path pair in map
+                //     std::cout << "Debug s122\n";
+                //     pathMap.insert(std::make_pair(item, destination));
+                // }
+                // else{
+                //     std::string sourceParentDir = source.parent_path().filename().string();
+                //     std::string destination = archivePathAbs + "\\" + dateDir + "\\" + sourceParentDir + "\\" + source.filename().string();
+                //     std::cout << "Debug s128\n";
+
+                //     try{
+                //         std::filesystem::create_directories(archivePathAbs + "\\" + dateDir + "\\" + sourceParentDir);
+                //         std::cout << "Debug s132\n";
+                //         std::filesystem::copy(source, std::filesystem::path(destination), std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::recursive);
+                //         std::cout << "Debug s134\n";
+                //     }
+                //     catch(std::filesystem::filesystem_error& copyError){
+                //         std::cout << "Debug s137\n";
+                //         return 0; // throw std::runtime_error(copyError);
+                //     }
+
+                    // std::cout << "Debug s141\n";
+                    // // Store path pair in map
+                    // pathMap.insert(std::make_pair(item, destination));
+                    // std::cout << "Debug s144\n";
+                // }
+                // std::cout << "Debug s146\n"; -->
 
 
 ## Parking Lot
 <!-- 
+
+            // std::string groupName;
+            // if(programconfig::has_groups(programName)){
+            //     programconfig pcfg(programName, exeLocation);
+            //     groupName = pcfg.get_path_groups();
+            // }
+            // recurse_scanner(std::filesystem::path(lastSavedDir) / std::filesystem::path("Directories"), configItems);
+            
+            // const std::filesystem::path singleFiles = std::filesystem::path(lastSavedDir) / std::filesystem::path("Single-Files");
+            // if(std::filesystem::exists(singleFiles)){
+            //     recurse_scanner(singleFiles, configItems);
+
+            // }
+            // /* Get pathmap */
+            // database db(lastSavedDir + "\\ConfigSync-PathDatabase.bin");
+            // std::map<std::string, std::string> map;
+            // db.readStringMap(map);
+
+            // for(const auto& pair : map){
+            //     configItems.push_back(pair.second);
+            // }
+
+  int is_identical_config(){ // Main function of this class
+            
+            // Get saved config items
+            std::vector<std::string> configItemsSaved;
+            get_config_items_saved(configItemsSaved);
+            sortby_filename(configItemsSaved);
+            std::cout << "items saved 0,1: " << configItemsSaved[0] << "  1: " << configItemsSaved[1] << std::endl;
+            
+            // Get ProgramPaths
+            std::vector<std::string> configItemsCurrent;
+            get_config_items_current(configItemsCurrent);
+            sortby_filename(configItemsCurrent);
+            std::cout << "items current 0,1: " << configItemsCurrent[0] << "  1: " << configItemsCurrent[1] << std::endl;
+            
+            // Compare vectors
+            if(is_identical_filenames(configItemsSaved, configItemsCurrent)){
+                int i = 0;
+                for(const auto& item : configItemsSaved){
+                    
+                    if(!is_identical_bytes(item, configItemsCurrent[i])){
+                        std::cout << "FILES NOT IDENTICAL!!!: " << item << configItemsCurrent[i] << std::endl;
+                        return 0; // config changed
+                    }
+                    
+                    i++;
+                }
+            }
+            else{
+                std::cerr << "this is a problem!" << std::endl;
+                return 0;
+            }
+
+            std::cout << "Debug a169\n";
+            return 1; // config did not change
+        }
+
+
+
+        void get_config_items_saved(std::vector<std::string>& configItems){
+            std::cout << "Debug a110\n";
+            const std::string lastSavedDir = get_newest_backup_path();
+            std::cout << "lastSavedDir: " << lastSavedDir << std::endl;
+            std::cout << "Debug a112\n";
+            const std::filesystem::path configPathSaved = lastSavedDir;
+            if(std::filesystem::exists(configPathSaved)){
+                std::cout << "configPathSaved exists!!!\n";
+            }
+            std::cout << "configPathSaved: " << configPathSaved << std::endl;
+            
+            recurse_scanner(configPathSaved, configItems);
+            std::cout << "Debug a116\n";
+        
+        }
+
+        
     std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
         std::cout << "usage: cfgs [OPTIONS]... [PROGRAM]\n" << std::endl;
