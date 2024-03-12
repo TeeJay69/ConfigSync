@@ -21,6 +21,7 @@
 #include "synchronizer.hpp"
 #include "database.hpp"
 #include "organizer.hpp"
+#include "logs.hpp"
 
 #ifdef DEBUG
 #define DEBUG_MODE 1
@@ -78,45 +79,64 @@ int path_check(const std::vector<std::string>& paths){
 // TODO: Add optional parameter for the group_id's. 
 int create_save(const std::vector<std::string>& programPaths, const std::string& program, const std::string& pArchivePath, const std::string& exelocation){
     if(path_check(programPaths) == 1){ // Verify program paths        
-        std::cout << "DEBUG m82\n";
-        analyzer configAnalyzer(programPaths, program, exelocation);
-        std::cout << "DEBUG m84\n";
+
+        std::ofstream logf = logs::session_log(exelocation, 50); // Create logfile
+        analyzer configAnalyzer(programPaths, program, exelocation, logf);
 
         if(configAnalyzer.is_archive_empty() == 1){ // First ever save.
-            std::cout << "DEBUG m87\n";
-            std::cout << "First synchronization of " << program << "." << std::endl;
-            synchronizer sync(programPaths, program, exelocation); // initialize class
+            const std::string out = "First synchronization of " + program + ".\n";
+            std::cerr << out;
+            logf << logs::ms(out);
+            synchronizer sync(programPaths, program, exelocation, logf); // initialize class
 
             if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
-                std::cout << "DEBUG m92\n";
-                std::cerr << "Error synchronizing " + program << "." << std::endl; // copy_config returned 0
+                const std::string errSync = "Error synchronizing " + program + ".\n"; // copy_config returned 0
+                std::cerr << errSync;
+                logf << logs::ms(errSync);
                 return 0;
             }
-            std::cout << "DEBUG m96\n";
         }
         else{
-            std::cout << "DEBUG m99\n";
-            if(configAnalyzer.is_identical_config()){ // Compare last save to current config
-                std::cout << program + " config did not change, updating save date..." << std::endl;
-                std::cout << "DEBUG m102\n";
-                
-                std::filesystem::path newestPath = configAnalyzer.get_newest_backup_path();
-                std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
+            const std::string dateDir = configAnalyzer.get_newest_backup_path(); // Latest dir
 
-                return 1;
-            }
-            else{ // Config changed
-                std::cout << "DEBUG m110\n";
-                std::cout << program << " config changed.\nSynchronizing " << program << "..." << std::endl;
+            if(configAnalyzer.has_hashmap(dateDir) == 1){
+                if(configAnalyzer.is_identical()){ // Compare last save to current config
+                    const std::string noChange = program + " config did not change, updating save date...\n";
+                    std::cout << noChange;
+                    logf << logs::ms(noChange);
+                    std::filesystem::path newestPath = configAnalyzer.get_newest_backup_path();
+                    std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
 
-                synchronizer sync(programPaths, program, exelocation); // initialize class
-
-                std::cout << "DEBUG m115\n";
-                if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
-                    std::cout << "DEBUG m117\n";
-                    std::cerr << "Error synchronizing " + program << "." << std::endl; // copy_config returned 0
-                    return 0;
+                    return 1;
                 }
+                else{ // Config changed
+                    const std::string changed = program + " config changed.\nSynchronizing " + program + "...\n";
+                    std::cout << changed;
+                    logf << logs::ms(changed);
+
+                    synchronizer sync(programPaths, program, exelocation, logf); // initialize class
+
+                    if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
+                        const std::string errSync = "Error synchronizing " + program + ".\n"; // copy_config returned 0
+                        std::cerr << errSync;
+                        logf << logs::ms(errSync); 
+                        return 0;
+                    }
+                }
+            }
+
+            synchronizer::recurse_remove(dateDir); // Remove the corrupt save, it has no hashmap
+            const std::string changed = program + "'s existing save was deleted, due to a missing hashmap.\nSynchronizing " + program + "...\n";
+            std::cout << changed;
+            logf << logs::ms(changed);
+
+            synchronizer sync(programPaths, program, exelocation, logf); // initialize class
+
+            if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
+                const std::string errSync = "Error synchronizing " + program + ".\n"; // copy_config returned 0
+                std::cerr << errSync;
+                logf << logs::ms(errSync); 
+                return 0;
             }
         }
     }
@@ -125,7 +145,6 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
         return 0;
     }
 
-    std::cout << "DEBUG m129\n";
     return 1;
 }
 

@@ -6,7 +6,9 @@
 #include <filesystem>
 #include <chrono>
 #include <set>
+#include <algorithm>
 #include "synchronizer.hpp"
+#include "CFGSExcept.hpp"
 
 class logs{
     public:
@@ -27,6 +29,8 @@ class logs{
             }
 
             if(fvec.size() > limit){
+                
+                std::sort(fvec.begin(), fvec.end());
                 try{
                     std::filesystem::remove(fvec[0]);
                     log_cleaner(dir, limit); // Check again
@@ -50,10 +54,20 @@ class logs{
             log_cleaner(logDir, limit);
 
             std::ofstream logf(logPath);
-
+            if(!logf.is_open()){
+                throw cfgsexcept("Failed to open logfile");
+            }
+            
             return logf;
         }
-        
+
+
+        static const std::string ms(const std::string& message){
+            const std::string m = timestamp() + ":    " + message;
+
+            return m;
+        }
+
 };
 
 #endif

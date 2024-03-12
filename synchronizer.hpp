@@ -13,6 +13,7 @@
 #include <boost\filesystem.hpp>
 #include <map>
 #include <chrono>
+#include <ranges>
 #include "database.hpp"
 #include "programs.hpp"
 #include "organizer.hpp"
@@ -22,11 +23,12 @@
 
 class synchronizer{
     private:
-        const std::vector<std::string> programPaths;
-        const std::string programName;
-        const std::string exeLocation;
+        const std::vector<std::string>& programPaths;
+        const std::string& programName;
+        const std::string& exeLocation;
+        std::ofstream& logf;
     public:
-        synchronizer(const std::vector<std::string>& ppaths, const std::string& pname, const std::string& exeLocat) : programPaths(ppaths), programName(pname), exeLocation(exeLocat) {}
+        synchronizer(const std::vector<std::string>& ppaths, const std::string& pname, const std::string& exeLocat, std::ofstream& logFile) : programPaths(ppaths), programName(pname), exeLocation(exeLocat), logf(logFile) {}
         
 
         static std::string generate_UUID(){
@@ -66,7 +68,6 @@ class synchronizer{
             map[t] = strValue;
         }
 
-
         
         /**
          * @brief Recursively copy a directory or a single file
@@ -75,7 +76,10 @@ class synchronizer{
          * @param map Optional pass by reference map of strings. When defined, source is inserted as key with destination as value.
          * @note Optional parameter requires a map inside a reference_wrapper container, created in part with std::ref(normMap). normMap is modified and can be used like normal afterwards.
          */
-        static int recurse_copy(const std::filesystem::path& source, const std::string& destination, std::optional<std::reference_wrapper<std::map<std::string, std::string>>> map = std::nullopt){
+        static int recurse_copy(const std::filesystem::path& source, const std::string& destination,
+                                std::optional<std::reference_wrapper<std::map<std::string, std::string>>> map = std::nullopt,
+                                std::optional<std::reference_wrapper<std::vector<std::string>>> paVec = std::nullopt,
+                                std::optional<std::reference_wrapper<std::vector<std::string>>> pbVec = std::nullopt){
 
             if(std::filesystem::is_directory(source)){
                 for(const auto& entry : std::filesystem::directory_iterator(source)){
@@ -98,6 +102,15 @@ class synchronizer{
                                 auto& mapDeref = map->get();
                                 mapDeref[entry.path().string()] = dstPath;
                             }
+                            
+                            if(paVec.has_value() && pbVec.has_value()){
+                                // Dereference the optional to access the vector
+                                auto& paVecd = paVec->get();
+                                auto& pbVecd = pbVec->get();
+
+                                paVecd.push_back(entry.path().string());
+                                pbVecd.push_back(dstPath);
+                            }
                         }
                         catch(const std::filesystem::filesystem_error& err){
                             throw cfgsexcept(err.what());
@@ -116,6 +129,14 @@ class synchronizer{
                     if(map.has_value()){
                         auto& mapDeref = map->get(); // Dereference the optional
                         mapDeref[source.string()] = dstPath; // Add element to map
+                    }
+                    if(paVec.has_value() && pbVec.has_value()){
+                        // Dereference the optional to access the vector
+                        auto& paVecd = paVec->get();
+                        auto& pbVecd = pbVec->get();
+
+                        paVecd.push_back(source.string());
+                        pbVecd.push_back(dstPath);
                     }
                 }
                 catch(const std::filesystem::filesystem_error& err){
@@ -154,44 +175,40 @@ class synchronizer{
          * @note Uses private members 'programPaths', 'programName' and 'exeLocation'.
          */
         int copy_config(const std::string& archivePathAbs, const std::string& dateDir){ // archivePathAbs = programs directory containing the date directories
-    	    std::cout << "DEBUG: archivePathAbs synchronizer: " << archivePathAbs << std::endl;
-            std::cout << "Debug s72\n";
+
             // create first date folder if it doesnt exist yet
             if(std::filesystem::is_empty(std::filesystem::path(archivePathAbs))){
-                std::cout << "Debug s75\n";
-
                 char* date = ymd_date_cstyle();
-                
+
                 std::filesystem::create_directory(exeLocation + "\\" + "ConfigArchive\\" + programName + "\\" + date); // Create archive dir and the subdir "dateDir"
             }
             
 
-            std::cout << "Debug s83\n";
+
             const std::filesystem::path datePath = (archivePathAbs / std::filesystem::path(dateDir));
             if(!std::filesystem::exists(datePath)){ // If date dir doesnt exist, create it.
                 std::cout << "archivePathAbs: " << archivePathAbs << std::endl;
-                std::cout << "Debug s85\n";
+
                 std::filesystem::create_directories(datePath);
             }
             else if(!std::filesystem::is_empty(datePath)){ // If exists but not empty, remove dir and recreate it. Handles cases where user runs sync command multiple times on the same day.
-                std::cout << "Debug s89\n";
+
                 recurse_remove(archivePathAbs);
-                std::cout << "Debug s160\n";
+
                 std::filesystem::create_directories(datePath);
             }
             std::cout << "archivePathAbs: " << archivePathAbs << std::endl;
-            std::cout << "Debug s93\n";
+
             
   
 
-            // PathDatabase location is inside the dateDir
-            std::string databasePath = archivePathAbs + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin";
-            std::map<std::string, std::string> pathMap;
-            std::optional<std::reference_wrapper<std::map<std::string, std::string>>> mapRef = std::ref(pathMap);
+            // hashbase location is inside the dateDir
+            const std::string hashbasePath = archivePathAbs + "\\" + dateDir + "\\ConfigSync-Hashbase.csv";
 
-            std::cout << "Debug s214\n";
+            hashbase H; // Initialize hashbase
+            std::optional<std::reference_wrapper<std::vector<std::string>>> p1Ref = std::ref(H.pa);
+            std::optional<std::reference_wrapper<std::vector<std::string>>> p2Ref = std::ref(H.pb);
 
-            
             /* Copy Process */
             std::unordered_map<std::string, std::string> id;
             int groupFlag = 0;
@@ -203,62 +220,45 @@ class synchronizer{
             else{
                 groupFlag = 0;
             }
-            std::cout << "Debug s219\n";
+
             for(const auto& item : programPaths){
-                std::cout << "Debug s220\n";
                 std::string groupName;
                 if(std::filesystem::is_directory(item)){
-                    std::cout << "Debug s223\n";
-                    
-                    if(groupFlag == 1 && id.contains(item)){
-                        std::cout << "Debug s226\n";
+                    if(groupFlag == 1 && id.contains(item)){ // Assign group or default name
                         groupName = id[item];
                     }
                     else{
-                        std::cout << "Debug s230\n";
                         groupName = "Directories";
                     }
-                    
-                    std::cout << "Debug s234\n";
-                    std::string destination = archivePathAbs + "\\" + dateDir + "\\" + groupName;
+
+                    const std::string destination = archivePathAbs + "\\" + dateDir + "\\" + groupName;
                     try{
-                        std::cout << "Debug s237\n";
-                        recurse_copy(item, destination, mapRef);
-                        std::cout << "Debug s239\n";
+                        recurse_copy(item, destination, std::nullopt, p1Ref, p2Ref); // Copy and load into vectors
                     }
                     catch(cfgsexcept& except){
-                        std::cout << "Debug s242\n";
                         std::cerr << except.what() << std::endl;
                     }
                 }
                 else{
-                    
-                    std::cout << "Debug s248\n";
-                    if(groupFlag == 1 && id.contains(item)){
-                        std::cout << "Debug s250\n";
+                    if(groupFlag == 1 && id.contains(item)){ // Assign group or default name
                         groupName = id[item];
                     }
                     else{
                         groupName = "Single-Files";
                     }
 
-                    std::string destination = archivePathAbs + "\\" + dateDir + "\\" + groupName;
+                    const std::string destination = archivePathAbs + "\\" + dateDir + "\\" + groupName;
                     try{
-                        std::cout << "Debug s259\n";
-                        recurse_copy(item, destination, mapRef);
-                        std::cout << "Debug s261\n";
+                        recurse_copy(item, destination, std::nullopt, p1Ref, p2Ref); // Copy and load into vectors
                     }
                     catch(cfgsexcept& err){
-                        std::cout << "Debug s264\n";
                         std::cerr << err.what() << std::endl;
                     }
                 }
             }
 
-            std::cout << "Debug s148\n";
-            // Writes the path map to file
-            database db(databasePath);
-            db.storeStringMap(pathMap);
+
+            database::storeHashbase(hashbasePath, H); // Write the hashbase to file
 
             /* Create username file */
             std::ofstream idfile(archivePathAbs + "\\" + dateDir + "\\id.bin");
@@ -342,7 +342,7 @@ class synchronizer{
             }
 
             // Write path map to file
-            // std::cout << "Debug s204\n";
+
             database db(databasePath);
             db.storeStringMap(pathMap);
         }
@@ -418,6 +418,53 @@ class synchronizer{
             }
         }
 
+        /**
+         * @brief Convert username of paths as elements of a vector of a pair.
+         * @param vec Vector of type <std::string, std::string> containing paths.
+         * @param newUser The new username.
+         */
+        static void transform_pathvector_new_username(std::vector<std::pair<std::string, std::string>>& vec, const std::string& newUser){
+            
+            const boost::regex pattern("C:\\\\Users\\\\");
+            const boost::regex repPattern("(?<=C:\\\\Users\\\\)(.+?)\\\\");
+            
+            for(auto & pair : vec){
+                
+                auto keyMatches = boost::smatch{};
+                auto valueMatches = boost::smatch{};
+
+                std::string newKey;
+                std::string newValue;
+
+                /* Check key */
+                if(boost::regex_search(pair.first, keyMatches, pattern)){
+                    
+                    newKey = boost::regex_replace(pair.first, repPattern, newUser);
+
+                    /* Search value */
+                    if(boost::regex_search(pair.second, valueMatches, pattern)){
+                        
+                        newValue = boost::regex_replace(pair.second, repPattern, newUser);    
+
+                        /* Replace pair element */
+                        pair = std::make_pair(newKey, newValue);
+
+                    }
+                    else{ // Replace only key when value did not contain username
+                        pair = std::make_pair(newKey, pair.second);
+                    }
+                }
+
+                /* Check value when key did not contain username */
+                else if(boost::regex_search(pair.second, valueMatches, pattern)){
+                    newValue = boost::regex_replace(pair.second, repPattern, newUser);
+
+                    /* Replace value  */
+                    pair = std::make_pair(pair.first, newValue);
+                }
+            }
+        }
+
 
         /**
          * @brief Replace a programs config with a save from the config archive.
@@ -435,8 +482,8 @@ class synchronizer{
             }
 
             /* Create backup of current config */
-            std::string backupDir = exeLocation + "\\ConfigBackup\\" + programName;
-            std::string dirUUID = generate_UUID();
+            const std::string backupDir = exeLocation + "\\ConfigBackup\\" + programName;
+            const std::string dirUUID = generate_UUID();
             std::map<unsigned long long, std::string> recycleMap; // Stores recycleBin items with timestamps
 
             if(!std::filesystem::is_empty(std::filesystem::path(backupDir + "\\temp"))){ // Clean up temp directory
@@ -449,7 +496,7 @@ class synchronizer{
                 }
 
                 // Clean recyclebin
-                std::string mapPath = backupDir + "\\RecycleBin\\RecycleMap.bin";
+                const std::string mapPath = backupDir + "\\RecycleBin\\RecycleMap.bin";
                 organizer janitor;
                 janitor.recyclebin_cleaner(recyclebinlimit, recycleMap, mapPath); // Clean recycle bin and store recycle map as file
             }
@@ -458,10 +505,9 @@ class synchronizer{
             backup_config_for_restore(dirUUID); // Backup to temp directory
 
             // Get path database from ConfigArchive
-            std::string databasePath = (exeLocation + "\\ConfigArchive\\" + programName + "\\" + dateDir + "\\ConfigSync-PathDatabase.bin");
-            database db(databasePath);
-            std::map<std::string, std::string> pathMap;
-            db.readStringMap(pathMap);
+            const std::string databasePath = (exeLocation + "\\ConfigArchive\\" + programName + "\\" + dateDir + "\\ConfigSync-Hashbase.csv");
+            hashbase H;
+            database::readHashbase(databasePath, H);
 
 
             /* Get username file */

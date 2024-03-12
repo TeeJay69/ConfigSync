@@ -220,10 +220,17 @@ class database{
                 throw cfgsexcept("Failed to open file: Error opening. " + __LINE__);
             }
             
-            for(unsigned i = 0; i < hb.ha.size(); i++){
-                hf << hb.ha[i] << "," << hb.hb[i] << "," << hb.pa[i] << "," << hb.pb[i] << "\n";
+            if(hb.ha.empty() && hb.hb.empty()){
+                for(unsigned i = 0; i < hb.ha.size(); i++){
+                    hf << '0' << "," << "0" << "," << hb.pa[i] << "," << hb.pb[i] << "\n";
+                }
             }
-
+            else if(!hb.ha.empty() && !hb.hb.empty() && !hb.pa.empty() && !hb.pb.empty()){
+                for(unsigned i = 0; i < hb.ha.size(); i++){
+                    hf << hb.ha[i] << "," << hb.hb[i] << "," << hb.pa[i] << "," << hb.pb[i] << "\n";
+                }
+            }
+            
             hf.close();
         }
 

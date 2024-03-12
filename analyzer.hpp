@@ -24,11 +24,12 @@
 
 class analyzer{
     private:
-        const std::vector<std::string> programPaths;
-        const std::string programName;
-        const std::string exeLocation;
+        const std::vector<std::string>& programPaths;
+        const std::string& programName;
+        const std::string& exeLocation;
+        std::ofstream& logf;
     public:
-        analyzer(const std::vector<std::string>& path, const std::string& name, const std::string& exeLocat) : programPaths(path), programName(name), exeLocation(exeLocat) {}
+        analyzer(const std::vector<std::string>& path, const std::string& name, const std::string& exeLocat, std::ofstream& logFile) : programPaths(path), programName(name), exeLocation(exeLocat), logf(logFile) {}
 
 
         const std::string archivePath = exeLocation + "\\ConfigArchive\\" + programName;
@@ -101,13 +102,10 @@ class analyzer{
 
         // Check if a programs archive is empty
         int is_archive_empty(){
-            std::cout << "Debug a83\n";
             if(std::filesystem::is_empty(archivePath)){
-                std::cout << "Debug a85\n";
                 return 1;
             }
             
-            std::cout << "Debug a89\n";
             return 0;
         }
 
@@ -153,43 +151,6 @@ class analyzer{
                 std::string filename2 = std::filesystem::path(path2).filename().generic_string();
                 return filename1 < filename2;
             });
-        }
-
-
-        int is_identical_config(){ // Main function of this class
-            
-            // Get saved config items
-            std::vector<std::string> configItemsSaved;
-            get_config_items_saved(configItemsSaved);
-            sortby_filename(configItemsSaved);
-            std::cout << "items saved 0,1: " << configItemsSaved[0] << "  1: " << configItemsSaved[1] << std::endl;
-            
-            // Get ProgramPaths
-            std::vector<std::string> configItemsCurrent;
-            get_config_items_current(configItemsCurrent);
-            sortby_filename(configItemsCurrent);
-            std::cout << "items current 0,1: " << configItemsCurrent[0] << "  1: " << configItemsCurrent[1] << std::endl;
-            
-            // Compare vectors
-            if(is_identical_filenames(configItemsSaved, configItemsCurrent)){
-                int i = 0;
-                for(const auto& item : configItemsSaved){
-                    
-                    if(!is_identical_bytes(item, configItemsCurrent[i])){
-                        std::cout << "FILES NOT IDENTICAL!!!: " << item << configItemsCurrent[i] << std::endl;
-                        return 0; // config changed
-                    }
-                    
-                    i++;
-                }
-            }
-            else{
-                std::cerr << "this is a problem!" << std::endl;
-                return 0;
-            }
-
-            std::cout << "Debug a169\n";
-            return 1; // config did not change
         }
 
 
@@ -240,7 +201,18 @@ class analyzer{
             md5string = ss.str(); 
 
             return md5string; 
-        } 
+        }
+
+
+        static const int has_hashmap(const std::string& path){
+            const std::string hPath = path + "\\ConfigSync-Hashmap.csv";
+
+            if(!std::filesystem::exists(hPath)){ // No hashmap found
+                return 0;
+            }
+
+            return 1;
+        }
 
         /*
         void hash_program_items(std::unordered_map<std::string, std::string>& hashMap){
@@ -267,53 +239,32 @@ class analyzer{
 
         int is_identical(){
             const std::string savePath = get_newest_backup_path();
-            const std::string dbPath = savePath + "\\" + "ConfigSync-PathDatabase.bin";
             const std::string hbPath = savePath + "\\" + "ConfigSync-Hashbase.csv";
-            
-            database db(dbPath);
-            std::map<std::string, std::string> pathMap;
-            db.readStringMap(pathMap);
 
-            hashbase h;
+            /* Hash progFiles and savefiles using paths from hashbase and compare */
+            hashbase h;            
+            database::readHashbase(hbPath, h);
 
-            if(!std::filesystem::exists(hbPath)){
+            for(const auto& [hashA, hashB, pathA, pathB] : std::views::zip(h.ha, h.hb, h.pa, h.pb)){
                 
-                for(const auto& [pathA, pathB] : pathMap){
-                    // TODO: Multithread the hashing
-                    const std::string hashA = get_md5hash(pathA);
-                    const std::string hashB = get_md5hash(pathB);
-
-                    if(hashA != hashB){
-                        return 0;
-                    }
-                    
-                    h.ha.push_back(hashA);
-                    h.hb.push_back(hashB);
-                    h.pa.push_back(pathA);
-                    h.pb.push_back(pathB);
+                if(!std::filesystem::exists(pathA)){
+                    std::cerr << "Warning: program path not found!" << std::endl;
+                    logf << "Warning: program file [" << pathA << "] not found!" << std::endl;
+                    return 0;
                 }
-
-                std::ofstream of(hbPath);
-                of.close();
-                database::storeHashbase(hbPath, h);
-            }
-            else{
-                // Hash progFiles, compare against Hashbase
-                database::readHashbase(hbPath, h);
-
-                for(const auto& [hashA, hashB, pathA, pathB] : std::views::zip(h.ha, h.hb, h.pa, h.pb)){
-                    
-                    if(!std::filesystem::exists(pathA)){
-                        std::cerr << "Warning: program path not found!" << std::endl;
-                        return 0;
-                    }
-                    else if(!std::filesystem::exists(pathB)){
-                        std::cerr << "Warning: archived file not found!" << std::endl;
-                    }
-                    if(!std::filesystem::exists(pathA) && std::filesystem::exists(pathB) && get_md5hash(pathA) == get_md5hash(pathB)){ // rehash pathB
-                    }
+                
+                else if(!std::filesystem::exists(pathB)){
+                    logf << "Warning: archived file [" << pathB << "] not found!" << std::endl;
+                    return 0;
+                }
+                
+                else if(get_md5hash(pathA) != get_md5hash(pathB)){
+                    return 0;
                 }
             }
+
+            return 1;
+    
         }
 };
 #endif

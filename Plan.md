@@ -174,7 +174,64 @@ Install-Location
 
 
 ## Trashcan:
+<!-- if(!std::filesystem::exists(hbPath)){
+                logf << logs::ms("THIS SHOULD NEVER HAPPEN!!! the hashmap should always exist before this function (is_identical()) is called!!" + __LINE__);
 
+                for(const auto& [pathA, pathB] : pathMap){
+                    // TODO: Multithread the hashing
+                    const std::string hashA = s(pathA);
+                    const std::string hashB = get_md5hash(pathB);
+
+                    if(hashA != hashB){
+                        return 0;
+                    }
+                    
+                    h.ha.push_back(hashA);
+                    h.hb.push_back(hashB);
+                    h.pa.push_back(pathA);
+                    h.pb.push_back(pathB);
+                }
+
+                std::ofstream of(hbPath);
+                of.close();
+                database::storeHashbase(hbPath, h);
+            }
+                 -->
+<!-- int is_identical_config(){ // Main function of this class
+            
+            // Get saved config items
+            std::vector<std::string> configItemsSaved;
+            get_config_items_saved(configItemsSaved);
+            sortby_filename(configItemsSaved);
+            std::cout << "items saved 0,1: " << configItemsSaved[0] << "  1: " << configItemsSaved[1] << std::endl;
+            
+            // Get ProgramPaths
+            std::vector<std::string> configItemsCurrent;
+            get_config_items_current(configItemsCurrent);
+            sortby_filename(configItemsCurrent);
+            std::cout << "items current 0,1: " << configItemsCurrent[0] << "  1: " << configItemsCurrent[1] << std::endl;
+            
+            // Compare vectors
+            if(is_identical_filenames(configItemsSaved, configItemsCurrent)){
+                int i = 0;
+                for(const auto& item : configItemsSaved){
+                    
+                    if(!is_identical_bytes(item, configItemsCurrent[i])){
+                        std::cout << "FILES NOT IDENTICAL!!!: " << item << configItemsCurrent[i] << std::endl;
+                        return 0; // config changed
+                    }
+                    
+                    i++;
+                }
+            }
+            else{
+                std::cerr << "this is a problem!" << std::endl;
+                return 0;
+            }
+
+            std::cout << "Debug a169\n";
+            return 1; // config did not change
+        } -->
 <!-- - Combine show and status arguments' -->
 <!-- The following commands are available -->
 <!-- 
@@ -230,7 +287,7 @@ restore config:
                     // std::cout << "Debug s144\n";
                 // }
                 // std::cout << "Debug s146\n"; -->
-
+                
 
 ## Parking Lot
 <!-- 
