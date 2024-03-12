@@ -6,6 +6,9 @@
 #include <fstream>
 #include <vector>
 #include <map>
+#include <filesystem>
+#include "CFGSExcept.hpp"
+#include "hashbase.hpp"
 
 class database{
     private:
@@ -198,27 +201,68 @@ class database{
             file.close();
         }
 
-
-        struct hashbase{
-            std::vector<std::string> ha;
-            std::vector<std::string> hb;
-            std::vector<std::string> pa;
-            std::vector<std::string> pb;
-        };
-
-
+        /**
+         * @brief Write a hashbase to file in CSV format.
+         * 
+         */
         static void storeHashbase(const std::string& path, const hashbase& hb){
-            hashbase h;
-            if(!std::filesystem::exists(path)){
-                throw cfgsexcept((const char*)("Failed to open file: file not found. " + __LINE__));
-            }
             std::ofstream hf;
-            hf.open(path);
-
-            for(unsigned i = 0; i < h.ha.size(); i++){
-                hf << h.ha[i] << "," << h.hb[i] << "," << h.pa[i] << "," << h.pb[i] << "\n";
+            if(!std::filesystem::exists(path)){
+                hf.open(path);
+                if(!hf.is_open()){
+                    throw cfgsexcept("Failed to open file: Error creating file. " + __LINE__);
+                }
             }
+            else{
+                hf.open(path);
+            }
+            if(!hf.is_open()){
+                throw cfgsexcept("Failed to open file: Error opening. " + __LINE__);
+            }
+            
+            for(unsigned i = 0; i < hb.ha.size(); i++){
+                hf << hb.ha[i] << "," << hb.hb[i] << "," << hb.pa[i] << "," << hb.pb[i] << "\n";
+            }
+
+            hf.close();
         }
+
+
+        static void readHashbase(const std::string& path, hashbase& hb){
+            if(!std::filesystem::exists(path)){
+                throw cfgsexcept("Failed to open file: file not found. " + __LINE__);
+            }
+            std::ifstream hf;
+            hf.open(path);
+            if(!hf.is_open()){
+                throw cfgsexcept("Failed to open file: Error opening. " + __LINE__);
+            }
+            
+            std::string str;
+            // std::vector<hashbase> records;
+
+            while(std::getline(hf, str)){
+                std::istringstream iss(str);
+
+                std::string hashA;
+                std::string hashB;
+                std::string pathA;
+                std::string pathB;
+
+                std::getline(iss, hashA, ',');
+                std::getline(iss, hashB, ',');  
+                std::getline(iss, pathA, ',');  
+                std::getline(iss, pathB, ',');  
+                
+                hb.ha.push_back(hashA);
+                hb.hb.push_back(hashB);
+                hb.pa.push_back(pathA);
+                hb.pb.push_back(pathB);
+            }
+
+            hf.close();
+        }
+
 };
 
 #endif

@@ -31,7 +31,6 @@
 #define SETTINGS_ID 1
 #define VERSION "v1.0.0"
 
-
 volatile sig_atomic_t interrupt = 0;
 
 void enableColors(){

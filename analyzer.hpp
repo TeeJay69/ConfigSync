@@ -18,6 +18,8 @@
 #include "organizer.hpp"
 #include "ANSIcolor.hpp"
 #include "CFGSExcept.hpp"
+#include "hashbase.hpp"
+
 
 class analyzer{
     private:
@@ -262,13 +264,6 @@ class analyzer{
         }
         */
 
-        struct hashbase{
-            std::vector<std::string> ha;
-            std::vector<std::string> hb;
-            std::vector<std::string> pa;
-            std::vector<std::string> pb;
-        };
-
         int is_identical(){
             const std::string savePath = get_newest_backup_path();
             const std::string dbPath = savePath + "\\" + "ConfigSync-PathDatabase.bin";
@@ -281,7 +276,7 @@ class analyzer{
             hashbase h;
 
             if(!std::filesystem::exists(hbPath)){
-
+                
                 for(const auto& [pathA, pathB] : pathMap){
                     // TODO: Multithread the hashing
                     const std::string hashA = get_md5hash(pathA);
@@ -296,10 +291,14 @@ class analyzer{
                     h.pa.push_back(pathA);
                     h.pb.push_back(pathB);
                 }
+
+                std::ofstream of(hbPath);
+                of.close();
+                database::storeHashbase(hbPath, h);
             }
             else{
                 // Hash progFiles, compare against Hashbase
-
+                for(const auto)
             }
         }
 };
