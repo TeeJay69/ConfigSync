@@ -205,7 +205,7 @@ class database{
          * @brief Write a hashbase to file in CSV format.
          * 
          */
-        static void storeHashbase(const std::string& path, const hashbase& hb){
+        static void storeHashbase(const std::string& path, const hashbase& H){
             std::ofstream hf;
             if(!std::filesystem::exists(path)){
                 hf.open(path);
@@ -219,23 +219,28 @@ class database{
             if(!hf.is_open()){
                 throw cfgsexcept("Failed to open file: Error opening. " + __LINE__);
             }
+
             
-            if(hb.ha.empty() && hb.hb.empty()){
-                for(unsigned i = 0; i < hb.ha.size(); i++){
-                    hf << '0' << "," << "0" << "," << hb.pa[i] << "," << hb.pb[i] << "\n";
+            if(H.hh.empty() && !H.pp.empty()){
+                for(const auto& pair : H.pp){
+                    hf << "0" << "," << "0" << "," << pair.first << "," << pair.second << ",\n";
                 }
             }
-            else if(!hb.ha.empty() && !hb.hb.empty() && !hb.pa.empty() && !hb.pb.empty()){
-                for(unsigned i = 0; i < hb.ha.size(); i++){
-                    hf << hb.ha[i] << "," << hb.hb[i] << "," << hb.pa[i] << "," << hb.pb[i] << "\n";
+            else if(!H.hh.empty() && !H.pp.empty()){
+                for(const auto& [pairA, pairB] : std::views::zip(H.hh, H.pp)){
+                    hf << pairA.first << "," << pairA.second << "," << pairB.first << "," << pairB.second << ",\n";
                 }
             }
+            else{
+                
+            }
+            
             
             hf.close();
         }
 
 
-        static void readHashbase(const std::string& path, hashbase& hb){
+        static void readHashbase(const std::string& path, hashbase& H){
             if(!std::filesystem::exists(path)){
                 throw cfgsexcept("Failed to open file: file not found. " + __LINE__);
             }
@@ -246,7 +251,6 @@ class database{
             }
             
             std::string str;
-            // std::vector<hashbase> records;
 
             while(std::getline(hf, str)){
                 std::istringstream iss(str);
@@ -260,11 +264,10 @@ class database{
                 std::getline(iss, hashB, ',');  
                 std::getline(iss, pathA, ',');  
                 std::getline(iss, pathB, ',');  
+
+                H.hh.push_back(std::make_pair(hashA, hashB));
+                H.pp.push_back(std::make_pair(pathA, pathB));
                 
-                hb.ha.push_back(hashA);
-                hb.hb.push_back(hashB);
-                hb.pa.push_back(pathA);
-                hb.pb.push_back(pathB);
             }
 
             hf.close();

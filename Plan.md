@@ -171,9 +171,31 @@ Install-Location
 - [ ] --force option for sync
 - [ ] Status indicator for is_identical() function from analyzer
 - [ ] --verify parameter to make an integrity check of a snapshot from the archive. (defaults to newest) (option to provide specific date) ([PROGRAM] --all for verifying all saves of that program.) (verify --all checks every single save from all programs.)(--all-newest for checking the newest save from all programs in the archive)
-
+- [ ] Add id to hashbase file.
 
 ## Trashcan:
+<!--       /*
+        void hash_program_items(std::unordered_map<std::string, std::string>& hashMap){
+            std::vector<std::string> vec;
+            get_config_items_current(vec);
+
+            for(const auto& entry : vec){
+                const std::string& md5 = get_md5hash(entry);
+                hashMap[entry] = md5;
+            }
+        }
+
+
+        void hash_saved_items(std::unordered_map<std::string, std::string>& hashMap){
+            std::vector<std::string> vec;
+            get_config_items_saved(vec);
+
+            for(const auto& entry : vec){
+                const std::string& md5 = get_md5hash(entry);
+                hashMap[entry] = md5;
+            }
+        }
+        */ -->
 <!-- if(!std::filesystem::exists(hbPath)){
                 logf << logs::ms("THIS SHOULD NEVER HAPPEN!!! the hashmap should always exist before this function (is_identical()) is called!!" + __LINE__);
 
@@ -290,6 +312,16 @@ restore config:
                 
 
 ## Parking Lot
+<!-- else if(hb.ha.empty() && hb.hb.empty() && !hb.pa.empty() && !hb.pb.empty() && hb.hh.empty() && hb.pp.empty()){
+                for(unsigned i = 0; i < hb.ha.size(); i++){
+                    hf << '0' << "," << "0" << "," << hb.pa[i] << "," << hb.pb[i] << "\n";
+                }
+            }
+            else if(!hb.ha.empty() && !hb.hb.empty() && !hb.pa.empty() && !hb.pb.empty() && hb.hh.empty() && hb.pp.empty()){
+                for(unsigned i = 0; i < hb.ha.size(); i++){
+                    hf << hb.ha[i] << "," << hb.hb[i] << "," << hb.pa[i] << "," << hb.pb[i] << "\n";
+                }
+            } -->
 <!-- 
 
             // std::string groupName;

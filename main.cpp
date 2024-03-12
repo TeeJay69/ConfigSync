@@ -77,65 +77,70 @@ int path_check(const std::vector<std::string>& paths){
 }
 
 // TODO: Add optional parameter for the group_id's. 
-int create_save(const std::vector<std::string>& programPaths, const std::string& program, const std::string& pArchivePath, const std::string& exelocation){
+int create_save(const std::vector<std::string>& programPaths, const std::string& program, const std::string& pArchivePath, const std::string& exelocation, std::ofstream& logfile){
     if(path_check(programPaths) == 1){ // Verify program paths        
 
-        std::ofstream logf = logs::session_log(exelocation, 50); // Create logfile
-        analyzer configAnalyzer(programPaths, program, exelocation, logf);
+        analyzer configAnalyzer(programPaths, program, exelocation, logfile);
 
         if(configAnalyzer.is_archive_empty() == 1){ // First ever save.
             const std::string out = "First synchronization of " + program + ".\n";
             std::cerr << out;
-            logf << logs::ms(out);
-            synchronizer sync(programPaths, program, exelocation, logf); // initialize class
+            logfile << logs::ms(out);
+            synchronizer sync(programPaths, program, exelocation, logfile); // initialize class
 
             if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
                 const std::string errSync = "Error synchronizing " + program + ".\n"; // copy_config returned 0
                 std::cerr << errSync;
-                logf << logs::ms(errSync);
+                logfile << logs::ms(errSync);
                 return 0;
             }
         }
         else{
             const std::string dateDir = configAnalyzer.get_newest_backup_path(); // Latest dir
 
-            if(configAnalyzer.has_hashmap(dateDir) == 1){
+            if(configAnalyzer.has_hashbase(dateDir) == 1){
                 if(configAnalyzer.is_identical()){ // Compare last save to current config
-                    const std::string noChange = program + " config did not change, updating save date...\n";
-                    std::cout << noChange;
-                    logf << logs::ms(noChange);
-                    std::filesystem::path newestPath = configAnalyzer.get_newest_backup_path();
-                    std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
+                    const std::filesystem::path &newestPath = dateDir;
+                    if(newestPath.filename() == synchronizer::ymd_date()){
+                        const std::string noChange = program + " config did not change.\n";
+                        std::cout << noChange;
+                        logfile << logs::ms(noChange);
+                    }
+                    else{
+                        const std::string noChange = program + " config did not change, updating save date...\n";
+                        logfile << logs::ms(noChange);
+                        std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
+                    }
 
                     return 1;
                 }
                 else{ // Config changed
                     const std::string changed = program + " config changed.\nSynchronizing " + program + "...\n";
                     std::cout << changed;
-                    logf << logs::ms(changed);
+                    logfile << logs::ms(changed);
 
-                    synchronizer sync(programPaths, program, exelocation, logf); // initialize class
+                    synchronizer sync(programPaths, program, exelocation, logfile); // initialize class
 
                     if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
                         const std::string errSync = "Error synchronizing " + program + ".\n"; // copy_config returned 0
                         std::cerr << errSync;
-                        logf << logs::ms(errSync); 
+                        logfile << logs::ms(errSync); 
                         return 0;
                     }
                 }
             }
 
-            synchronizer::recurse_remove(dateDir); // Remove the corrupt save, it has no hashmap
-            const std::string changed = program + "'s existing save was deleted, due to a missing hashmap.\nSynchronizing " + program + "...\n";
+            synchronizer::recurse_remove(dateDir); // Remove the corrupt save, it has no hashbase
+            const std::string changed = program + "'s existing save was deleted, due to a missing hashbase.\nSynchronizing " + program + "...\n";
             std::cout << changed;
-            logf << logs::ms(changed);
+            logfile << logs::ms(changed);
 
-            synchronizer sync(programPaths, program, exelocation, logf); // initialize class
+            synchronizer sync(programPaths, program, exelocation, logfile); // initialize class
 
             if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
                 const std::string errSync = "Error synchronizing " + program + ".\n"; // copy_config returned 0
                 std::cerr << errSync;
-                logf << logs::ms(errSync); 
+                logfile << logs::ms(errSync); 
                 return 0;
             }
         }
@@ -264,7 +269,7 @@ int main(int argc, char* argv[]){
     const std::string settingsPath = exePath + "\\settings.json";
     const std::string batPath = exePath + "\\cfgs.bat";
     const std::string taskName = "ConfigSyncTask";
-
+    std::ofstream logfile = logs::session_log(exePath, 50); // Create logfileile
     // Settings @section
     boost::property_tree::ptree pt;
 
@@ -446,7 +451,7 @@ int main(int argc, char* argv[]){
             // Sync Jackett
             std::cout << "DEBUG 424: " << std::endl;
             int jackettSync = 0;
-            if(create_save(jackettPaths, "Jackett", jackett.get_archive_path().string(), exePath) == 1){
+            if(create_save(jackettPaths, "Jackett", jackett.get_archive_path().string(), exePath, logfile) == 1){
                 std::cout << "DEBUG 426: " << std::endl;
                 jackettSync = 1;
                 syncedList.push_back("Jackett");
@@ -459,7 +464,7 @@ int main(int argc, char* argv[]){
 
             // Sync Prowlarr
             int prowlarrSync = 0;
-            if(create_save(prowlarrPaths, "Prowlarr", prowlarr.get_archive_path().string(), exePath) == 1){
+            if(create_save(prowlarrPaths, "Prowlarr", prowlarr.get_archive_path().string(), exePath, logfile) == 1){
                 prowlarrSync = 1;
                 syncedList.push_back("Prowlarr");
 
@@ -469,7 +474,7 @@ int main(int argc, char* argv[]){
 
             // Sync qBittorrent
             int qbittorrentSync = 0;
-            if(create_save(qbittorrentPaths, "qBittorrent", qbittorrent.get_archive_path().string(), exePath) == 1){
+            if(create_save(qbittorrentPaths, "qBittorrent", qbittorrent.get_archive_path().string(), exePath, logfile) == 1){
                 qbittorrentSync = 1;
                 syncedList.push_back("qBittorrent");
 
@@ -501,7 +506,7 @@ int main(int argc, char* argv[]){
             }
             
             
-            if(create_save(pPaths, "Jackett", jackett.get_archive_path().string(), exePath) == 1){ // save config
+            if(create_save(pPaths, "Jackett", jackett.get_archive_path().string(), exePath, logfile) == 1){ // save config
                 // Limit num of saves
                 organizer janitor;
                 janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), jackett.get_archive_path().string()); // Cleanup
@@ -523,7 +528,7 @@ int main(int argc, char* argv[]){
                 std::filesystem::create_directories(prowlarr.get_archive_path());
             }
 
-            if(create_save(pPaths, "Prowlarr", prowlarr.get_archive_path().string(), exePath) == 1){
+            if(create_save(pPaths, "Prowlarr", prowlarr.get_archive_path().string(), exePath, logfile) == 1){
                 // Limit num of saves
                 organizer janitor;
                 janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), prowlarr.get_archive_path().string()); // Cleanup
@@ -546,7 +551,7 @@ int main(int argc, char* argv[]){
                 std::filesystem::create_directories(qbittorrent.get_archive_path());
             }
 
-            if(create_save(pPaths, "qBittorrent", qbittorrent.get_archive_path().string(), exePath) == 1){
+            if(create_save(pPaths, "qBittorrent", qbittorrent.get_archive_path().string(), exePath, logfile) == 1){
                 // Limit num of saves
                 organizer janitor;
                 janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), qbittorrent.get_archive_path().string()); // Cleanup
@@ -582,8 +587,8 @@ int main(int argc, char* argv[]){
             programconfig jackett("Jackett", exePath); // Initialize class
             std::vector<std::string> jackettPaths = jackett.get_config_paths(); // Get program paths
             
-            analyzer anlyJackett(jackettPaths, "Jackett", exePath); // Initialize class
-            synchronizer syncJackett(jackettPaths, "Jackett", exePath); // Initialize class
+            analyzer anlyJackett(jackettPaths, "Jackett", exePath, logfile); // Initialize class
+            synchronizer syncJackett(jackettPaths, "Jackett", exePath, logfile); // Initialize class
             std::cout << "Debug m574\n";
             int jackettState = 0;
             if(anlyJackett.is_archive_empty() == 1){ // Archive is empty
@@ -607,8 +612,8 @@ int main(int argc, char* argv[]){
             programconfig prowlarr("Prowlarr", exePath); // Initialize class
             std::vector<std::string> prowlarrPaths = prowlarr.get_config_paths(); // Get program paths
             
-            analyzer anlyProw(prowlarrPaths, "Prowlarr", exePath); // Initialize class
-            synchronizer syncProw(prowlarrPaths, "Prowlarr", exePath); // Initialize class
+            analyzer anlyProw(prowlarrPaths, "Prowlarr", exePath, logfile); // Initialize class
+            synchronizer syncProw(prowlarrPaths, "Prowlarr", exePath, logfile); // Initialize class
 
             int prowlarrState = 0;
             if(anlyProw.is_archive_empty() == 1){ // Archive empty
@@ -631,8 +636,8 @@ int main(int argc, char* argv[]){
             programconfig qbittorrent("qBittorrent", exePath); // Initialize class
             std::vector<std::string> qbittorrentPaths = qbittorrent.get_config_paths(); // Get program paths
             
-            analyzer anlyQbit(qbittorrentPaths, "qBittorrent", exePath); // Initialize class
-            synchronizer syncQbit(qbittorrentPaths, "qBittorrent", exePath); // Initialize class
+            analyzer anlyQbit(qbittorrentPaths, "qBittorrent", exePath, logfile); // Initialize class
+            synchronizer syncQbit(qbittorrentPaths, "qBittorrent", exePath, logfile); // Initialize class
             
             int qbitState = 0;
             if(anlyQbit.is_archive_empty() == 1){ // Archive empty
@@ -673,7 +678,7 @@ int main(int argc, char* argv[]){
             programconfig jackett("Jackett", exePath); // Initialize class
             std::vector<std::string> pPaths = jackett.get_config_paths(); // Get program paths
             
-            analyzer anly(pPaths, "Jackett", exePath); // Initialize class
+            analyzer anly(pPaths, "Jackett", exePath, logfile); // Initialize class
 
             std::vector<std::string> jackettSaves;
             anly.get_all_saves(jackettSaves);
@@ -686,7 +691,7 @@ int main(int argc, char* argv[]){
                     std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
                 }
                 else{ // Archive not empty
-                    synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
+                    synchronizer sync(pPaths, "Jackett", exePath, logfile); // Initialize class
 
                     if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
@@ -701,7 +706,7 @@ int main(int argc, char* argv[]){
 
             else if(std::find(jackettSaves.begin(), jackettSaves.end(), std::string(argv[3])) != jackettSaves.end()){ // Specific save date 2subparam. Check if date is valid.
 
-                synchronizer sync(pPaths, "Jackett", exePath); // Initialize class
+                synchronizer sync(pPaths, "Jackett", exePath, logfile); // Initialize class
 
                 if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit")) == 1){ // Restore from user defined save date<
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
@@ -722,7 +727,7 @@ int main(int argc, char* argv[]){
             programconfig prowlarr("Prowlarr", exePath); // Initialize class
             std::vector<std::string> pPaths = prowlarr.get_config_paths(); // Get program paths
             
-            analyzer anly(pPaths, "Prowlarr", exePath); // Initialize class
+            analyzer anly(pPaths, "Prowlarr", exePath, logfile); // Initialize class
 
             std::vector<std::string> prowlarrSaves;
             anly.get_all_saves(prowlarrSaves);
@@ -735,7 +740,7 @@ int main(int argc, char* argv[]){
                     std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
                 }
                 else{ // Archive not empty
-                    synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
+                    synchronizer sync(pPaths, "Prowlarr", exePath, logfile); // Initialize class
 
                     if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
@@ -749,7 +754,7 @@ int main(int argc, char* argv[]){
 
             else if(std::find(prowlarrSaves.begin(), prowlarrSaves.end(), std::string(argv[3])) != prowlarrSaves.end()){ // Specific save date 2subparam. Check if date is valid.
 
-                synchronizer sync(pPaths, "Prowlarr", exePath); // Initialize class
+                synchronizer sync(pPaths, "Prowlarr", exePath, logfile); // Initialize class
 
                 if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit")) == 1){ // Restore from user defined save date
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
@@ -770,7 +775,7 @@ int main(int argc, char* argv[]){
             programconfig qbittorrent("qBittorrent", exePath); // Initialize class
             std::vector<std::string> pPaths = qbittorrent.get_config_paths(); // Get program paths
             
-            analyzer anly(pPaths, "qBittorrent", exePath); // Initialize class
+            analyzer anly(pPaths, "qBittorrent", exePath, logfile); // Initialize class
 
             std::vector<std::string> qbittorrentSaves;
             anly.get_all_saves(qbittorrentSaves);
@@ -783,7 +788,7 @@ int main(int argc, char* argv[]){
                     std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
                 }
                 else{ // Archive not empty
-                    synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
+                    synchronizer sync(pPaths, "qBittorrent", exePath, logfile); // Initialize class
 
                     if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
@@ -797,7 +802,7 @@ int main(int argc, char* argv[]){
 
             else if(std::find(qbittorrentSaves.begin(), qbittorrentSaves.end(), std::string(argv[3])) != qbittorrentSaves.end()){ // Specific save date 2subparam. Check if date is valid.
 
-                synchronizer sync(pPaths, "qBittorrent", exePath); // Initialize class
+                synchronizer sync(pPaths, "qBittorrent", exePath, logfile); // Initialize class
 
                 if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit")) == 1){ // Restore from user defined save date
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
@@ -832,14 +837,14 @@ int main(int argc, char* argv[]){
             for(const auto& app : programconfig::get_support_list()){ // Fetch status
 
                 programconfig pcfg(app, exePath); // Init class
-                analyzer anly(pcfg.get_config_paths(), app, exePath); // Init class
+                analyzer anly(pcfg.get_config_paths(), app, exePath, logfile); // Init class
 
                 if(anly.is_archive_empty() == 1){ // Check for previous save
                     neverSaveList.insert(app);
                 }
                 else{ // Save exists
                     
-                    if(anly.is_identical_config() == 1){
+                    if(anly.is_identical() == 1){
                         inSyncList.insert(app);
                     }
                     else{
@@ -868,7 +873,7 @@ int main(int argc, char* argv[]){
         else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett subparam
 
             programconfig pcfg("Jackett", exePath); // Init class
-            analyzer anly(pcfg.get_config_paths(), "Jackett", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "Jackett", exePath, logfile); // Init class
             
             std::cout << "Program: Jackett" << std::endl;
             std::cout << "Last Save: " << anly.get_newest_backup_path() << std::endl;
@@ -879,7 +884,7 @@ int main(int argc, char* argv[]){
             }
             else{ // Save exists
 
-                if(anly.is_identical_config() == 1){ // Compare config
+                if(anly.is_identical() == 1){ // Compare config
                     std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -892,7 +897,7 @@ int main(int argc, char* argv[]){
         else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr subparam
 
             programconfig pcfg("Prowlarr", exePath); // Init class
-            analyzer anly(pcfg.get_config_paths(), "Prowlarr", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "Prowlarr", exePath, logfile); // Init class
             
             std::cout << "Program: Prowlarr" << std::endl;
             std::cout << "Last Save: " << anly.get_newest_backup_path() << std::endl;
@@ -903,7 +908,7 @@ int main(int argc, char* argv[]){
             }
             else{ // Save exists
 
-                if(anly.is_identical_config() == 1){ // Compare config
+                if(anly.is_identical() == 1){ // Compare config
                     std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -916,7 +921,7 @@ int main(int argc, char* argv[]){
         else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent subparam
  
             programconfig pcfg("qBittorrent", exePath); // Init class
-            analyzer anly(pcfg.get_config_paths(), "qBittorrent", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "qBittorrent", exePath, logfile); // Init class
             
             std::cout << "Program: qBittorrent" << std::endl;
             std::cout << "Last Save: " << anly.get_newest_backup_path() << std::endl;
@@ -927,7 +932,7 @@ int main(int argc, char* argv[]){
             }
             else{ // Save exists
 
-                if(anly.is_identical_config() == 1){ // Compare config
+                if(anly.is_identical() == 1){ // Compare config
                     std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -954,7 +959,7 @@ int main(int argc, char* argv[]){
         else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett subparam
 
             programconfig pcfg("Jackett", exePath); // Init class
-            analyzer anly(pcfg.get_config_paths(), "Jackett", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "Jackett", exePath, logfile); // Init class
 
             
             if(anly.is_archive_empty() == 1) {
@@ -981,7 +986,7 @@ int main(int argc, char* argv[]){
 
         else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr subparam
             programconfig pcfg("Prowlarr", exePath); // Init class
-            analyzer anly(pcfg.get_config_paths(), "Prowlarr", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "Prowlarr", exePath, logfile); // Init class
 
             
             if(anly.is_archive_empty() == 1) {
@@ -1008,7 +1013,7 @@ int main(int argc, char* argv[]){
 
         else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent subparam
             programconfig pcfg("qBittorrent", exePath); // Init class
-            analyzer anly(pcfg.get_config_paths(), "qBittorrent", exePath); // Init class
+            analyzer anly(pcfg.get_config_paths(), "qBittorrent", exePath, logfile); // Init class
 
             
             if(anly.is_archive_empty() == 1) { // Archive empty

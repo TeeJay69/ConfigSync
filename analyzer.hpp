@@ -10,6 +10,7 @@
 #include <fstream>
 #include <iomanip>
 #include <openssl\md5.h>
+#include <openssl\sha.h>
 #include <map>
 #include <sstream>
 #include <utility>
@@ -27,9 +28,9 @@ class analyzer{
         const std::vector<std::string>& programPaths;
         const std::string& programName;
         const std::string& exeLocation;
-        std::ofstream& logf;
+        std::ofstream& logfile;
     public:
-        analyzer(const std::vector<std::string>& path, const std::string& name, const std::string& exeLocat, std::ofstream& logFile) : programPaths(path), programName(name), exeLocation(exeLocat), logf(logFile) {}
+        analyzer(const std::vector<std::string>& path, const std::string& name, const std::string& exeLocat, std::ofstream& logFile) : programPaths(path), programName(name), exeLocation(exeLocat), logfile(logFile) {}
 
 
         const std::string archivePath = exeLocation + "\\ConfigArchive\\" + programName;
@@ -204,8 +205,8 @@ class analyzer{
         }
 
 
-        static const int has_hashmap(const std::string& path){
-            const std::string hPath = path + "\\ConfigSync-Hashmap.csv";
+        static const int has_hashbase(const std::string& path){
+            const std::string hPath = path + "\\ConfigSync-Hashbase.csv";
 
             if(!std::filesystem::exists(hPath)){ // No hashmap found
                 return 0;
@@ -214,52 +215,69 @@ class analyzer{
             return 1;
         }
 
-        /*
-        void hash_program_items(std::unordered_map<std::string, std::string>& hashMap){
-            std::vector<std::string> vec;
-            get_config_items_current(vec);
 
-            for(const auto& entry : vec){
-                const std::string& md5 = get_md5hash(entry);
-                hashMap[entry] = md5;
+        std::string get_sha256hash(const std::string& fname){
+            FILE *file;
+
+            unsigned char buf[131072];
+            unsigned char output[SHA256_DIGEST_LENGTH];
+            size_t len;
+
+            SHA256_CTX sha256;
+
+            file = fopen(fname.c_str(), "rb");
+
+            if(file == NULL){
+                const std::string err = "Error: Failed to open file to hash.\n";
+                logfile << logs::ms(err);
+                throw cfgsexcept(err.c_str());
+            }
+            else{
+
+                SHA256_Init(&sha256);
+                while((len = fread(buf, 1, sizeof(buf), file)) != 0){
+                    SHA256_Update(&sha256, buf, len);
+                } 
+                fclose(file);
+                SHA256_Final(output, &sha256);
+
+                std::stringstream ss;
+                for (int i = 0; i < SHA256_DIGEST_LENGTH; i++){
+                    ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(output[i]);
+                }
+
+                return ss.str();
             }
         }
-
-
-        void hash_saved_items(std::unordered_map<std::string, std::string>& hashMap){
-            std::vector<std::string> vec;
-            get_config_items_saved(vec);
-
-            for(const auto& entry : vec){
-                const std::string& md5 = get_md5hash(entry);
-                hashMap[entry] = md5;
-            }
-        }
-        */
 
         int is_identical(){
             const std::string savePath = get_newest_backup_path();
             const std::string hbPath = savePath + "\\" + "ConfigSync-Hashbase.csv";
 
             /* Hash progFiles and savefiles using paths from hashbase and compare */
-            hashbase h;            
-            database::readHashbase(hbPath, h);
-
-            for(const auto& [hashA, hashB, pathA, pathB] : std::views::zip(h.ha, h.hb, h.pa, h.pb)){
+            hashbase H;            
+            database::readHashbase(hbPath, H);
+            for(const auto& [hash, path] : std::views::zip(H.hh, H.pp)){
                 
-                if(!std::filesystem::exists(pathA)){
+                if(!std::filesystem::exists(path.first)){
                     std::cerr << "Warning: program path not found!" << std::endl;
-                    logf << "Warning: program file [" << pathA << "] not found!" << std::endl;
+                    logfile << "Warning: program file [" << path.first << "] not found!" << std::endl;
                     return 0;
                 }
                 
-                else if(!std::filesystem::exists(pathB)){
-                    logf << "Warning: archived file [" << pathB << "] not found!" << std::endl;
+                else if(!std::filesystem::exists(path.second)){
+                    logfile << "Warning: archived file [" << path.second << "] not found!" << std::endl;
                     return 0;
                 }
-                
-                else if(get_md5hash(pathA) != get_md5hash(pathB)){
+
+                const std::string &firstHash = get_sha256hash(path.first);
+                const std::string &secondHash = get_sha256hash(path.second);
+
+                if(firstHash != secondHash){
                     return 0;
+                }
+                else{
+                    hash = std::pair(firstHash, secondHash);
                 }
             }
 

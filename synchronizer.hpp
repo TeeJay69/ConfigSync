@@ -78,8 +78,7 @@ class synchronizer{
          */
         static int recurse_copy(const std::filesystem::path& source, const std::string& destination,
                                 std::optional<std::reference_wrapper<std::map<std::string, std::string>>> map = std::nullopt,
-                                std::optional<std::reference_wrapper<std::vector<std::string>>> paVec = std::nullopt,
-                                std::optional<std::reference_wrapper<std::vector<std::string>>> pbVec = std::nullopt){
+                                std::optional<std::reference_wrapper<std::vector<std::pair<std::string,std::string>>>> pp = std::nullopt){
 
             if(std::filesystem::is_directory(source)){
                 for(const auto& entry : std::filesystem::directory_iterator(source)){
@@ -103,13 +102,11 @@ class synchronizer{
                                 mapDeref[entry.path().string()] = dstPath;
                             }
                             
-                            if(paVec.has_value() && pbVec.has_value()){
+                            if(pp.has_value()){
                                 // Dereference the optional to access the vector
-                                auto& paVecd = paVec->get();
-                                auto& pbVecd = pbVec->get();
+                                auto& ppDeref = pp->get();
 
-                                paVecd.push_back(entry.path().string());
-                                pbVecd.push_back(dstPath);
+                                ppDeref.push_back(std::make_pair(entry.path().string(), dstPath));
                             }
                         }
                         catch(const std::filesystem::filesystem_error& err){
@@ -130,13 +127,10 @@ class synchronizer{
                         auto& mapDeref = map->get(); // Dereference the optional
                         mapDeref[source.string()] = dstPath; // Add element to map
                     }
-                    if(paVec.has_value() && pbVec.has_value()){
+                    if(pp.has_value()){
                         // Dereference the optional to access the vector
-                        auto& paVecd = paVec->get();
-                        auto& pbVecd = pbVec->get();
-
-                        paVecd.push_back(source.string());
-                        pbVecd.push_back(dstPath);
+                        auto& ppDeref = pp->get();
+                        ppDeref.push_back(std::make_pair(source.string(), dstPath));
                     }
                 }
                 catch(const std::filesystem::filesystem_error& err){
@@ -206,8 +200,7 @@ class synchronizer{
             const std::string hashbasePath = archivePathAbs + "\\" + dateDir + "\\ConfigSync-Hashbase.csv";
 
             hashbase H; // Initialize hashbase
-            std::optional<std::reference_wrapper<std::vector<std::string>>> p1Ref = std::ref(H.pa);
-            std::optional<std::reference_wrapper<std::vector<std::string>>> p2Ref = std::ref(H.pb);
+            std::optional<std::reference_wrapper<std::vector<std::pair<std::string,std::string>>>> ppRef = std::ref(H.pp);
 
             /* Copy Process */
             std::unordered_map<std::string, std::string> id;
@@ -233,7 +226,7 @@ class synchronizer{
 
                     const std::string destination = archivePathAbs + "\\" + dateDir + "\\" + groupName;
                     try{
-                        recurse_copy(item, destination, std::nullopt, p1Ref, p2Ref); // Copy and load into vectors
+                        recurse_copy(item, destination, std::nullopt, ppRef); // Copy and load into vector
                     }
                     catch(cfgsexcept& except){
                         std::cerr << except.what() << std::endl;
@@ -249,7 +242,7 @@ class synchronizer{
 
                     const std::string destination = archivePathAbs + "\\" + dateDir + "\\" + groupName;
                     try{
-                        recurse_copy(item, destination, std::nullopt, p1Ref, p2Ref); // Copy and load into vectors
+                        recurse_copy(item, destination, std::nullopt, ppRef); // Copy and load into vector
                     }
                     catch(cfgsexcept& err){
                         std::cerr << err.what() << std::endl;
@@ -488,7 +481,7 @@ class synchronizer{
 
             if(!std::filesystem::is_empty(std::filesystem::path(backupDir + "\\temp"))){ // Clean up temp directory
                 database db(backupDir + "\\RecycleBin\\RecycleMap.bin"); // Inside respective programs RecycleBin dir
-                
+
                 for(const auto& item : std::filesystem::directory_iterator(backupDir + "\\temp")){
                     const std::string newPath = backupDir + "\\RecycleBin\\" + item.path().filename().string();
                     std::filesystem::rename(item, newPath); // Move item to recyclebin
@@ -516,13 +509,13 @@ class synchronizer{
             std::string id = database::read_lenght_prefix_encoded_string(idFile);
 
             if(id != programconfig::get_username()){ // Check if username is still valid
-                transform_pathmap_new_username(pathMap, id); // Update username
+                transform_pathvector_new_username(H.pp, id); // Update username
             }
 
 
             
             // Replace config
-            for(const auto& pair : pathMap){
+            for(const auto& pair : H.pp){
                 try{
                     recurse_copy(std::filesystem::path(pair.second), pair.first);
                 }
