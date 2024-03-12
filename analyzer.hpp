@@ -13,6 +13,7 @@
 #include <map>
 #include <sstream>
 #include <utility>
+#include <ranges>
 #include "database.hpp"
 #include "programs.hpp"
 #include "organizer.hpp"
@@ -268,7 +269,7 @@ class analyzer{
             const std::string savePath = get_newest_backup_path();
             const std::string dbPath = savePath + "\\" + "ConfigSync-PathDatabase.bin";
             const std::string hbPath = savePath + "\\" + "ConfigSync-Hashbase.csv";
-
+            
             database db(dbPath);
             std::map<std::string, std::string> pathMap;
             db.readStringMap(pathMap);
@@ -298,7 +299,20 @@ class analyzer{
             }
             else{
                 // Hash progFiles, compare against Hashbase
-                for(const auto)
+                database::readHashbase(hbPath, h);
+
+                for(const auto& [hashA, hashB, pathA, pathB] : std::views::zip(h.ha, h.hb, h.pa, h.pb)){
+                    
+                    if(!std::filesystem::exists(pathA)){
+                        std::cerr << "Warning: program path not found!" << std::endl;
+                        return 0;
+                    }
+                    else if(!std::filesystem::exists(pathB)){
+                        std::cerr << "Warning: archived file not found!" << std::endl;
+                    }
+                    if(!std::filesystem::exists(pathA) && std::filesystem::exists(pathB) && get_md5hash(pathA) == get_md5hash(pathB)){ // rehash pathB
+                    }
+                }
             }
         }
 };

@@ -3,6 +3,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <ranges>
 
 struct hashbase{
     std::vector<std::string> ha;
@@ -24,6 +25,17 @@ struct hashbase{
     // iterator end() {
     //     return std::make_tuple(ha.end(), hb.end(), pa.end(), pb.end());
     // }
+
+    void push_all(const std::string& str){
+        ha.push_back(str);
+        hb.push_back(str);
+        pa.push_back(str);
+        pb.push_back(str);
+    }
+
+    std::ranges::zip_view<std::ranges::ref_view<std::vector<std::string>>, std::ranges::ref_view<std::vector<std::string>>, std::ranges::ref_view<std::vector<std::string>>, std::ranges::ref_view<std::vector<std::string>>> zip_view(){ // or auto
+        return std::views::zip(ha, hb, pa, pb);
+    }
 };
 
 #endif

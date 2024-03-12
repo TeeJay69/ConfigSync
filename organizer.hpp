@@ -36,6 +36,7 @@ class organizer{
                 
                 try{
                     std::filesystem::remove(itemList[0]); // remove oldest save
+                    limit_enforcer_configarchive(maxdirs, savepath); // Self reference
                 }
                 catch(std::filesystem::filesystem_error& error){
                     std::cerr << ANSI_COLOR_RED << "Failed to remove directory. (Class: organizer). Error Code: 38 & <" << error.what() << ">" << ANSI_COLOR_RESET << std::endl;

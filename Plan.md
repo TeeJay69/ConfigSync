@@ -144,6 +144,7 @@ Install-Location
 - [ ] Doxygen comments
 - [ ] Refactor the way the last save dir is retrieved. A unique Id linked to the date might be helpful.
 - [ ] Use more structs
+- [ ] Add log file
 
 
 ## Reevaluate:
@@ -168,7 +169,8 @@ Install-Location
 - [ ] Backup settings file, in case primary gets corrupted or messed with.
 - [ ] Verify settings file using hash function.
 - [ ] --force option for sync
-
+- [ ] Status indicator for is_identical() function from analyzer
+- [ ] --verify parameter to make an integrity check of a snapshot from the archive. (defaults to newest) (option to provide specific date) ([PROGRAM] --all for verifying all saves of that program.) (verify --all checks every single save from all programs.)(--all-newest for checking the newest save from all programs in the archive)
 
 
 ## Trashcan:

@@ -119,6 +119,7 @@ class programconfig{
                 return {{logs, "logs"}, {preferences, "preferences"}};
             }
 
+
             std::unordered_map<std::string, std::string> x;
             return x;
         }
