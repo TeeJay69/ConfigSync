@@ -21,6 +21,7 @@
 #include "ANSIcolor.hpp"
 #include "CFGSExcept.hpp"
 #include "hashbase.hpp"
+#include "logs.hpp"
 
 
 class analyzer{
@@ -219,7 +220,7 @@ class analyzer{
         std::string get_sha256hash(const std::string& fname){
             FILE *file;
 
-            unsigned char buf[131072];
+            unsigned char buf[8192];
             unsigned char output[SHA256_DIGEST_LENGTH];
             size_t len;
 
@@ -261,12 +262,12 @@ class analyzer{
                 
                 if(!std::filesystem::exists(path.first)){
                     std::cerr << "Warning: program path not found!" << std::endl;
-                    logfile << "Warning: program file [" << path.first << "] not found!" << std::endl;
+                    logfile << logs::ms("Warning:") <<  " program file [" << path.first << "] not found!" << std::endl;
                     return 0;
                 }
                 
                 else if(!std::filesystem::exists(path.second)){
-                    logfile << "Warning: archived file [" << path.second << "] not found!" << std::endl;
+                    logfile << logs::ms("Warning:") << " archived file [" << path.second << "] not found!" << std::endl;
                     return 0;
                 }
 
@@ -274,6 +275,7 @@ class analyzer{
                 const std::string &secondHash = get_sha256hash(path.second);
 
                 if(firstHash != secondHash){
+                    logfile << logs::ms("Hashes don't match.\n");
                     return 0;
                 }
                 else{
@@ -281,8 +283,10 @@ class analyzer{
                 }
             }
 
+            logfile << logs::ms("Config is identical, storing hashbase.\n");
+            database::storeHashbase(hbPath, H);
+
             return 1;
-    
         }
 };
 #endif

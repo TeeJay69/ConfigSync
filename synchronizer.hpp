@@ -87,7 +87,7 @@ class synchronizer{
                         if(!std::filesystem::exists(dst)){
                             std::filesystem::create_directories(dst);
                         }
-                        recurse_copy(entry.path(), dst, map);
+                        recurse_copy(entry.path(), dst, std::nullopt, pp);
                     }
                     else{
                         try{

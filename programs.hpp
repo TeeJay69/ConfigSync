@@ -82,7 +82,6 @@ class programconfig{
 
             if(programName == "Jackett"){
                 const std::string jackettArchivePath = exeLocation + "\\ConfigArchive\\Jackett";
-                std::cout << "jackettArchivePath programs.hpp" << jackettArchivePath << std::endl;
                 return jackettArchivePath;
             }
 

@@ -64,15 +64,11 @@ void exitSignalHandler(int signum){
 
 int path_check(const std::vector<std::string>& paths){
     for(const auto& item : paths){ // Check if program exist
-        std::cerr << "Debug m9\n";
         if(!std::filesystem::exists(item)){
-            std::cerr << "Debug m10\n";
             // std::cerr << "Program path not found: (" << item << ").\n" << std::endl;
             return 0;
         }
-        std::cerr << "DEBUG m11\n";
     }
-    std::cerr << "Debug m 12\n";
     return 1;
 }
 
@@ -99,7 +95,7 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
             const std::string dateDir = configAnalyzer.get_newest_backup_path(); // Latest dir
 
             if(configAnalyzer.has_hashbase(dateDir) == 1){
-                if(configAnalyzer.is_identical()){ // Compare last save to current config
+                if(configAnalyzer.is_identical() == 1){ // Compare last save to current config
                     const std::filesystem::path &newestPath = dateDir;
                     if(newestPath.filename() == synchronizer::ymd_date()){
                         const std::string noChange = program + " config did not change.\n";
@@ -115,7 +111,7 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
                     return 1;
                 }
                 else{ // Config changed
-                    const std::string changed = program + " config changed.\nSynchronizing " + program + "...\n";
+                    const std::string changed = program + " config changed. Synchronizing " + program + "...\n";
                     std::cout << changed;
                     logfile << logs::ms(changed);
 
@@ -131,7 +127,7 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
             }
 
             synchronizer::recurse_remove(dateDir); // Remove the corrupt save, it has no hashbase
-            const std::string changed = program + "'s existing save was deleted, due to a missing hashbase.\nSynchronizing " + program + "...\n";
+            const std::string changed = program + "'s existing save was deleted, due to a missing hashbase. Synchronizing " + program + "...\n";
             std::cout << changed;
             logfile << logs::ms(changed);
 
@@ -429,7 +425,7 @@ int main(int argc, char* argv[]){
             std::cout << ANSI_COLOR_222 << "Checking archive..." << ANSI_COLOR_RESET << std::endl;
 
             // Create the archive @dir if it does not exist yet
-            std::cout << "DEBUG: 404: \n";
+
             if(!std::filesystem::exists(jackett.get_archive_path())){
                 std::filesystem::create_directories(jackett.get_archive_path());
             }
@@ -449,17 +445,17 @@ int main(int argc, char* argv[]){
             organizer janitor; // Initialize class
 
             // Sync Jackett
-            std::cout << "DEBUG 424: " << std::endl;
+
             int jackettSync = 0;
             if(create_save(jackettPaths, "Jackett", jackett.get_archive_path().string(), exePath, logfile) == 1){
-                std::cout << "DEBUG 426: " << std::endl;
+
                 jackettSync = 1;
                 syncedList.push_back("Jackett");
 
                 // Limit number of saves
-                std::cout << "DEBUG 432: " << std::endl;
+
                 janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), jackett.get_archive_path().string()); // Cleanup
-                std::cout << "DEBUG 434: " << std::endl;
+
             }
 
             // Sync Prowlarr
@@ -589,10 +585,10 @@ int main(int argc, char* argv[]){
             
             analyzer anlyJackett(jackettPaths, "Jackett", exePath, logfile); // Initialize class
             synchronizer syncJackett(jackettPaths, "Jackett", exePath, logfile); // Initialize class
-            std::cout << "Debug m574\n";
+
             int jackettState = 0;
             if(anlyJackett.is_archive_empty() == 1){ // Archive is empty
-                std::cout << "Debug m577\n";
+
                 std::cout << "Skipping Jackett, not synced..." << std::endl;
                 failList.push_back("Jackett");
             }

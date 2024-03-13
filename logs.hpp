@@ -15,7 +15,7 @@ class logs{
         
         static const std::string timestamp(){
             auto now = std::chrono::system_clock::now();
-            std::string formatted_time = std::format("{0:%F_%T}", now);
+            std::string formatted_time = std::format("{0:%F_%Y-%M-%S}", now);
 
             return formatted_time;
         }
