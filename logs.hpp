@@ -28,7 +28,7 @@ class logs{
                 fvec.push_back(x);
             }
 
-            if(fvec.size() > limit){
+            if(fvec.size() - 1  > limit){
                 
                 std::sort(fvec.begin(), fvec.end());
                 try{

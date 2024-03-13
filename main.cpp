@@ -22,6 +22,9 @@
 #include "database.hpp"
 #include "organizer.hpp"
 #include "logs.hpp"
+#include "CFGSIndex.hpp"
+#include "CFGSExcept.hpp"
+#include "index.hpp"
 
 #ifdef DEBUG
 #define DEBUG_MODE 1
@@ -31,6 +34,8 @@
 
 #define SETTINGS_ID 1
 #define VERSION "v1.0.0"
+
+using std::string;
 
 volatile sig_atomic_t interrupt = 0;
 
@@ -82,9 +87,9 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
             const std::string out = "First synchronization of " + program + ".\n";
             std::cerr << out;
             logfile << logs::ms(out);
-            synchronizer sync(programPaths, program, exelocation, logfile); // initialize class
+            synchronizer sync(program, exelocation, logfile); // initialize class
 
-            if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
+            if(sync.copy_config(pArchivePath, synchronizer::ymd_date(), programPaths) != 1){ // sync config   
                 const std::string errSync = "Error synchronizing " + program + ".\n"; // copy_config returned 0
                 std::cerr << errSync;
                 logfile << logs::ms(errSync);
@@ -116,9 +121,9 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
                     std::cout << ANSI_COLOR_138 << changed << ANSI_COLOR_RESET;
                     logfile << logs::ms(changed);
 
-                    synchronizer sync(programPaths, program, exelocation, logfile); // initialize class
+                    synchronizer sync(program, exelocation, logfile); // initialize class
 
-                    if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
+                    if(sync.copy_config(pArchivePath, synchronizer::ymd_date(), programPaths) != 1){ // sync config   
                         const std::string errSync = "Error synchronizing " + program + ".\n"; // copy_config returned 0
                         std::cerr << errSync;
                         logfile << logs::ms(errSync); 
@@ -132,9 +137,9 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
             std::cout << changed;
             logfile << logs::ms(changed);
 
-            synchronizer sync(programPaths, program, exelocation, logfile); // initialize class
+            synchronizer sync(program, exelocation, logfile); // initialize class
 
-            if(sync.copy_config(pArchivePath, synchronizer::ymd_date()) != 1){ // sync config   
+            if(sync.copy_config(pArchivePath, synchronizer::ymd_date(), programPaths) != 1){ // sync config   
                 const std::string errSync = "Error synchronizing " + program + ".\n"; // copy_config returned 0
                 std::cerr << errSync;
                 logfile << logs::ms(errSync); 
@@ -145,6 +150,34 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
     else{   
         std::cerr << "Verification of " << program << " location failed." << std::endl;
         return 0;
+    }
+
+    return 1;
+}
+
+int revertRestore(const std::string& program, const std::string& exePath, std::ofstream& logfile){
+    if(analyzer::has_backup(program, exePath)){
+        std::cout << ANSI_COLOR_166 << "Reverting last " << program << " Jackett restore:" << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_222 << "Fetching index..." << ANSI_COLOR_RESET << std::endl;
+        // Get index
+        Index IX = analyzer::get_Index(program, exePath);
+
+        synchronizer sync(exePath, program, logfile);
+        
+        std::cout << ANSI_COLOR_222 << "Starting revert..." << ANSI_COLOR_RESET << std::endl;
+        // Try to undo last restore
+        if(!sync.revert_restore(IX.time_uuid.back().second) != 1){
+            std::cerr << ANSI_COLOR_RED << "Error: Failed to revert last restore.\n";
+            logfile << logs::ms("Error: Failed to revert last restore.\n");
+            throw cfgsexcept("Please verify that none of your selected programs components are missing or corrupted");
+            return 0;
+        }
+
+        std::cout << ANSI_COLOR_222 << "Revert finished, cleaning up..." << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_GREEN << "Revert was successfull!" << ANSI_COLOR_RESET << std::endl;
+    }
+    else{
+        std::cerr << ANSI_COLOR_RED << "Fatal: no previous restore found. See 'cfgs --help'." << ANSI_COLOR_RESET << std::endl;
     }
 
     return 1;
@@ -256,7 +289,9 @@ class defaultsetting{
 
 int main(int argc, char* argv[]){
 
+    // Catches exit signal Ctrl+C
     std::signal(SIGINT, exitSignalHandler);
+    // Enables colors in windows command processor
     enableColors();
     // Get location of exe
     boost::filesystem::path exePathBfs(boost::filesystem::initial_path<boost::filesystem::path>());
@@ -270,7 +305,7 @@ int main(int argc, char* argv[]){
     // Settings @section
     boost::property_tree::ptree pt;
 
-    try{ // Try loading the file. Its at the same time a validity check
+    try{ // Try parsing the settings file.
         boost::property_tree::read_json(settingsPath, pt); // read config
     }
 
@@ -585,7 +620,7 @@ int main(int argc, char* argv[]){
             std::vector<std::string> jackettPaths = jackett.get_config_paths(); // Get program paths
             
             analyzer anlyJackett(jackettPaths, "Jackett", exePath, logfile); // Initialize class
-            synchronizer syncJackett(jackettPaths, "Jackett", exePath, logfile); // Initialize class
+            synchronizer syncJackett("Jackett", exePath, logfile); // Initialize class
 
             int jackettState = 0;
             if(anlyJackett.is_archive_empty() == 1){ // Archive is empty
@@ -594,7 +629,7 @@ int main(int argc, char* argv[]){
                 failList.push_back("Jackett");
             }
             else{ // Archive not empty
-                if(syncJackett.restore_config(anlyJackett.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
+                if(syncJackett.restore_config(anlyJackett.get_newest_backup_path(), pt.get<int>("recyclelimit"), jackettPaths) == 1){ // Restore from newest save
                     std::cout << ANSI_COLOR_GREEN << "Jackett rollback successfull!" << ANSI_COLOR_RESET << std::endl;
                     jackettState = 1;
                 }
@@ -610,7 +645,7 @@ int main(int argc, char* argv[]){
             std::vector<std::string> prowlarrPaths = prowlarr.get_config_paths(); // Get program paths
             
             analyzer anlyProw(prowlarrPaths, "Prowlarr", exePath, logfile); // Initialize class
-            synchronizer syncProw(prowlarrPaths, "Prowlarr", exePath, logfile); // Initialize class
+            synchronizer syncProw("Prowlarr", exePath, logfile); // Initialize class
 
             int prowlarrState = 0;
             if(anlyProw.is_archive_empty() == 1){ // Archive empty
@@ -618,7 +653,7 @@ int main(int argc, char* argv[]){
                 failList.push_back("Prowlarr");
             }
             else{ // Archive not empty
-                if(syncProw.restore_config(anlyProw.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
+                if(syncProw.restore_config(anlyProw.get_newest_backup_path(), pt.get<int>("recyclelimit"), prowlarrPaths) == 1){ // Restore from newest save
                     std::cout << ANSI_COLOR_GREEN << "Prowlarr rollback successfull!" << ANSI_COLOR_RESET << std::endl;
                     prowlarrState = 1;
                 }
@@ -634,7 +669,7 @@ int main(int argc, char* argv[]){
             std::vector<std::string> qbittorrentPaths = qbittorrent.get_config_paths(); // Get program paths
             
             analyzer anlyQbit(qbittorrentPaths, "qBittorrent", exePath, logfile); // Initialize class
-            synchronizer syncQbit(qbittorrentPaths, "qBittorrent", exePath, logfile); // Initialize class
+            synchronizer syncQbit("qBittorrent", exePath, logfile); // Initialize class
             
             int qbitState = 0;
             if(anlyQbit.is_archive_empty() == 1){ // Archive empty
@@ -642,7 +677,7 @@ int main(int argc, char* argv[]){
                 failList.push_back("qBittorrent");
             }
             else{ // Archive not empty
-                if(syncQbit.restore_config(anlyQbit.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
+                if(syncQbit.restore_config(anlyQbit.get_newest_backup_path(), pt.get<int>("recyclelimit"), qbittorrentPaths) == 1){ // Restore from newest save
                     std::cout << ANSI_COLOR_GREEN << "qBittorrent rollback successfull!" << ANSI_COLOR_RESET << std::endl;
                     qbitState = 1;
                 }
@@ -688,9 +723,9 @@ int main(int argc, char* argv[]){
                     std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
                 }
                 else{ // Archive not empty
-                    synchronizer sync(pPaths, "Jackett", exePath, logfile); // Initialize class
+                    synchronizer sync("Jackett", exePath, logfile); // Initialize class
 
-                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), pPaths) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                     }
                     else{
@@ -703,9 +738,9 @@ int main(int argc, char* argv[]){
 
             else if(std::find(jackettSaves.begin(), jackettSaves.end(), std::string(argv[3])) != jackettSaves.end()){ // Specific save date 2subparam. Check if date is valid.
 
-                synchronizer sync(pPaths, "Jackett", exePath, logfile); // Initialize class
+                synchronizer sync("Jackett", exePath, logfile); // Initialize class
 
-                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit")) == 1){ // Restore from user defined save date<
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit"), pPaths) == 1){ // Restore from user defined save date<
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -737,9 +772,9 @@ int main(int argc, char* argv[]){
                     std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
                 }
                 else{ // Archive not empty
-                    synchronizer sync(pPaths, "Prowlarr", exePath, logfile); // Initialize class
+                    synchronizer sync("Prowlarr", exePath, logfile); // Initialize class
 
-                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), pPaths) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                     }
                     else{
@@ -751,9 +786,9 @@ int main(int argc, char* argv[]){
 
             else if(std::find(prowlarrSaves.begin(), prowlarrSaves.end(), std::string(argv[3])) != prowlarrSaves.end()){ // Specific save date 2subparam. Check if date is valid.
 
-                synchronizer sync(pPaths, "Prowlarr", exePath, logfile); // Initialize class
+                synchronizer sync("Prowlarr", exePath, logfile); // Initialize class
 
-                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit")) == 1){ // Restore from user defined save date
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit"), pPaths) == 1){ // Restore from user defined save date
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -785,9 +820,9 @@ int main(int argc, char* argv[]){
                     std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
                 }
                 else{ // Archive not empty
-                    synchronizer sync(pPaths, "qBittorrent", exePath, logfile); // Initialize class
+                    synchronizer sync("qBittorrent", exePath, logfile); // Initialize class
 
-                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit")) == 1){ // Restore from newest save
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), pPaths) == 1){ // Restore from newest save
                         std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                     }
                     else{
@@ -799,9 +834,9 @@ int main(int argc, char* argv[]){
 
             else if(std::find(qbittorrentSaves.begin(), qbittorrentSaves.end(), std::string(argv[3])) != qbittorrentSaves.end()){ // Specific save date 2subparam. Check if date is valid.
 
-                synchronizer sync(pPaths, "qBittorrent", exePath, logfile); // Initialize class
+                synchronizer sync("qBittorrent", exePath, logfile); // Initialize class
 
-                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit")) == 1){ // Restore from user defined save date
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit"), pPaths) == 1){ // Restore from user defined save date
                     std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
@@ -1055,6 +1090,29 @@ int main(int argc, char* argv[]){
 
     else if(std::string(argv[1]) == "verify"){ // 'verify' param
         // TODO
+    }
+
+
+    else if(std::string(argv[1]) == "revert"){ // 'revert' param
+        if(argv[2] == NULL){
+            std::cerr << ANSI_COLOR_RED << "Fatal: missing argument or value. See 'cfgs --help'." << ANSI_COLOR_RESET << std::endl;
+        }
+
+        
+        else if(std::string(argv[2]) == "Jackett"){ // 'Jackett' subparam
+                // Try to revert
+                revertRestore("Jackett", exePath, logfile);
+        }
+
+        else if(std::string(argv[2]) == "Prowlarr"){ // 'Prowlarr' subparam
+                // Try to revert
+                revertRestore("Prowlarr", exePath, logfile);
+        }
+        
+        else if(std::string(argv[2]) == "qBittorrent"){ // 'qBittorrent' subparam
+                // Try to revert
+                revertRestore("qBittorrent", exePath, logfile);
+        }
     }
 
 

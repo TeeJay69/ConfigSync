@@ -102,6 +102,30 @@ class analyzer{
             }
         }
 
+        static int has_backup(const std::string& program, const std::string& exePath){
+            const std::string pBackLoc = exePath + "\\ConfigBackup\\" + program;
+            if(!std::filesystem::exists(pBackLoc) || std::filesystem::is_empty(pBackLoc)){
+                return 0;
+            }
+            
+            return 1;
+        }
+
+        static Index get_Index(const std::string& program, const std::string& exePath){
+            const std::string pBackLoc = exePath + "\\ConfigBackup\\" + program;
+            if(!std::filesystem::exists(pBackLoc) || std::filesystem::is_empty(pBackLoc)){
+                throw cfgsexcept("Error: Last backup not found. (get_last_backup)");
+            }
+
+            const std::string &IXPath = exePath + "\\ConfigBackup\\" + program + "\\Index.csv";
+            Index IX;
+            database db(IXPath);
+            db.readIndex(IX);
+
+            return IX;
+        }
+
+        
         // Check if a programs archive is empty
         int is_archive_empty(){
             if(std::filesystem::is_empty(archivePath)){
@@ -154,7 +178,6 @@ class analyzer{
                 return filename1 < filename2;
             });
         }
-
 
         // Get all saves for the program. Iterates over archivePath and loads all directories into the vector.
         void get_all_saves(std::vector<std::string>& storageVector){

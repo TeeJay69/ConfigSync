@@ -19,16 +19,16 @@
 #include "organizer.hpp"
 #include "ANSIcolor.hpp"
 #include "CFGSExcept.hpp"
+#include "CFGSIndex.hpp"
 
 
 class synchronizer{
     private:
-        const std::vector<std::string>& programPaths;
         const std::string& programName;
         const std::string& exeLocation;
         std::ofstream& logfile;
     public:
-        synchronizer(const std::vector<std::string>& ppaths, const std::string& pname, const std::string& exeLocat, std::ofstream& logf) : programPaths(ppaths), programName(pname), exeLocation(exeLocat), logfile(logfile) {}
+        synchronizer(const std::string& pname, const std::string& exeLocat, std::ofstream& logf) : programName(pname), exeLocation(exeLocat), logfile(logfile) {}
         
 
         static std::string generate_UUID(){
@@ -59,13 +59,13 @@ class synchronizer{
             return out;
         }
 
-        
-        static void timestamp_objects(std::map<unsigned long long, std::string>& map, const std::string& strValue){
+
+        static unsigned long long* timestamp(){
             std::chrono::time_point<std::chrono::system_clock> timePoint;
             timePoint = std::chrono::system_clock::now();
             unsigned long long t = std::chrono::system_clock::to_time_t(timePoint);
             
-            map[t] = strValue;
+            return &t;
         }
 
         
@@ -168,7 +168,7 @@ class synchronizer{
          * @param dateDir A specific date for the directory that the items are copied to.
          * @note Uses private members 'programPaths', 'programName' and 'exeLocation'.
          */
-        int copy_config(const std::string& archivePathAbs, const std::string& dateDir){ // archivePathAbs = programs directory containing the date directories
+        int copy_config(const std::string& archivePathAbs, const std::string& dateDir, const std::vector<std::string>& programPaths){ // archivePathAbs = programs directory containing the date directories
 
             // create first date folder if it doesnt exist yet
             if(std::filesystem::is_empty(std::filesystem::path(archivePathAbs))){
@@ -191,7 +191,6 @@ class synchronizer{
 
                 std::filesystem::create_directories(datePath);
             }
-            std::cout << "archivePathAbs: " << archivePathAbs << std::endl;
 
             
   
@@ -262,92 +261,15 @@ class synchronizer{
             return 1;
         }
 
-        
-        void backup_config_for_restore(const std::string& dirUUID){
-            std::string backupDir = exeLocation + "\\ConfigBackup\\" + programName;
-
-            if(std::filesystem::is_empty(backupDir)){
-                std::filesystem::create_directories(backupDir + "\\temp");
-                std::filesystem::create_directories(backupDir + "\\RecycleBin");
-            }
-            
-            // Create UUID directory
-            try{
-                std::filesystem::create_directory(backupDir + "\\temp\\" + dirUUID);
-            }
-            catch(std::filesystem::filesystem_error& errorCode){
-                throw std::runtime_error(errorCode);
-            }
-
-            // databasePath inside temp UUID dir 
-            std::string databasePath = backupDir + "\\temp\\" + dirUUID + "\\" + "ConfigSync-PathDatabase.bin";
-            std::map<std::string, std::string> pathMap;
-            std::optional<std::reference_wrapper<std::map<std::string, std::string>>> mapRef = std::ref(pathMap);
-
-            // Backup to UUID directory
-            std::unordered_map<std::string, std::string> id;
-            int groupFlag = 0;
-            if(programconfig::has_groups(programName)){ // Check for groups
-                programconfig pcfg(programName, exeLocation);
-                id = pcfg.get_path_groups();
-                groupFlag = 1;
-            }
-            else{
-                groupFlag = 0;
-            }
-            for(const auto& item : programPaths){
-                std::string groupName;
-
-                if(std::filesystem::is_directory(item)){
-
-                    if(groupFlag == 1 && id.contains(item)){
-                        groupName = id[item];
-                    }
-                    else{
-                        groupName = "Directories";
-                    }
-
-                    std::string destination = backupDir + "\\temp\\" + dirUUID + "\\" + groupName;
-                    try{
-                        recurse_copy(item, destination, mapRef);
-                    }
-                    catch(cfgsexcept& err){
-                        std::cerr << err.what() << std::endl;
-                    }
-                }
-                else{
-
-                    if(groupFlag == 1 && id.contains(item)){
-                        groupName = id[item];
-                    }
-                    else{
-                        groupName = "Single-Files";
-                    }
-
-                    std::string destination = backupDir + "\\temp\\" + dirUUID + "\\" + groupName;
-                    try{
-                        recurse_copy(item, destination, mapRef);
-                    }
-                    catch(cfgsexcept& err){
-                        std::cerr << err.what() << std::endl;
-                    }
-                }
-            }
-
-            // Write path map to file
-
-            database db(databasePath);
-            db.storeStringMap(pathMap);
-        }
 
 
-        static int rebuild_from_backup(const std::string databasePath){
-            database db(databasePath);
+        int revert_restore(const std::string& uuid){
+            const std::string hashbasePath = exeLocation + "\\ConfigBackup\\" + programName + "\\" + uuid + "\\ConfigSync-Hashbase.csv";
+            database db(hashbasePath);
+            hashbase H;
+            db.readHashbase(hashbasePath, H, logfile);
 
-            std::map<std::string, std::string> pathMap;
-            db.readStringMap(pathMap);
-            
-            for(const auto& pair : pathMap){
+            for(const auto& pair : H.pp){
                 try{
                    recurse_copy(std::filesystem::path(pair.second), pair.first); 
                 }
@@ -360,56 +282,6 @@ class synchronizer{
             return 1;
         }
         
-
-        /**
-         * @brief Convert username of paths as elements of a map.
-         * @param map Map of type <std::string, std::string> containing paths.
-         * @param newUser The new username.
-         */
-        static void transform_pathmap_new_username(std::map<std::string, std::string>& map, const std::string& newUser){
-            
-            const boost::regex pattern("C:\\\\Users\\\\");
-            const boost::regex repPattern("(?<=C:\\\\Users\\\\)(.+?)\\\\");
-            
-            for(const auto & pair : map){
-                
-                auto keyMatches = boost::smatch{};
-                auto valueMatches = boost::smatch{};
-
-                std::string newKey;
-                std::string newValue;
-
-                
-                /* Check key */
-                if(boost::regex_search(pair.first, keyMatches, pattern)){
-                    
-                    newKey = boost::regex_replace(pair.first, repPattern, newUser);
-
-                    /* Search value */
-                    if(boost::regex_search(pair.second, valueMatches, pattern)){
-                        
-                        newValue = boost::regex_replace(pair.second, repPattern, newUser);    
-
-                        /* Replace map element */
-                        map.erase(pair.first); // Remove key value pair
-                        map.insert(std::make_pair(newKey, newValue));
-                    }
-                    else{ // Replace key when value did not contain username
-
-                        map.erase(pair.first);
-                        map.insert(std::make_pair(newKey, pair.second));
-                    }
-                }
-
-                /* Check value when key did not contain username */
-                else if(boost::regex_search(pair.second, valueMatches, pattern)){
-                    newValue = boost::regex_replace(pair.second, repPattern, newUser);
-
-                    /* Replace value  */
-                    map[pair.first] = newValue;
-                }
-            }
-        }
 
         /**
          * @brief Convert username of paths as elements of a vector of a pair.
@@ -465,7 +337,7 @@ class synchronizer{
          * @param recyclebinlimit Amount of backups to keep of a single programs config, resulting from the restore process (backup_config_for_restore function).
          * @note The recycle bin management occurs automatically.
          */
-        int restore_config(const std::string dateDir, const int& recyclebinlimit){ // Main function for restoring. Uses generate_UUID, timestamp_objects, backup_config_for_restore, backup_config_for_restore, rebuild_from_backup
+        int restore_config(const std::string dateDir, const int& recyclebinlimit, const std::vector<std::string>& programPaths){ // Main function for restoring. Uses generate_UUID, timestamp_objects, backup_config_for_restore, backup_config_for_restore, rebuild_from_backup
             // Check if programPaths exist
             for(const auto& item : programPaths){
                 if(!std::filesystem::exists(std::filesystem::path(item))){
@@ -474,30 +346,60 @@ class synchronizer{
                 }
             }
 
-            /* Create backup of current config */
+            std::cout << ANSI_COLOR_YELLOW << "Backing up program config..." << ANSI_COLOR_RESET << std::endl;
+
+            /* Backup: */
+            /* Copy current config to ConfigBackup  */
             const std::string backupDir = exeLocation + "\\ConfigBackup\\" + programName;
             const std::string dirUUID = generate_UUID();
             std::map<unsigned long long, std::string> recycleMap; // Stores recycleBin items with timestamps
 
-            if(!std::filesystem::is_empty(std::filesystem::path(backupDir + "\\temp"))){ // Clean up temp directory
-                database db(backupDir + "\\RecycleBin\\RecycleMap.bin"); // Inside respective programs RecycleBin dir
+            copy_config(backupDir, dirUUID, programPaths);
+            
+            // Load index file
+            const std::string indexPath = backupDir + "\\Index.csv";
+            // Try to create the index file when it doesnt exist
+            if(!std::filesystem::exists(backupDir + "\\Index.csv")){
+                
+                std::ofstream indexFile(indexPath);
 
-                for(const auto& item : std::filesystem::directory_iterator(backupDir + "\\temp")){
-                    const std::string newPath = backupDir + "\\RecycleBin\\" + item.path().filename().string();
-                    std::filesystem::rename(item, newPath); // Move item to recyclebin
-                    timestamp_objects(recycleMap, newPath); // Timestamp and load into map                                       
+                if(!indexFile.is_open()){
+                    throw cfgsexcept("Error creating index file\n");
+                    logfile << logs::ms("Error creating index file\n");
                 }
 
-                // Clean recyclebin
-                const std::string mapPath = backupDir + "\\RecycleBin\\RecycleMap.bin";
-                organizer janitor;
-                janitor.recyclebin_cleaner(recyclebinlimit, recycleMap, mapPath); // Clean recycle bin and store recycle map as file
+
+                indexFile << timestamp << "," << dirUUID << ",\n";
             }
+            
+            // Append timestamp and UUID to index
+            std::ofstream indexFile(indexPath, std::ios_base::app);
+            if(!indexFile.is_open()){
+                throw cfgsexcept("Error creating index file\n");
+                logfile << logs::ms("Error creating index file\n");
+            }
+            indexFile << timestamp << "," << dirUUID << ",\n";
 
-            std::cout << ANSI_COLOR_YELLOW << "Backing up program config, in case of plan B..." << ANSI_COLOR_RESET << std::endl; // Verbose
-            backup_config_for_restore(dirUUID); // Backup to temp directory
+            indexFile.close();
 
-            // Get path database from ConfigArchive
+            // Read index file into memory
+            database index(indexPath);
+            Index IX;
+            index.readIndex(IX);
+
+            // Enforce max dir limit
+            organizer::index_cleaner(recyclebinlimit, IX, backupDir);
+            
+            // Write updated index
+            std::ofstream iXfile(indexPath);
+            if(iXfile.is_open()){
+                for(const auto& pair : IX.time_uuid){
+                    iXfile << pair.first << "," << pair.second << ",\n";
+                }
+            }
+            
+            /* Restore: */
+            // Get paths from ConfigArchive
             const std::string databasePath = (exeLocation + "\\ConfigArchive\\" + programName + "\\" + dateDir + "\\ConfigSync-Hashbase.csv");
             hashbase H;
             database::readHashbase(databasePath, H, logfile);
@@ -521,14 +423,12 @@ class synchronizer{
                 }
                 catch(cfgsexcept& copyError){ // Error. Breaks for loop 
                     std::cerr << "Aborting synchronisation: ( " << copyError.what() << ")" << std::endl;
-                    std::cout << "Plan B: Rebuilding from backup..." << std::endl;
+                    std::cout << "Rebuilding from backup..." << std::endl;
                     
-                    const std::string databaseBackupPath = exeLocation + "\\ConfigBackup\\" + programName + "\\temp\\" + dirUUID + "\\ConfigSync-PathDatabase.bin";
-
                     // Rebuild from backup
-                    if(rebuild_from_backup(databaseBackupPath) != 1){
-                        std::cerr << ANSI_COLOR_RED << "Fatal: Failed to rebuild from backup.\n Please verify that none of the selected programs components are missing or corrupted." << ANSI_COLOR_RESET << std::endl;
-                        std::cerr << "You may have to reinstall the affected application" << std::endl;  
+                    if(revert_restore(dirUUID) != 1){
+                        std::cerr << ANSI_COLOR_RED << "Fatal: Failed to rebuild from backup.\n Please verify that none of your selected programs components are missing or corrupted." << ANSI_COLOR_RESET << std::endl;
+                        std::cerr << "You may need to reinstall the affected application." << std::endl;  
                         return 0;
                     }
                     else{

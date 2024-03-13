@@ -10,8 +10,10 @@
 #include "CFGSExcept.hpp"
 #include "hashbase.hpp"
 #include "logs.hpp"
+#include "CFGSIndex.hpp"
 
-class database{
+
+class database {
     private:
         const std::string filePath;
     public:
@@ -275,6 +277,38 @@ class database{
                 logfile << logs::ms("hashbase path vector is empty after reading the hashbase.\n");
             }
             hf.close();
+        }
+
+
+
+        void readIndex(Index& IX){
+
+            if(!std::filesystem::exists(filePath)){
+                throw cfgsexcept("Failed to open file: file not found. " + __LINE__);
+            }
+
+            std::ifstream indexFile;
+            indexFile.open(filePath);
+            if(!indexFile.is_open()){
+                throw cfgsexcept("Failed to open file: Error opening. " + __LINE__);
+            }
+
+            std::string str;
+
+            while(std::getline(indexFile, str)){
+                std::istringstream iss(str);
+
+                
+                std::string timestamp;
+                std::string uuid;
+
+                std::getline(iss, timestamp, ',');
+                std::getline(iss, uuid, ',');
+
+                IX.time_uuid.push_back(std::pair(std::stoull(timestamp), uuid));
+            }
+            
+            indexFile.close();
         }
 
 };

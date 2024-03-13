@@ -99,6 +99,9 @@ Query the tree for a different setting and convert it (with a default value if t
 Ask the user
 
 
+When copying a backup is created in temp which is then moved to recycle bin. We could skip the temp step and move directly to recycle bin.
+Then we create 
+
 - Structure:
 
 Install-Location
@@ -112,18 +115,25 @@ Install-Location
     |       |---Save-2 (DateDir)
     |
     |---ConfigBackup
-        |---Program-1
-        |   |---Temp
-        |   |   |---287421 (UUID)
-        |   |
-        |   |---RecycleBin
-        |       |---928811
-        |       |---118272
-        |       |---327366
+    |    |---Program-1
+    |    |   |---Temp
+    |    |   |   |---287421 (UUID)
+    |    |   |
+    |    |   |---RecycleBin
+    |    |       |---928811
+    |    |       |---118272
+    |    |       |---327366
+    |    |
+    |    |---Program-2
+    |
+    <!-- |---UndoHistory
         |
-        |---Program-2
+        |---Program-1
+            |
+            |---878920
+            |---893742 -->
 
-            
+
 
 ## Critical ToDo's:
 - [x] Fix hardcoded absolute program location problem. Program needs the absolute location where its stored on the filesystem, not where its run from!
@@ -133,19 +143,19 @@ Install-Location
 - [x] Check if a save exists before restoring 
 - [x] Add cleanup to sync and restore parts.
 - [x] Support restore on machine that has a different user name (Paths from maps...)
+- [x] Add log file
+- [x] Catch `Ctrl + C`
+- [ ] Add logging
 - [ ] Format --help message.
 - [ ] License stuff. Include license in installer. Display license in help message.
 - [ ] Add more verbose messages.
 - [ ] Add disclaimer for runas admin before restoring. (Folder access) (something like, may require running from elevated command prompt)
 - [ ] Support pointing to existing Archive during installation (Copy existing Archive to installation directory).
 - [ ] Support CMake
-- [ ] Add logging
-- [ ] Catch `Ctrl + C`
 - [ ] Doxygen comments
 - [ ] Refactor the way the last save dir is retrieved. A unique Id linked to the date might be helpful.
-- [ ] Use more structs
-- [ ] Add log file
 
+- 
 
 ## Reevaluate:
 
@@ -174,6 +184,107 @@ Install-Location
 - [ ] --verify parameter to make an integrity check of a snapshot from the archive. (defaults to newest) (option to provide specific date) ([PROGRAM] --all for verifying all saves of that program.) (verify --all checks every single save from all programs.)(--all-newest for checking the newest save from all programs in the archive)
 
 ## Trashcan:
+<!-- /* void backup_config_for_restore(const std::string& dirUUID){
+            std::string backupDir = exeLocation + "\\ConfigBackup\\" + programName;
+
+            // Check if backup directory is empty
+            if(std::filesystem::is_empty(backupDir)){
+                // Create backup directory in ConfigBackup folder
+                std::filesystem::create_directories(backupDir + "\\temp");
+                std::filesystem::create_directories(backupDir + "\\RecycleBin");
+            }
+            
+            // Create UUID dir in temp
+            try{
+                std::filesystem::create_directory(backupDir + "\\temp\\" + dirUUID);
+            }
+            catch(std::filesystem::filesystem_error& errorCode){
+                throw std::runtime_error(errorCode);
+            }
+
+            // Create Path file inside UUID dir 
+            std::string databasePath = backupDir + dirUUID + "\\" + "ConfigSync-PathDatabase.bin";
+            std::map<std::string, std::string> pathMap;
+            std::optional<std::reference_wrapper<std::map<std::string, std::string>>> mapRef = std::ref(pathMap);
+
+            // Backup to UUID directory
+            std::unordered_map<std::string, std::string> id;
+            int groupFlag = 0;
+            if(programconfig::has_groups(programName)){ // Check for groups
+                programconfig pcfg(programName, exeLocation);
+                id = pcfg.get_path_groups();
+                groupFlag = 1;
+            }
+            else{
+                groupFlag = 0;
+            }
+
+            // Copy to UUID dir
+            for(const auto& item : programPaths){
+                std::string groupName;
+
+                if(std::filesystem::is_directory(item)){
+
+                    if(groupFlag == 1 && id.contains(item)){
+                        groupName = id[item];
+                    }
+                    else{
+                        groupName = "Directories";
+                    }
+
+                    std::string destination = backupDir + dirUUID + "\\" + groupName;
+                    try{
+                        recurse_copy(item, destination, mapRef);
+                    }
+                    catch(cfgsexcept& err){
+                        std::cerr << err.what() << std::endl;
+                    }
+                }
+                else{
+
+                    if(groupFlag == 1 && id.contains(item)){
+                        groupName = id[item];
+                    }
+                    else{
+                        groupName = "Single-Files";
+                    }
+
+                    std::string destination = backupDir + dirUUID + "\\" + groupName;
+                    try{
+                        recurse_copy(item, destination, mapRef);
+                    }
+                    catch(cfgsexcept& err){
+                        std::cerr << err.what() << std::endl;
+                    }
+                }
+            }
+
+            // Write path map to file
+
+            database db(databasePath);
+            db.storeStringMap(pathMap);
+        } */ -->
+<!--         static void timestamp_path_map(std::map<unsigned long long, std::string>& map, const std::string& strValue){
+            std::chrono::time_point<std::chrono::system_clock> timePoint;
+            timePoint = std::chrono::system_clock::now();
+            unsigned long long t = std::chrono::system_clock::to_time_t(timePoint);
+            
+            map[t] = strValue;
+        } -->
+<!--  if(!std::filesystem::is_empty(std::filesystem::path(backupDir + "\\temp"))){ // Clean up temp directory
+                database db(backupDir + "\\RecycleBin\\RecycleMap.bin"); // Inside respective programs RecycleBin dir
+
+                for(const auto& item : std::filesystem::directory_iterator(backupDir + "\\temp")){
+                    const std::string newPath = backupDir + "\\RecycleBin\\" + item.path().filename().string();
+                    std::filesystem::rename(item, newPath); // Move item to recyclebin
+                    timestamp_objects(recycleMap, newPath); // Timestamp and load into map                                       
+                }
+
+                // Clean recyclebin
+                const std::string mapPath = backupDir + "\\RecycleBin\\RecycleMap.bin";
+                organizer janitor;
+                janitor.recyclebin_cleaner(recyclebinlimit, recycleMap, mapPath); // Clean recycle bin and store recycle map as file
+            } -->
 <!--       /*
         void hash_program_items(std::unordered_map<std::string, std::string>& hashMap){
             std::vector<std::string> vec;

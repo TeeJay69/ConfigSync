@@ -67,5 +67,20 @@ class organizer{
                 db.storeIntMap(map);
             }
         }
+
+
+        static void index_cleaner(const int& maxdirs, Index& IX, const std::string& program_directory){
+            if(IX.time_uuid.size() > maxdirs){
+                try{
+                    synchronizer::recurse_remove(program_directory + "\\" + IX.time_uuid[0].second);
+                    // Remove element from index 0 (oldest)
+                    IX.time_uuid.erase(IX.time_uuid.begin());
+                    index_cleaner(maxdirs, IX, program_directory);
+                }
+                catch(cfgsexcept& err){
+                    std::cerr << err.what() << std::endl;
+                }
+            }
+        }
 };
 #endif
