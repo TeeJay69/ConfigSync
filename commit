@@ -1,0 +1,9 @@
+- Refactor main.cpp, programs.hpp. Complete refactor of programconfig. 
+- Reduced private members, only exeLocation required. 
+- Organized program parameters in new ProgramInfo struct. 
+- Reduced overhead by fetching ProgramsInfo at beginning of main.cpp
+- Created new rollback function in main.cpp to simplify restore per program.
+- Created new revertRestore function in main.cpp.
+- Implemented revert parameter in main.cpp.
+- Updated all class and function calls, necessary after the refactor of ProgramConfig class.
+- Refactored defaultsetting class in main.cpp, removed unnessecary function calls in favor of non-static members.

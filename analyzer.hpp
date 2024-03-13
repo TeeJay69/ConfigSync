@@ -111,10 +111,16 @@ class analyzer{
             return 1;
         }
 
+        /**
+         * @brief Get Index of programs prior restore backups.  
+         * @param program Program 
+         * @param exePath Executable location
+         * @note The Index structure contains the timestamps and UUIDs for all backups of the program. The last element is the newest.
+         */
         static Index get_Index(const std::string& program, const std::string& exePath){
             const std::string pBackLoc = exePath + "\\ConfigBackup\\" + program;
             if(!std::filesystem::exists(pBackLoc) || std::filesystem::is_empty(pBackLoc)){
-                throw cfgsexcept("Error: Last backup not found. (get_last_backup)");
+                throw cfgsexcept("Error: Last backup not found. (get_Index)");
             }
 
             const std::string &IXPath = exePath + "\\ConfigBackup\\" + program + "\\Index.csv";

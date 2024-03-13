@@ -179,11 +179,30 @@ Install-Location
 - [ ] Verbose message showing old setting vs new setting when changing settigns
 - [ ] Backup settings file, in case primary gets corrupted or messed with.
 - [ ] Verify settings file using hash function.
-- [ ] --force option for sync
+- [ ] --force option for sync (Make new snapshot regardless of hashes)
 - [ ] Status indicator for is_identical() function from analyzer
 - [ ] --verify parameter to make an integrity check of a snapshot from the archive. (defaults to newest) (option to provide specific date) ([PROGRAM] --all for verifying all saves of that program.) (verify --all checks every single save from all programs.)(--all-newest for checking the newest save from all programs in the archive)
 
 ## Trashcan:
+<!--  // Fetch Index of backups
+                auto IX = anly.get_Index("Jackett", exePath);
+    
+                std::cout << ANSI_COLOR_222 << "Showing Jackett:" << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_166 << "Snapshots: " << ANSI_COLOR_RESET << std::endl;
+                unsigned i = 1;
+                for(const auto& save : saveList){ // Show all saves
+                    std::cout << ANSI_COLOR_146 << i << ". " << save << ANSI_COLOR_RESET << std::endl;
+                    i++;
+                }
+                
+                // Show restore backups:
+                std::cout << ANSI_COLOR_166 << "Restore backups: " << ANSI_COLOR_RESET << std::endl;
+                i = 0;
+                for(const auto& pair : IX.time_uuid){
+                    std::cout << ANSI_COLOR_151 << i << ". " << synchronizer::timestamp_to_string(pair.first) << ANSI_COLOR_RESET << std::endl;
+                    i++;
+                }
+                std::cout << "Found " << saveList.size() << " saves and " << i << " Restore backups" << std::endl; -->
 <!-- /* void backup_config_for_restore(const std::string& dirUUID){
             std::string backupDir = exeLocation + "\\ConfigBackup\\" + programName;
 

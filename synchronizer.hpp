@@ -68,6 +68,18 @@ class synchronizer{
             return &t;
         }
 
+
+        static std::string timestamp_to_string(unsigned long long timestamp){
+            std::time_t ts = static_cast<std::time_t>(timestamp);
+            std::tm* tm = std::localtime(&ts);
+            
+            char buffer[80];
+            std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", tm);
+            
+            return std::string(buffer);
+        
+        }
+
         
         /**
          * @brief Recursively copy a directory or a single file
