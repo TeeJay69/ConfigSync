@@ -26,9 +26,9 @@ class synchronizer{
         const std::vector<std::string>& programPaths;
         const std::string& programName;
         const std::string& exeLocation;
-        std::ofstream& logf;
+        std::ofstream& logfile;
     public:
-        synchronizer(const std::vector<std::string>& ppaths, const std::string& pname, const std::string& exeLocat, std::ofstream& logFile) : programPaths(ppaths), programName(pname), exeLocation(exeLocat), logf(logFile) {}
+        synchronizer(const std::vector<std::string>& ppaths, const std::string& pname, const std::string& exeLocat, std::ofstream& logf) : programPaths(ppaths), programName(pname), exeLocation(exeLocat), logfile(logfile) {}
         
 
         static std::string generate_UUID(){
@@ -500,7 +500,7 @@ class synchronizer{
             // Get path database from ConfigArchive
             const std::string databasePath = (exeLocation + "\\ConfigArchive\\" + programName + "\\" + dateDir + "\\ConfigSync-Hashbase.csv");
             hashbase H;
-            database::readHashbase(databasePath, H);
+            database::readHashbase(databasePath, H, logfile);
 
 
             /* Get username file */

@@ -9,6 +9,7 @@
 #include <filesystem>
 #include "CFGSExcept.hpp"
 #include "hashbase.hpp"
+#include "logs.hpp"
 
 class database{
     private:
@@ -240,10 +241,11 @@ class database{
         }
 
 
-        static void readHashbase(const std::string& path, hashbase& H){
+        static void readHashbase(const std::string& path, hashbase& H, std::ofstream& logfile){
             if(!std::filesystem::exists(path)){
                 throw cfgsexcept("Failed to open file: file not found. " + __LINE__);
             }
+
             std::ifstream hf;
             hf.open(path);
             if(!hf.is_open()){
@@ -269,7 +271,9 @@ class database{
                 H.pp.push_back(std::make_pair(pathA, pathB));
                 
             }
-
+            if(H.pp.empty()){
+                logfile << logs::ms("hashbase path vector is empty after reading the hashbase.\n");
+            }
             hf.close();
         }
 

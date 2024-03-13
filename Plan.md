@@ -154,6 +154,7 @@ Install-Location
 - Message 'Config is in sync' instead of 'Config is up to date'
 - Display last save for every program, 'cfgs status' --default 
 - Change 'Rollback complete' to 'Successfully restored <program name>' or 'Restored <programname> successfully'
+- [ ] Add id to hashbase file.
 
 
 ## Feature requests:
@@ -171,7 +172,6 @@ Install-Location
 - [ ] --force option for sync
 - [ ] Status indicator for is_identical() function from analyzer
 - [ ] --verify parameter to make an integrity check of a snapshot from the archive. (defaults to newest) (option to provide specific date) ([PROGRAM] --all for verifying all saves of that program.) (verify --all checks every single save from all programs.)(--all-newest for checking the newest save from all programs in the archive)
-- [ ] Add id to hashbase file.
 
 ## Trashcan:
 <!--       /*

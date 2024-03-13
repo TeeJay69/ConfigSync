@@ -257,7 +257,7 @@ class analyzer{
 
             /* Hash progFiles and savefiles using paths from hashbase and compare */
             hashbase H;            
-            database::readHashbase(hbPath, H);
+            database::readHashbase(hbPath, H, logfile);
             for(const auto& [hash, path] : std::views::zip(H.hh, H.pp)){
                 
                 if(!std::filesystem::exists(path.first)){

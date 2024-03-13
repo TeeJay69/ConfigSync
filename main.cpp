@@ -98,12 +98,13 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
                 if(configAnalyzer.is_identical() == 1){ // Compare last save to current config
                     const std::filesystem::path &newestPath = dateDir;
                     if(newestPath.filename() == synchronizer::ymd_date()){
-                        const std::string noChange = program + " config did not change.\n";
-                        std::cout << noChange;
+                        const std::string noChange = program + " config is identical.\n";
+                        std::cout << ANSI_COLOR_66 << noChange << ANSI_COLOR_RESET;
                         logfile << logs::ms(noChange);
                     }
                     else{
-                        const std::string noChange = program + " config did not change, updating save date...\n";
+                        const std::string noChange = program + " config is identical, updating save date...\n";
+                        std::cout << ANSI_COLOR_138 << noChange << ANSI_COLOR_RESET;
                         logfile << logs::ms(noChange);
                         std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
                     }
@@ -112,7 +113,7 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
                 }
                 else{ // Config changed
                     const std::string changed = program + " config changed. Synchronizing " + program + "...\n";
-                    std::cout << changed;
+                    std::cout << ANSI_COLOR_138 << changed << ANSI_COLOR_RESET;
                     logfile << logs::ms(changed);
 
                     synchronizer sync(programPaths, program, exelocation, logfile); // initialize class
@@ -481,11 +482,11 @@ int main(int argc, char* argv[]){
             std::cout << ANSI_COLOR_222 << "Preparing summary..." << ANSI_COLOR_RESET << std::endl;
 
             // Info
-            std::cout << "Synced programs:" << std::endl;
+            std::cout << ANSI_COLOR_161 << "Synced programs:" << ANSI_COLOR_RESET << std::endl;
 
             int i = 1;
             for(const auto& item : syncedList){
-                std::cout << ANSI_COLOR_GREEN << "      " << i << "." << item << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_GREEN << i << "." << item << ANSI_COLOR_RESET << std::endl;
                 i++;
             }
             std::cout << ANSI_COLOR_GREEN << "Synchronization finished!" << ANSI_COLOR_RESET << std::endl;
@@ -1049,6 +1050,11 @@ int main(int argc, char* argv[]){
             std::cout << i << ". " << app << std::endl;
             i++;
         }
+    }
+
+
+    else if(std::string(argv[1]) == "verify"){ // 'verify' param
+        // TODO
     }
 
 
