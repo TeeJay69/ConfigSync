@@ -10,20 +10,15 @@
 #include <cctype>
 #include <csignal>
 #include <windows.h>
+#include <thread>
 #include <boost\uuid\uuid.hpp>
 #include <boost\uuid\uuid_generators.hpp>
 #include <boost\filesystem\operations.hpp>
 #include <boost\filesystem\path.hpp>
 #include <boost\property_tree\ptree.hpp>
 #include <boost\property_tree\json_parser.hpp>
-#include "analyzer.hpp"
-#include "programs.hpp"
 #include "synchronizer.hpp"
-#include "database.hpp"
-#include "organizer.hpp"
-#include "logs.hpp"
-#include "CFGSIndex.hpp"
-#include "CFGSExcept.hpp"
+
 
 #ifdef DEBUG
 #define DEBUG_MODE 1
@@ -131,7 +126,7 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
                 }
             }
 
-            synchronizer::recurse_remove(dateDir); // Remove the corrupt save, it has no hashbase
+            recurse_remove(dateDir); // Remove the corrupt save, it has no hashbase
             const std::string changed = program + "'s existing save was deleted, due to a missing hashbase. Synchronizing " + program + "...\n";
             std::cout << changed;
             logfile << logs::ms(changed);
@@ -341,9 +336,9 @@ class task{
  */
 class defaultsetting{
     public:
-        static const int savelimit = 3;
-        static const int recyclelimit = 3;
-        static const bool task = false;
+        const int savelimit = 3;
+        const int recyclelimit = 3;
+        const bool task = false;
         const std::string taskfrequency = "daily,1";
 };
 
@@ -851,10 +846,16 @@ int main(int argc, char* argv[]){
 
         if(argv[2] == NULL){ // default: all. subparam
 
+            std::cout << ANSI_COLOR_166 << "Status:" << ANSI_COLOR_RESET << std::endl;
+
             std::set<std::string> neverSaveList;
             std::set<std::string> outofSyncList;
             std::set<std::string> inSyncList;
 
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            std::cout << ANSI_COLOR_222 << "Fetching programs..." << ANSI_COLOR_RESET << std::endl;
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+            std::cout << ANSI_COLOR_222 << "Calculating hashes..." << ANSI_COLOR_RESET << std::endl;
 
             for(const auto& app : PC.get_support_list()){ // Fetch status
 
