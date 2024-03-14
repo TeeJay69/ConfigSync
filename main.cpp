@@ -178,27 +178,84 @@ int rollback(const string& programName, const std::vector<string>& configPaths, 
 }
 
 
-
-int revertRestore(const std::string& program, const std::string& exePath, std::ofstream& logfile){
+int revertRestore(const std::string& program, const std::string& exePath, std::ofstream& logfile, std::optional<std::reference_wrapper<std::string>> op_userIn = std::nullopt){
     if(analyzer::has_backup(program, exePath)){
-        std::cout << ANSI_COLOR_166 << "Reverting last " << program << " restore:" << ANSI_COLOR_RESET << std::endl;
-        std::cout << ANSI_COLOR_222 << "Fetching index..." << ANSI_COLOR_RESET << std::endl;
-        // Get index
-        Index IX = analyzer::get_Index(program, exePath);
+        if(op_userIn.has_value()){
+            // Dereference the optional
+            auto& op_userInDeref = op_userIn->get();
 
-        synchronizer sync(exePath, program, logfile);
-        
-        std::cout << ANSI_COLOR_222 << "Starting revert..." << ANSI_COLOR_RESET << std::endl;
-        // Try to undo last restore
-        if(!sync.revert_restore(IX.time_uuid.back().second) != 1){
-            std::cerr << ANSI_COLOR_RED << "Error: Failed to revert last restore.\n";
-            logfile << logs::ms("Error: Failed to revert last restore.\n");
-            throw cfgsexcept("Please verify that none of your selected programs components are missing or corrupted");
-            return 0;
+            std::cout << ANSI_COLOR_166 << "Reverting specified " << program << " restore:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Fetching index..." << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Verifying provided date or UUID..." << ANSI_COLOR_RESET << std::endl;
+
+            // Get index
+            Index IX = analyzer::get_Index(program, exePath);
+
+            synchronizer sync(exePath, program, logfile);
+
+            std::string match;
+            unsigned hit = 0;
+            for(const auto& pair : IX.time_uuid){
+                // Convert unsigned long long to string and match for userInput
+                if(synchronizer::timestamp_to_string(pair.first).find(op_userInDeref) != std::string::npos){
+                    hit++;
+                    match = pair.second; // we want uuid
+                }
+                else if(pair.second.find(op_userInDeref) != std::string::npos){
+                    hit++;
+                    match = pair.second; // we want uuid
+                }
+            }
+
+            logfile << logs::ms("revertRestore userInput hits: ") << hit << "Program:" << program << "\n";
+
+            // More than 1 hit, can't allow that...
+            if(hit > 1){
+                std::cerr << ANSI_COLOR_RED << "Fatal: provided date or uuid was not unique. See 'cfgs show " << program << "'" << ANSI_COLOR_RESET << std::endl;
+                return 0;
+            }
+            else if(hit == 0){
+                // No match, cant have that either...
+                std::cerr << ANSI_COLOR_RED << "Fatal: provided date or uuid is invalid. See 'cfgs show " << program << "'" << ANSI_COLOR_RESET << std::endl;
+                return 0;
+            }
+            
+            std::cout << ANSI_COLOR_222 << "Found a unique match..." << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Starting revert..." << ANSI_COLOR_RESET << std::endl;
+            // Try to undo last restore wit the match uuid
+            if(!sync.revert_restore(match) != 1){
+                std::cerr << ANSI_COLOR_RED << "Error: Failed to revert last restore.\n";
+                logfile << logs::ms("Error: Failed to revert last restore.\n");
+                throw cfgsexcept("Please verify that none of your selected programs components are missing or corrupted");
+                return 0;
+            }
+
+            std::cout << ANSI_COLOR_222 << "Revert finished, cleaning up..." << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_GREEN << "Revert was successfull!" << ANSI_COLOR_RESET << std::endl;
+            return 1;
         }
+        else{
+            std::cout << ANSI_COLOR_166 << "Reverting last " << program << " restore:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Fetching index..." << ANSI_COLOR_RESET << std::endl;
+            // Get index
+            Index IX = analyzer::get_Index(program, exePath);
 
-        std::cout << ANSI_COLOR_222 << "Revert finished, cleaning up..." << ANSI_COLOR_RESET << std::endl;
-        std::cout << ANSI_COLOR_GREEN << "Revert was successfull!" << ANSI_COLOR_RESET << std::endl;
+            synchronizer sync(exePath, program, logfile);
+            
+            std::cout << ANSI_COLOR_222 << "Starting revert..." << ANSI_COLOR_RESET << std::endl;
+            // Try to undo last restore
+            if(!sync.revert_restore(IX.time_uuid.back().second) != 1){
+                std::cerr << ANSI_COLOR_RED << "Error: Failed to revert last restore.\n";
+                logfile << logs::ms("Error: Failed to revert last restore.\n");
+                throw cfgsexcept("Please verify that none of your selected programs components are missing or corrupted");
+                return 0;
+            }
+
+            std::cout << ANSI_COLOR_222 << "Revert finished, cleaning up..." << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_GREEN << "Revert was successfull!" << ANSI_COLOR_RESET << std::endl;
+
+            return 1;
+        }
     }
     else{
         std::cerr << ANSI_COLOR_RED << "Fatal: no previous restore found. See 'cfgs --help'." << ANSI_COLOR_RESET << std::endl;
@@ -1056,25 +1113,55 @@ int main(int argc, char* argv[]){
         }
 
         
-        else if(std::string(argv[2]) == "--all"){ // 'Jackett' subparam
+        else if(std::string(argv[2]) == "--all"){ // '--all' subparam
             std::cout << ANSI_COLOR_166 << "Reverting all restores:" << ANSI_COLOR_RESET << std::endl;
 
-            
+            for(const auto& app : ProgramConfig::get_support_list()){
+                revertRestore(app, exePath, logfile, std::nullopt);
+            }
         }
         
-        else if(std::string(argv[2]) == "Jackett"){ // 'Jackett' subparam
-            // Try to revert
-            revertRestore("Jackett", exePath, logfile);
+        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // 'Jackett' subparam
+            if(argv[3] != NULL){
+                // Create optional
+                std::string input = std::string(argv[3]);
+                std::optional<std::reference_wrapper<std::string>> userInputRef = std::ref(input);
+                // Try to revert
+                revertRestore("Jackett", exePath, logfile, userInputRef);
+            }
+            else{
+                revertRestore("Jackett", exePath, logfile);
+            }
         }
 
-        else if(std::string(argv[2]) == "Prowlarr"){ // 'Prowlarr' subparam
-            // Try to revert
-            revertRestore("Prowlarr", exePath, logfile);
+        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // 'Prowlarr' subparam
+            if(argv[3] != NULL){
+                // Create optional
+                std::string input = std::string(argv[3]);
+                std::optional<std::reference_wrapper<std::string>> userInputRef = std::ref(input);
+                // Try to revert
+                revertRestore("Prowlarr", exePath, logfile, userInputRef);
+            }
+            else{
+                revertRestore("Prowlarr", exePath, logfile);
+            }
         }
         
-        else if(std::string(argv[2]) == "qBittorrent"){ // 'qBittorrent' subparam
-            // Try to revert
-            revertRestore("qBittorrent", exePath, logfile);
+        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // 'qBittorrent' subparam
+            if(argv[3] != NULL){
+                // Create optional
+                std::string input = std::string(argv[3]);
+                std::optional<std::reference_wrapper<std::string>> userInputRef = std::ref(input);
+                // Try to revert
+                revertRestore("qBittorrent", exePath, logfile, userInputRef);
+            }
+            else{
+                revertRestore("qBittorrent", exePath, logfile);
+            }
+        }
+        
+        else{
+            std::cerr << "Fatal: invalid argument. See 'cfgs --settings'." << std::endl;
         }
     }
 

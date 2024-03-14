@@ -422,7 +422,7 @@ class synchronizer{
             std::ifstream idFile(idPath);
             std::string id = database::read_lenght_prefix_encoded_string(idFile);
 
-            if(id != programconfig::get_username()){ // Check if username is still valid
+            if(id != ProgramConfig::get_username()){ // Check if username is still valid
                 transform_pathvector_new_username(H.pp, id); // Update username
             }
 
