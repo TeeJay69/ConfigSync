@@ -127,7 +127,6 @@ class logs{
         }
 
 };
-
 class ProgramConfig {
     private:
         std::string exeLocation;
@@ -140,6 +139,7 @@ class ProgramConfig {
             const std::string archivePath;
             const std::unordered_map<std::string, std::string> pathGroups;
             const bool hasGroups;
+            const std::vector<std::string> processNames;
         };
         
         enum supported {
@@ -174,7 +174,8 @@ class ProgramConfig {
                     {"C:\\ProgramData\\Jackett"},
                     exeLocation + "\\ConfigArchive\\Jackett",
                     {},
-                    false
+                    false,
+                    {"JackettTray.exe", "JackettConsole.exe"}
                 };
             }
             
@@ -185,7 +186,8 @@ class ProgramConfig {
                     {"C:\\ProgramData\\Prowlarr"},
                     exeLocation + "\\ConfigArchive\\Prowlarr",
                     {},
-                    false
+                    false,
+                    {"Prowlarr.Console.exe"}
                 };
             }
             else if(pName == "qBittorrent"){
@@ -198,7 +200,8 @@ class ProgramConfig {
                     {logs, preferences},
                     exeLocation + "\\ConfigArchive\\qBittorrent",
                     {{logs, "logs"}, {preferences, "preferences"}},
-                    true
+                    true,
+                    {"qBittorrent.exe"}
                 };
             }
         }
@@ -515,6 +518,7 @@ class analyzer{
 
 
         const std::string archivePath = exeLocation + "\\ConfigArchive\\" + programName;
+        const std::string configArchive = exeLocation + "\\ConfigArchive\\";
 
         /**
          * @brief Iterate recursively over a directory and pull all items into vector.
@@ -600,7 +604,7 @@ class analyzer{
         static Index get_Index(const std::string& program, const std::string& exePath){
             const std::string pBackLoc = exePath + "\\ConfigBackup\\" + program;
             if(!std::filesystem::exists(pBackLoc) || std::filesystem::is_empty(pBackLoc)){
-                throw cfgsexcept("Error: Last backup not found. (get_Index)");
+                return {};
             }
 
             const std::string &IXPath = exePath + "\\ConfigBackup\\" + program + "\\Index.csv";
@@ -614,7 +618,7 @@ class analyzer{
         
         // Check if a programs archive is empty
         int is_archive_empty(){
-            if(std::filesystem::is_empty(archivePath)){
+            if(std::filesystem::is_empty(configArchive) || std::filesystem::is_empty(archivePath)){
                 return 1;
             }
             
@@ -798,7 +802,6 @@ class analyzer{
             return 1;
         }
 };
-
 class organizer{
     public:
         
@@ -846,8 +849,6 @@ class organizer{
             }
         }
 };
-
-
 class synchronizer{
     private:
         const std::string programName;
@@ -1005,7 +1006,6 @@ class synchronizer{
 
             const std::filesystem::path datePath = (archivePathAbs / std::filesystem::path(dateDir));
             if(!std::filesystem::exists(datePath)){ // If date dir doesnt exist, create it.
-                std::cout << "archivePathAbs: " << archivePathAbs << std::endl;
 
                 std::filesystem::create_directories(datePath);
             }
@@ -1267,15 +1267,61 @@ class synchronizer{
             return 1;
         }
 };
+class Process{
+    public:
+
+        int findPID(const char *procname) {
+
+            HANDLE hSnapshot;
+            PROCESSENTRY32 pe;
+            int pid = 0;
+            BOOL hResult;
+
+            // snapshot of all processes in the system
+            hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+            if (INVALID_HANDLE_VALUE == hSnapshot) return 0;
+
+            // initializing size: needed for using Process32First
+            pe.dwSize = sizeof(PROCESSENTRY32);
+
+            // info about first process encountered in a system snapshot
+            hResult = Process32First(hSnapshot, &pe);
+
+            // retrieve information about the processes
+            // and exit if unsuccessful
+            while (hResult) {
+                // if we find the process: return process ID
+                if (strcmp(procname, pe.szExeFile) == 0) {
+                pid = pe.th32ProcessID;
+                break;
+                }  
+                hResult = Process32Next(hSnapshot, &pe);
+            }
+
+            // closes an open handle (CreateToolhelp32Snapshot)
+            CloseHandle(hSnapshot);
+            return pid;
+        }
+
+        /**
+         * @brief Kill a process by its name
+         * @param processName Process name
+         * 
+         */
+        int killProcess(const char* processName){
+
+            const int x = findPID(processName);
+            
+            if(x == NULL || x == 0){
+                return 0;
+            }
 
 
-
-
-
-
-
-
-
-
-
+            const auto adpservice = OpenProcess(PROCESS_TERMINATE, false, x);
+            TerminateProcess(adpservice, 1);
+            CloseHandle(adpservice);
+            
+            return 1;
+        }
+};
 #endif

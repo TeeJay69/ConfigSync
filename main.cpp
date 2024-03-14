@@ -11,6 +11,7 @@
 #include <csignal>
 #include <windows.h>
 #include <thread>
+#include <TlHelp32.h>
 #include <boost\uuid\uuid.hpp>
 #include <boost\uuid\uuid_generators.hpp>
 #include <boost\filesystem\operations.hpp>
@@ -125,19 +126,20 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
                     }
                 }
             }
+            else{
+                recurse_remove(dateDir); // Remove the corrupt save, it has no hashbase
+                const std::string changed = program + "'s existing save was deleted, due to a missing hashbase. Synchronizing " + program + "...\n";
+                std::cout << changed;
+                logfile << logs::ms(changed);
 
-            recurse_remove(dateDir); // Remove the corrupt save, it has no hashbase
-            const std::string changed = program + "'s existing save was deleted, due to a missing hashbase. Synchronizing " + program + "...\n";
-            std::cout << changed;
-            logfile << logs::ms(changed);
+                synchronizer sync(program, exelocation, logfile); // initialize class
 
-            synchronizer sync(program, exelocation, logfile); // initialize class
-
-            if(sync.copy_config(pArchivePath, synchronizer::ymd_date(), programPaths) != 1){ // sync config   
-                const std::string errSync = "Error synchronizing " + program + ".\n"; // copy_config returned 0
-                std::cerr << errSync;
-                logfile << logs::ms(errSync); 
-                return 0;
+                if(sync.copy_config(pArchivePath, synchronizer::ymd_date(), programPaths) != 1){ // sync config   
+                    const std::string errSync = "Error synchronizing " + program + ".\n"; // copy_config returned 0
+                    std::cerr << errSync;
+                    logfile << logs::ms(errSync); 
+                    return 0;
+                }
             }
         }
     }
@@ -155,11 +157,11 @@ int rollback(const string& programName, const std::vector<string>& configPaths, 
     synchronizer syncJackett(programName, exeLocation, logfile); // Initialize class
 
     if(anly.is_archive_empty() == 1){ // Archive is empty
-
         std::cout << "Skipping " << programName << ", not synced..." << std::endl;
         failList.push_back(programName);
     }
     else{ // Archive not empty
+
         if(syncJackett.restore_config(anly.get_newest_backup_path(), restoreLimit, configPaths) == 1){ // Restore from newest save
             std::cout << ANSI_COLOR_GREEN << programName << " restore successfull!" << ANSI_COLOR_RESET << std::endl;
             return 1;
@@ -302,7 +304,7 @@ class task{
          */
         static const int removetask(const std::string& taskname){
 
-            std::string com = "cmd /c \"schtasks /delete /tn " + taskname + " >NUL 2>&1\"";
+            const std::string com = "cmd /c \"schtasks /delete /tn \"" + taskname + "\" /F >NUL 2>&1\"";
 
             if(std::system(com.c_str()) != 0){
                 return 0;
@@ -437,7 +439,7 @@ int main(int argc, char* argv[]){
         // Do nothing, pt contains correct config
     }
 
-
+    std::cout << pt.get<bool>("task")<<std::endl;
     /* Ensure that task setting reflects reality. */
     if(pt.get<bool>("task") == true && !task::exists(taskName)){ // Task setting is true and task doesnt exist
         if(task::createtask(taskName, batPath, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);} // Create task
@@ -490,7 +492,7 @@ int main(int argc, char* argv[]){
         std::cout << "restore [PROGRAM] [DATE]      Restore configuration of the specified program, date.\n";
         std::cout << "restore --all                 Restore configuration of all supported programs.\n";
         std::cout << "revert [PROGRAM] [DATE]       Revert a restore of the specified program, date.\n";
-        std::cout << "restore --all                 Restore configuration of all supported programs.\n";
+        std::cout << "revert --all                  Revert restore of all programs.\n";
         std::cout << "status [PROGRAM]              Display synchronization state. (Default: all)\n";
         std::cout << "show [PROGRAM]                List all existing snapshots of a program\n";
         std::cout << "list --supported              Show all supported programs.\n";
@@ -500,7 +502,9 @@ int main(int argc, char* argv[]){
         std::cout << "settings.reset --all          Reset all settings to default.\n";
         std::cout << "settings --help               Show detailed settings info.\n";
         std::cout << "--help                        Display help message.\n";
-        std::cout << "--version                     Display version and copyright disclaimer.\n";
+        std::cout << "--version                     Display version and copyright disclaimer.\n\n";
+        std::cout << "Operands:\n";
+        std::cout << "[...] --force                 Kills running instances before, to avoid errors.\n";
         std::exit(EXIT_SUCCESS);
     }
     
@@ -656,7 +660,22 @@ int main(int argc, char* argv[]){
 
         
         else if(std::string(argv[2]) == "all" || std::string(argv[2]) == "--all"){ // '--all' subparam
-            std::cout << ANSI_COLOR_YELLOW << "Restoring all supported programs with latest save..." << ANSI_COLOR_RESET << std::endl;
+
+            if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced restoring all supported programs with latest save..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+                
+                Process proc;
+                for(const auto& app : PC.get_support_list()){
+                    for(const auto& process : PC.get_ProgramInfo(app).processNames){
+                        proc.killProcess(process.data());
+                    }
+                }
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+            }
+            else{
+                std::cout << ANSI_COLOR_YELLOW << "Restoring all supported programs with latest save..." << ANSI_COLOR_RESET << std::endl;
+            }
             
             std::vector<std::string> failList;
 
@@ -665,7 +684,6 @@ int main(int argc, char* argv[]){
             if(rollback(jackettInfo.programName, jackettInfo.configPaths, exePath, logfile, failList, pt.get<unsigned>("recyclelimit")) == 1){
                 jackettState = 1;
             }
-
             
             // @section Prowlarr
             unsigned prowlarrState = 0;
@@ -673,15 +691,12 @@ int main(int argc, char* argv[]){
                 prowlarrState = 1;
             }
 
-
             // @section qBittorrent
             unsigned qbitState = 0;
             if(rollback(qbittorrentInfo.programName, qbittorrentInfo.configPaths, exePath, logfile, failList, pt.get<unsigned>("recyclelimit")) == 1){
                 qbitState = 1;
             }
 
-
-            
             // User info
             if(jackettState == 1 && prowlarrState == 1 && qbitState == 1){ // All success
                 std::cout << ANSI_COLOR_GREEN << "Rollback complete!" << ANSI_COLOR_RESET << std::endl; 
@@ -708,6 +723,34 @@ int main(int argc, char* argv[]){
 
 
             if(argv[3] == NULL){ // default behavior. Use latest save. No 2subparam provided
+            
+                if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
+                    std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
+                }
+                else{ // Archive not empty
+                    synchronizer sync("Jackett", exePath, logfile); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), jackettInfo.configPaths) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+
+
+            else if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced restore of Jackett with latest save..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& process : jackettInfo.processNames){
+                    proc.killProcess(process.data());
+                }
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+
 
                 if(anly.is_archive_empty() == 1){ // Archive empty
                     std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
@@ -722,13 +765,24 @@ int main(int argc, char* argv[]){
                     else{
                         std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
                     }
-
                 }
             }
 
 
             else if(std::find(jackettSaves.begin(), jackettSaves.end(), std::string(argv[3])) != jackettSaves.end()){ // Specific save date 2subparam. Check if date is valid.
 
+                if(std::string(argv[4]) == "--force"){ // '--force' 3subparam
+                    std::cout << ANSI_COLOR_161 << "Forced restore of Jackett with specific save..." << ANSI_COLOR_RESET << std::endl;
+                    std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+                    
+                    Process proc;
+                    for(const auto& process : jackettInfo.processNames){
+                        proc.killProcess(process.data());
+                    }
+                    std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+                }
+
+                
                 synchronizer sync("Jackett", exePath, logfile); // Initialize class
 
                 if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit"), jackettInfo.configPaths) == 1){ // Restore from user defined save date<
@@ -757,7 +811,35 @@ int main(int argc, char* argv[]){
 
                 if(anly.is_archive_empty() == 1){ // Archive empty
                     std::cout << "Archive does not contain previous saves of Prowlarr." << std::endl;
-                    std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
+                    std::cout << "Use 'cfgs --sync prowlarr' to create one." << std::endl;
+                }
+                else{ // Archive not empty
+                    synchronizer sync(prowlarrInfo.programName, exePath, logfile); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), prowlarrInfo.configPaths) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+
+
+            else if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced restore of Prowlarr with latest save..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& process : prowlarrInfo.processNames){
+                    proc.killProcess(process.data());
+                }
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+
+
+                if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of Prowlarr." << std::endl;
+                    std::cout << "Use 'cfgs --sync prowlarr' to create one." << std::endl;
                 }
                 else{ // Archive not empty
                     synchronizer sync(prowlarrInfo.programName, exePath, logfile); // Initialize class
@@ -773,6 +855,18 @@ int main(int argc, char* argv[]){
 
 
             else if(std::find(prowlarrSaves.begin(), prowlarrSaves.end(), std::string(argv[3])) != prowlarrSaves.end()){ // Specific save date 2subparam. Check if date is valid.
+
+                if(std::string(argv[4]) == "--force"){ // '--force' 3subparam
+                    std::cout << ANSI_COLOR_161 << "Forced restore of Prowlarr with specific save..." << ANSI_COLOR_RESET << std::endl;
+                    std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+                    
+                    Process proc;
+                    for(const auto& process : prowlarrInfo.processNames){
+                        proc.killProcess(process.data());
+                    }
+                    std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+                }
+
 
                 synchronizer sync(prowlarrInfo.programName, exePath, logfile); // Initialize class
 
@@ -801,8 +895,34 @@ int main(int argc, char* argv[]){
             if(argv[3] == NULL){ // default behavior. Use latest save. No 2subparam provided
 
                 if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of qBittorrent." << std::endl;
+                    std::cout << "Use 'cfgs --sync qbittorrent' to create one." << std::endl;
+                }
+                else{ // Archive not empty
+                    synchronizer sync("qBittorrent", exePath, logfile); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), qbittorrentInfo.configPaths) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+            
+            else if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced restore of qBittorrent with latest save..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& process : qbittorrentInfo.processNames){
+                    proc.killProcess(process.data());
+                }
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+                
+                if(anly.is_archive_empty() == 1){ // Archive empty
                     std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
-                    std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
+                    std::cout << "Use 'cfgs --sync qbittorrent' to create one." << std::endl;
                 }
                 else{ // Archive not empty
                     synchronizer sync("qBittorrent", exePath, logfile); // Initialize class
@@ -816,9 +936,16 @@ int main(int argc, char* argv[]){
                 }
             }
 
-
             else if(std::find(qbittorrentSaves.begin(), qbittorrentSaves.end(), std::string(argv[3])) != qbittorrentSaves.end()){ // Specific save date 2subparam. Check if date is valid.
 
+                std::cout << ANSI_COLOR_161 << "Forced restore of qBittorrent with specific save..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& process : qbittorrentInfo.processNames){
+                    proc.killProcess(process.data());
+                }
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
                 synchronizer sync("qBittorrent", exePath, logfile); // Initialize class
 
                 if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit"), qbittorrentInfo.configPaths) == 1){ // Restore from user defined save date
@@ -1109,19 +1236,33 @@ int main(int argc, char* argv[]){
 
 
     else if(std::string(argv[1]) == "revert"){ // 'revert' param
+
         if(argv[2] == NULL){
             std::cerr << ANSI_COLOR_RED << "Fatal: missing argument or value. See 'cfgs --help'." << ANSI_COLOR_RESET << std::endl;
         }
 
-        
         else if(std::string(argv[2]) == "--all"){ // '--all' subparam
-            std::cout << ANSI_COLOR_166 << "Reverting all restores:" << ANSI_COLOR_RESET << std::endl;
 
-            for(const auto& app : ProgramConfig::get_support_list()){
+            if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced revert of all programs:" << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& app : PC.get_support_list()){
+                    for(const auto& process : PC.get_ProgramInfo(app).processNames){
+                        proc.killProcess(process.data());
+                    }
+                }
+
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+            }
+            std::cout << ANSI_COLOR_166 << "Reverting all restores:" << ANSI_COLOR_RESET << std::endl;
+    
+            for(const auto& app : PC.get_support_list()){
                 revertRestore(app, exePath, logfile, std::nullopt);
             }
         }
-        
+
         else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // 'Jackett' subparam
             if(argv[3] != NULL){
                 // Create optional
@@ -1130,6 +1271,19 @@ int main(int argc, char* argv[]){
                 // Try to revert
                 revertRestore("Jackett", exePath, logfile, userInputRef);
             }
+
+            else if(std::string(argv[3]) == "--force"){ // 'force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced revert of Jackett:" << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& process : jackettInfo.processNames){
+                        proc.killProcess(process.data());
+                }
+
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+            }
+
             else{
                 revertRestore("Jackett", exePath, logfile);
             }
@@ -1142,6 +1296,18 @@ int main(int argc, char* argv[]){
                 std::optional<std::reference_wrapper<std::string>> userInputRef = std::ref(input);
                 // Try to revert
                 revertRestore("Prowlarr", exePath, logfile, userInputRef);
+            }
+            
+            else if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced revert of Prowlarr:" << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& process : prowlarrInfo.processNames){
+                        proc.killProcess(process.data());
+                }
+
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
             }
             else{
                 revertRestore("Prowlarr", exePath, logfile);
@@ -1156,6 +1322,19 @@ int main(int argc, char* argv[]){
                 // Try to revert
                 revertRestore("qBittorrent", exePath, logfile, userInputRef);
             }
+
+            else if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced revert of qBittorrent:" << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& process : qbittorrentInfo.processNames){
+                    proc.killProcess(process.data());
+                }
+
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+            }
+            
             else{
                 revertRestore("qBittorrent", exePath, logfile);
             }
@@ -1172,16 +1351,16 @@ int main(int argc, char* argv[]){
         if(argv[2] == NULL){ //* Default. No subparam provided.
             std::cout << ANSI_COLOR_YELLOW << "Settings: " << ANSI_COLOR_RESET << std::endl;
 
-            std::cout << "Config save limit:            " << ANSI_COLOR_50 << pt.get<int>("savelimit") << std::endl;
+            std::cout << "Config save limit:            " << ANSI_COLOR_50 << pt.get<int>("savelimit") << ANSI_COLOR_RESET << std::endl;
             std::cout << "See 'cfgs settings.savelimit <limit>" << std::endl << std::endl;
             
-            std::cout << "Backup recycle bin limit:     " << ANSI_COLOR_50 << pt.get<int>("recyclelimit") << std::endl;
+            std::cout << "Backup recycle bin limit:     " << ANSI_COLOR_50 << pt.get<int>("recyclelimit") << ANSI_COLOR_RESET << std::endl;
             std::cout << "See 'cfgs settings.recyclelimit <limit>" << std::endl << std::endl;
 
-            std::cout << "Scheduled Task On/Off:        " << ANSI_COLOR_50 << pt.get<bool>("task") << std::endl;
+            std::cout << "Scheduled Task On/Off:        " << ANSI_COLOR_50 << pt.get<bool>("task") << ANSI_COLOR_RESET << std::endl;
             std::cout << "See 'cfgs settings.task <True/False>" << std::endl << std::endl;
 
-            std::cout << "Scheduled Task Frequency:     " << ANSI_COLOR_50 << pt.get<std::string>("taskfrequency") << std::endl;
+            std::cout << "Scheduled Task Frequency:     " << ANSI_COLOR_50 << pt.get<std::string>("taskfrequency") << ANSI_COLOR_RESET << std::endl;
             std::cout << "See 'cfgs settings.taskfrequency <hourly/daily> <hours/days>" << std::endl << std::endl;
 
             std::cout << "For reset, see 'cfgs settings.reset'" << std::endl;
@@ -1380,19 +1559,21 @@ int main(int argc, char* argv[]){
                 }
                 else{ // Task doesnt exist --> launch task
                     if(task::createtask(taskName, batPath, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);}
+                    std::cout << ANSI_COLOR_GREEN << "Task created!" << ANSI_COLOR_RESET << std::endl;
                 }
             }
 
             else{ // Current property is already set to 'true'.
-                std::cout << "settings.task already set to true. Checking task..." << std::endl;
+                std::cout << ANSI_COLOR_161 << "settings.task already set to true." << ANSI_COLOR_RESET << std::endl;
+                std::cout <<  ANSI_COLOR_222 << "Checking task..." << ANSI_COLOR_RESET << std::endl;
 
                 if(task::exists("task")){ // Task exists.
                     std::cout << "Task exists, no changes were made." << std::endl;
                 }
                 else{ // Task doesnt exist. --> launch task
-                    std::cout << "Task doesn't exist. Creating task..." << std::endl;
+                    std::cout << ANSI_COLOR_222 << "Task doesn't exist. Creating task..." << ANSI_COLOR_RESET << std::endl;
                     if(task::createtask(taskName, batPath, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);}
-                    std::cout << "Task created!" << std::endl;
+                    std::cout << ANSI_COLOR_GREEN << "Task created!" << ANSI_COLOR_RESET << std::endl;
                 }
             }
         }
