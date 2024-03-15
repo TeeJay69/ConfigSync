@@ -109,7 +109,7 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
                         std::filesystem::rename(newestPath, newestPath.parent_path().string() + "\\" + synchronizer::ymd_date()); // Update name of newest save dir
                     }
 
-                    return 1;
+                    return 0;
                 }
                 else{ // Config changed
                     const std::string changed = program + " config changed. Synchronizing " + program + "...\n";
@@ -151,12 +151,79 @@ int create_save(const std::vector<std::string>& programPaths, const std::string&
     return 1;
 }
 
-int handleRestoreOption(char** argv, const boost::property_tree::ptree& pt, const std::string& exePath, std::ofstream& logfile){
-    ProgramConfig progcfg(exePath);
-    const auto &supportList = progcfg.get_support_list();
+int handleSyncOption(char** argv, const boost::property_tree::ptree& pt, const std::string& exePath, std::ofstream& logfile){
+    ProgramConfig PC(exePath);
+    const auto& supportedList = PC.get_support_list();
 
-    if(argv[2] == NULL){ // Missing argument
-        std::cout << "Fatal: Missing argument or operand." << std::endl;
+    if(argv[2] == NULL){ // No subparam provided
+            std::cout << "Fatal: Missing program or restore argument." << std::endl;
+    }
+    else if(std::string(argv[2]) == "--all"){ // Create a save of all supported, installed programs. No subparam provided
+        std::cout << ANSI_COLOR_161 << "Synchronizing all programs:" << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_222 << "Fetching paths..." << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_222 << "Checking archive..." << ANSI_COLOR_RESET << std::endl;
+        
+        std::vector<std::string> syncedList;
+        std::cout << ANSI_COLOR_222 << "Starting synchronization..." << ANSI_COLOR_RESET << std::endl;
+        organizer janitor; // Initialize class
+
+        for(const auto& app : PC.get_unique_support_list()){
+            const auto& pInfo = PC.get_ProgramInfo(app);
+            // Create the archive dir if it does not exist yet
+            if(!std::filesystem::exists(pInfo.archivePath)){
+                std::filesystem::create_directories(pInfo.archivePath);
+            }
+
+            if(create_save(pInfo.configPaths, pInfo.programName, pInfo.archivePath, exePath, logfile) == 1){
+                syncedList.push_back(pInfo.programName);
+                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), pInfo.archivePath); // Cleanup
+            }
+        }
+
+        std::cout << ANSI_COLOR_222 << "Preparing summary..." << ANSI_COLOR_RESET << std::endl;
+        // Info
+        std::cout << ANSI_COLOR_161 << "Synced programs:" << ANSI_COLOR_RESET << std::endl;
+        int i = 1;
+        for(const auto& item : syncedList){
+            std::cout << ANSI_COLOR_GREEN << i << "." << item << ANSI_COLOR_RESET << std::endl;
+            i++;
+        }
+        std::cout << ANSI_COLOR_GREEN << "Synchronization finished!" << ANSI_COLOR_RESET << std::endl;
+    }
+    else if(std::find(supportedList.begin(), supportedList.end(), std::string(argv[2])) != supportedList.end()){ // Jackett sync subparam
+        const auto &pInfo = PC.get_ProgramInfo(std::string(argv[2]));
+
+         // Create archive if it doesnt exist
+        if(!std::filesystem::exists(pInfo.archivePath)){
+            std::filesystem::create_directories(pInfo.archivePath);
+        }
+        
+        if(create_save(pInfo.configPaths, pInfo.programName, pInfo.archivePath, exePath, logfile) == 1){ // snapshot config
+            // Limit num of snaps
+            organizer janitor;
+            janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), pInfo.archivePath);
+            std::cout << ANSI_COLOR_GREEN << "Synchronization of " << pInfo.programName << " finished." << ANSI_COLOR_RESET << std::endl;
+        }
+        else{
+            std::cout << ANSI_COLOR_RED << "Synchronization of " << pInfo.programName << " failed." << ANSI_COLOR_RESET << std::endl;
+            return 0;
+        }
+
+    }
+    else{ // Invalid subparam provided
+        std::cerr << "Fatal: '" << argv[2] << "' is not a ConfigSync command. See 'cfgs --help'." << std::endl;
+        return 0;
+    }
+
+    return 1;
+}
+
+int handleRestoreOption(char** argv, const boost::property_tree::ptree& pt, const std::string& exePath, std::ofstream& logfile){
+ProgramConfig progcfg(exePath);
+const auto &supportList = progcfg.get_support_list();
+
+if(argv[2] == NULL){ // Missing argument
+    std::cout << "Fatal: Missing argument or operand." << std::endl;
         std::cout << "For usage see 'cfgs --help'" << std::endl;
     }
     else if(std::string(argv[2]) == "all" || std::string(argv[2]) == "--all"){ // '--all' operand
@@ -313,6 +380,88 @@ int handleRestoreOption(char** argv, const boost::property_tree::ptree& pt, cons
 
     return 1;
 }
+
+int handleStatusOption(char** argv, const boost::property_tree::ptree& pt, const std::string& exePath, std::ofstream& logfile){
+    ProgramConfig PC(exePath);
+    const auto &supportList = PC.get_support_list();
+    
+    if(argv[2] == NULL){ // default 
+        if(argv[2] == NULL){ // default: all. subparam
+
+        std::cout << ANSI_COLOR_166 << "Status:" << ANSI_COLOR_RESET << std::endl;
+
+        std::set<std::string> neverSaveList;
+        std::set<std::string> outofSyncList;
+        std::set<std::string> inSyncList;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::cout << ANSI_COLOR_222 << "Fetching programs..." << ANSI_COLOR_RESET << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::cout << ANSI_COLOR_222 << "Calculating hashes..." << ANSI_COLOR_RESET << std::endl;
+
+        for(const auto& app : PC.get_unique_support_list()){
+            analyzer anly(PC.get_ProgramInfo(app).configPaths, app, exePath, logfile); // Init class
+
+            if(anly.is_archive_empty() == 1){
+                neverSaveList.insert(app);
+            }
+            else{ // Save exists
+                if(anly.is_identical() == 1){
+                    inSyncList.insert(app);
+                }
+                else{
+                    outofSyncList.insert(app);
+                }
+            }
+        }
+
+        std::cout << "Status:" << std::endl;
+        
+        for(const auto& app : inSyncList){ // Up to date apps
+            std::cout << ANSI_COLOR_GREEN << "Up to date: " << app << ANSI_COLOR_RESET << std::endl;
+        }
+
+        for(const auto& app : outofSyncList){ // Out of sync apps
+            std::cout << ANSI_COLOR_YELLOW << "Out of sync: " << app << ANSI_COLOR_RESET << std::endl;
+        }
+
+        for(const auto& app : neverSaveList){ // Never synced apps
+            std::cout << ANSI_COLOR_RED << "Never synced: " << app << ANSI_COLOR_RESET << std::endl;
+        }
+    }
+
+    else if(std::find(supportList.begin(), supportList.end(), std::string(argv[2])) != supportList.end()){
+        const auto& pInfo = PC.get_ProgramInfo(std::string(argv[2]));
+
+        analyzer anly(pInfo.configPaths, pInfo.programName, exePath, logfile); // Init class
+            
+            std::cout << ANSI_COLOR_161 << "Status" << pInfo.programName << ":" << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Last Save: " << anly.get_newest_backup_path() << ANSI_COLOR_RESET << std::endl;
+            
+            
+            if(anly.is_archive_empty() == 1){ // Check if save exists
+                std::cerr << ANSI_COLOR_RED << "Error: No previous snapshot exists for" << pInfo.programName << " ." << ANSI_COLOR_RESET << std::endl;
+                return 0;
+            }
+            else{ // Save exists
+
+                if(anly.is_identical() == 1){ // Compare config
+                    std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cout << ANSI_COLOR_RED << "Config is out of sync!" << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+        }
+    }
+    else{
+        std::cerr << "Fatal: invalid argument. See 'cfgs --help'.\n";
+    }
+
+    return 1;
+}
+
+
 
 int revertRestore(const std::string& program, const std::string& exePath, std::ofstream& logfile, std::optional<std::reference_wrapper<std::string>> op_userIn = std::nullopt){
     if(analyzer::has_backup(program, exePath)){
@@ -599,7 +748,7 @@ int main(int argc, char* argv[]){
     else{
         std::cerr << "File: [" << __FILE__ << "] Line: [" << __LINE__ << "] This should never happen!\n";
     }
-
+    
 
 
     /* Parse command line options: */
@@ -647,276 +796,18 @@ int main(int argc, char* argv[]){
     }
     
 
-
     else if(std::string(argv[1]) == "sync"){ // Sync param
-
-        if(argv[2] == NULL){ // No subparam provided
-            std::cout << "Fatal: Missing program or restore argument." << std::endl;
-        }
-        
-        else if(std::string(argv[2]) == "--all"){ // Create a save of all supported, installed programs. No subparam provided
-            std::cout << ANSI_COLOR_161 << "Synchronizing all programs:" << ANSI_COLOR_RESET << std::endl;
-            
-            std::cout << ANSI_COLOR_222 << "Fetching paths..." << ANSI_COLOR_RESET << std::endl;
-
-
-            std::cout << ANSI_COLOR_222 << "Checking archive..." << ANSI_COLOR_RESET << std::endl;
-            // Create the archive @dir if it does not exist yet
-
-            if(!std::filesystem::exists(jackettInfo.archivePath)){
-                std::filesystem::create_directories(jackettInfo.archivePath);
-            }
-
-            if(!std::filesystem::exists(prowlarrInfo.archivePath)){
-                std::filesystem::create_directories(prowlarrInfo.archivePath);
-            }
-
-            if(!std::filesystem::exists(qbittorrentInfo.archivePath)){
-                std::filesystem::create_directories(qbittorrentInfo.archivePath); 
-            }        
-            
-            std::vector<std::string> syncedList; // For sync message
-
-            std::cout << ANSI_COLOR_222 << "Starting synchronization..." << ANSI_COLOR_RESET << std::endl;
-
-            organizer janitor; // Initialize class
-
-            // Sync Jackett
-            int jackettSync = 0;
-            if(create_save(jackettInfo.configPaths, "Jackett", jackettInfo.archivePath, exePath, logfile) == 1){
-
-                jackettSync = 1;
-                syncedList.push_back("Jackett");
-
-                // Limit number of saves
-
-                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), jackettInfo.archivePath); // Cleanup
-
-            }
-
-            // Sync Prowlarr
-            int prowlarrSync = 0;
-            if(create_save(prowlarrInfo.configPaths, "Prowlarr", prowlarrInfo.archivePath, exePath, logfile) == 1){
-                prowlarrSync = 1;
-                syncedList.push_back("Prowlarr");
-
-                // Limit number of saves
-                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), prowlarrInfo.archivePath); // Cleanup
-            }
-
-            // Sync qBittorrent
-            int qbittorrentSync = 0;
-            if(create_save(qbittorrentInfo.configPaths, "qBittorrent", qbittorrentInfo.archivePath, exePath, logfile) == 1){
-                qbittorrentSync = 1;
-                syncedList.push_back("qBittorrent");
-
-                // Limit number of saves
-                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), qbittorrentInfo.archivePath); // Cleanup
-            };
-            
-            std::cout << ANSI_COLOR_222 << "Preparing summary..." << ANSI_COLOR_RESET << std::endl;
-            // Info
-            std::cout << ANSI_COLOR_161 << "Synced programs:" << ANSI_COLOR_RESET << std::endl;
-            int i = 1;
-            for(const auto& item : syncedList){
-                std::cout << ANSI_COLOR_GREEN << i << "." << item << ANSI_COLOR_RESET << std::endl;
-                i++;
-            }
-            std::cout << ANSI_COLOR_GREEN << "Synchronization finished!" << ANSI_COLOR_RESET << std::endl;
-        }
-
-        else if(std::string(argv[2]) == "jackett" || std::string(argv[2]) == "Jackett"){ // Jackett sync subparam
-            // Create archive if it doesnt exist
-            if(!std::filesystem::exists(jackettInfo.archivePath)){
-                std::filesystem::create_directories(jackettInfo.archivePath);
-            }
-            
-            
-            if(create_save(jackettInfo.configPaths, "Jackett", jackettInfo.archivePath, exePath, logfile) == 1){ // save config
-                // Limit num of saves
-                organizer janitor;
-                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), jackettInfo.archivePath); // Cleanup
-
-                std::cout << ANSI_COLOR_GREEN << "Synchronization of Jackett finished." << ANSI_COLOR_RESET << std::endl;
-            }
-            else{
-                std::cout << ANSI_COLOR_RED << "Synchronization of Jackett failed." << ANSI_COLOR_RESET << std::endl;
-            }
-        }
-
-        else if(std::string(argv[2]) == "prowlarr" || std::string(argv[2]) == "Prowlarr"){ // Prowlarr sync subparam
-            // Create archive if it doesnt exists
-            if(!std::filesystem::create_directories(prowlarrInfo.archivePath)){
-                std::filesystem::create_directories(prowlarrInfo.archivePath);
-            }
-
-            if(create_save(prowlarrInfo.configPaths, "Prowlarr", prowlarrInfo.archivePath, exePath, logfile) == 1){
-                // Limit num of saves
-                organizer janitor;
-                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), prowlarrInfo.archivePath); // Cleanup
-
-                std::cout << ANSI_COLOR_GREEN << "Synchronization of Prowlarr finished." << ANSI_COLOR_RESET << std::endl;
-
-            }
-            else{
-                std::cout << ANSI_COLOR_RED << "Synchronization of Prowlarr failed." << ANSI_COLOR_RESET << std::endl;
-            }
-        }
-
-        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){  // qBittorrent sync subparam
-
-            // Create archive if it doesnt exists
-            if(!std::filesystem::create_directories(qbittorrentInfo.archivePath)){
-                std::filesystem::create_directories(qbittorrentInfo.archivePath);
-            }
-
-            if(create_save(qbittorrentInfo.configPaths, "qBittorrent", qbittorrentInfo.archivePath, exePath, logfile) == 1){
-                // Limit num of saves
-                organizer janitor;
-                janitor.limit_enforcer_configarchive(pt.get<int>("savelimit"), qbittorrentInfo.archivePath); // Cleanup
-
-                std::cout << ANSI_COLOR_GREEN << "Synchronization of qBittorrent finished." << ANSI_COLOR_RESET << std::endl;
-
-            }
-            else{
-                std::cout << ANSI_COLOR_RED << "Synchronization of qBittorrent failed." << ANSI_COLOR_RESET << std::endl;
-            }
-        }
-
-        else{ // Invalid subparam provided
-            std::cerr << "'" << argv[2] << "' is not a configsync command. See 'cfgs --help'." << std::endl;
-        }
+        handleSyncOption(argv, pt, exePath, logfile);
     }
 
 
     else if(std::string(argv[1]) == "restore" || std::string(argv[1]) == "--restore"){ // Restore param
-        
-        
+        handleRestoreOption(argv, pt, exePath, logfile);
     }
 
 
-    else if(std::string(argv[1]) == "status"){ // 'status' param
-
-        if(argv[2] == NULL){ // default: all. subparam
-
-            std::cout << ANSI_COLOR_166 << "Status:" << ANSI_COLOR_RESET << std::endl;
-
-            std::set<std::string> neverSaveList;
-            std::set<std::string> outofSyncList;
-            std::set<std::string> inSyncList;
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            std::cout << ANSI_COLOR_222 << "Fetching programs..." << ANSI_COLOR_RESET << std::endl;
-            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-            std::cout << ANSI_COLOR_222 << "Calculating hashes..." << ANSI_COLOR_RESET << std::endl;
-
-            for(const auto& app : PC.get_unique_support_list()){ // Fetch status
-                
-                analyzer anly(PC.get_ProgramInfo(app).configPaths, app, exePath, logfile); // Init class
-
-                if(anly.is_archive_empty() == 1){ // Check for previous save
-                    neverSaveList.insert(app);
-                }
-                else{ // Save exists
-                    
-                    if(anly.is_identical() == 1){
-                        inSyncList.insert(app);
-                    }
-                    else{
-                        outofSyncList.insert(app);
-                    }
-                }
-            }
-
-            std::cout << "Status:" << std::endl;
-            
-            for(const auto& app : inSyncList){ // Up to date apps
-                std::cout << ANSI_COLOR_GREEN << "Up to date: " << app << ANSI_COLOR_RESET << std::endl;
-            }
-
-            for(const auto& app : outofSyncList){ // Out of sync apps
-                std::cout << ANSI_COLOR_YELLOW << "Out of sync: " << app << ANSI_COLOR_RESET << std::endl;
-            }
-
-            for(const auto& app : neverSaveList){ // Never synced apps
-                std::cout << ANSI_COLOR_RED << "Never synced: " << app << ANSI_COLOR_RESET << std::endl;
-            }
-
-        }
-
-
-        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett subparam
-
-            analyzer anly(jackettInfo.configPaths, "Jackett", exePath, logfile); // Init class
-            
-            std::cout << "Program: Jackett" << std::endl;
-            std::cout << "Last Save: " << anly.get_newest_backup_path() << std::endl;
-            
-            
-            if(anly.is_archive_empty() == 1){ // Check if save exists
-                std::cout << "Error: No previous save exists for Jackett." << std::endl;
-            }
-            else{ // Save exists
-
-                if(anly.is_identical() == 1){ // Compare config
-                    std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
-                }
-                else{
-                    std::cout << ANSI_COLOR_RED << "Config is out of sync!" << ANSI_COLOR_RESET << std::endl;
-                }
-            }
-        }
-
-
-        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr subparam
-
-            analyzer anly(prowlarrInfo.configPaths, "Prowlarr", exePath, logfile); // Init class
-            
-            std::cout << "Program: Prowlarr" << std::endl;
-            std::cout << "Last Save: " << anly.get_newest_backup_path() << std::endl;
-            
-            
-            if(anly.is_archive_empty() == 1){ // Check if save exists
-                std::cout << "Error: No previous save exists for Prowlarr." << std::endl;
-            }
-            else{ // Save exists
-
-                if(anly.is_identical() == 1){ // Compare config
-                    std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
-                }
-                else{
-                    std::cout << ANSI_COLOR_RED << "Config is out of sync!" << ANSI_COLOR_RESET << std::endl;
-                }
-            }
-        }
-
-
-        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent subparam
-
-            analyzer anly(qbittorrentInfo.configPaths, "qBittorrent", exePath, logfile); // Init class
-            
-            std::cout << "Program: qBittorrent" << std::endl;
-            std::cout << "Last Save: " << anly.get_newest_backup_path() << std::endl;
-            
-            
-            if(anly.is_archive_empty() == 1){ // Check if save exists
-                std::cout << "Error: No previous save exists for qBittorrent." << std::endl;
-            }
-            else{ // Save exists
-
-                if(anly.is_identical() == 1){ // Compare config
-                    std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
-                }
-                else{
-                    std::cout << ANSI_COLOR_RED << "Config is out of sync!" << ANSI_COLOR_RESET << std::endl;
-                }
-            }
-        }
-
-        
-        else{
-            std::cerr << "Fatal: invalid argument. See 'cfgs --help'.\n";
-        }
+    else if(std::string(argv[1]) == "status"){ // 'status' parag
+        handleStatusOption(argv, pt, exePath, logfile);
     }
 
 
