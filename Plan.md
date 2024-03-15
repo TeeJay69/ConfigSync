@@ -3,25 +3,25 @@
 
 
 ## Minimal description:
- - Makes restoring the configuration/settings of programs easier when reinstalling them or when moving to a new system etc
-    - bckup Compress-Log
-    - Cura Slicer
-    - JDownloader
-    - qBittorrent
-    - Jackett
-        - Backup whole install in ProgramData\Jackett
-    - Prowlarr
-    - Microsoft PowerToys
-    - Fusion360
-    - Chrome
-    - Firefox
+ - Makes restoring the configuration/settings of programs possible when reinstalling them or when moving to a new system etc
+    - [x] qBittorrent
+    - [x] Prowlarr
+    - [x] Jackett
+    - [ ] JDownloader
+    - [ ] Microsoft PowerToys
+    - [ ] bckup Compress-Log
+    - [ ] Cura Slicer
+      [ ]   - Backup whole install in ProgramData\Jackett
+    - [ ] Fusion360
+    - [ ] Chrome
+    - [ ] Firefox
 
 
 
 ## Feature Dev:
 
 - ~~Per program stores config in extra directory by date.~~
-- ~~Checks if config changed.~~
+- ~~Checks if config changed.~~  
     - ~~If it did, keeps the previous config folder and creates a new one with current date~~
     - ~~If didnt change, rename the folder to current date~~
 - ~~Keeps x number of previous config folders when x = currentNumber, delete oldest folder~~
@@ -78,9 +78,6 @@
             - Option to move current install to configsync.old
     - Update
 
-- Support running program through explorer
-
-- Option to install on a USB stick, so that the archive is on the flash drive and restoring on a new pc is easier.
 
 
 
@@ -145,33 +142,35 @@ Install-Location
 - [x] Support restore on machine that has a different user name (Paths from maps...)
 - [x] Add log file
 - [x] Catch `Ctrl + C`
-- [ ] Add logging
-- [ ] Format --help message.
-- [ ] License stuff. Include license in installer. Display license in help message.
-- [ ] Add more verbose messages.
+- [x] Format --help message.
+- [x] License stuff. Include license in installer. Display license in help message.
 - [ ] Add disclaimer for runas admin before restoring. (Folder access) (something like, may require running from elevated command prompt)
-- [ ] Support pointing to existing Archive during installation (Copy existing Archive to installation directory).
+- [ ] Add logging
+- [ ] Add more verbose messages.
+- [x] Support pointing to existing Archive during installation (Copy existing Archive to installation directory). (Indirectly implemented by the way the program logic works)
 - [ ] Support CMake
 - [ ] Doxygen comments
-- [ ] Refactor the way the last save dir is retrieved. A unique Id linked to the date might be helpful.
 
-- 
+
 
 ## Reevaluate:
 
 // TODO: Make database path copy function self referencing with error message parameter. Use only this function wherever you copy database paths
-- Sync argument shouldnt default to all programs. 'sync --all' for synchronizing all programs
-- Message 'Config is in sync' instead of 'Config is up to date'
-- Display last save for every program, 'cfgs status' --default 
-- Change 'Rollback complete' to 'Successfully restored <program name>' or 'Restored <programname> successfully'
-- [ ] Add id to hashbase file.
+- [x] Sync argument shouldnt default to all programs. 'sync --all' for synchronizing all programs
+- [x] ~~Message 'Config is in sync' instead of 'Config is up to date'~~
+- [x] ~~Add id to hashbase file.~~
+- [ ] Display last save for every program, 'cfgs status' --default 
+- [ ] Change 'Rollback complete' to 'Successfully restored <program name>' or 'Restored <programname> successfully'
 
 
 ## Feature requests:
 
-- [ ] Implement incremental config saves, (storing modified files in vector)
-- [ ] Write the integer map in database.hpp serialized to a binary file. 
-- [ ] Let user change number of saves to keep
+- [Declined] ~~Implement incremental config saves, (storing modified files in vector)~~
+- [Declined] ~~Write the integer map in database.hpp serialized to a binary file.~~
+- [Declined] ~~--verify parameter to make an integrity check of a snapshot from the archive. (defaults to newest) (option to provide specific date) ([PROGRAM] --all for verifying all saves of that program.) (verify --all checks every single save from all programs.)(--all-newest for checking the newest save from all programs in the archive)~~
+- [x] Let user change number of saves to keep
+- [X] --force option for sync (Make new snapshot regardless of hashes)
+- [x] Status indicator for is_identical() function from analyzer (Implemented with 'status' options)
 - [ ] Let user delete saves
 - [ ] Option to change default behavior of restore param (Disable auto default to newest save, instead show save dates for a program. Let user select the date that he wants to restore)
 - [ ] Option to identify specific save date with an alias (Like '12.November')
@@ -179,11 +178,315 @@ Install-Location
 - [ ] Verbose message showing old setting vs new setting when changing settigns
 - [ ] Backup settings file, in case primary gets corrupted or messed with.
 - [ ] Verify settings file using hash function.
-- [ ] --force option for sync (Make new snapshot regardless of hashes)
-- [ ] Status indicator for is_identical() function from analyzer
-- [ ] --verify parameter to make an integrity check of a snapshot from the archive. (defaults to newest) (option to provide specific date) ([PROGRAM] --all for verifying all saves of that program.) (verify --all checks every single save from all programs.)(--all-newest for checking the newest save from all programs in the archive)
+- [ ] Support running program through explorer
+- [ ] Option to install on a USB stick, so that the archive is on the flash drive and restoring on a new pc is easier. (Implement as a portable release)
+
 
 ## Trashcan:
+<!-- 
+        else if(std::string(argv[2]) == "all" || std::string(argv[2]) == "--all"){ // '--all' subparam
+
+            if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced restoring all supported programs with latest save..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+                
+                Process proc;
+                for(const auto& app : PC.get_support_list()){
+                    for(const auto& process : PC.get_ProgramInfo(app).processNames){
+                        proc.killProcess(process.data());
+                    }
+                }
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+            }
+            else{
+                std::cout << ANSI_COLOR_YELLOW << "Restoring all supported programs with latest save..." << ANSI_COLOR_RESET << std::endl;
+            }
+            
+            std::vector<std::string> failList;
+
+            // @section Jackett:
+            unsigned jackettState = 0;
+            if(rollback(jackettInfo.programName, jackettInfo.configPaths, exePath, logfile, failList, pt.get<unsigned>("recyclelimit")) == 1){
+                jackettState = 1;
+            }
+            
+            // @section Prowlarr
+            unsigned prowlarrState = 0;
+            if(rollback(prowlarrInfo.programName, prowlarrInfo.configPaths, exePath, logfile, failList, pt.get<unsigned>("recyclelimit")) == 1){
+                prowlarrState = 1;
+            }
+
+            // @section qBittorrent
+            unsigned qbitState = 0;
+            if(rollback(qbittorrentInfo.programName, qbittorrentInfo.configPaths, exePath, logfile, failList, pt.get<unsigned>("recyclelimit")) == 1){
+                qbitState = 1;
+            }
+
+            // User info
+            if(jackettState == 1 && prowlarrState == 1 && qbitState == 1){ // All success
+                std::cout << ANSI_COLOR_GREEN << "Rollback complete!" << ANSI_COLOR_RESET << std::endl; 
+            }
+            else if(jackettState == 1 || prowlarrState == 1 || qbitState == 1){ // Partial success
+                std::cout << ANSI_COLOR_YELLOW << "Rollback complete!." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_RED << "Failed to restore:" << ANSI_COLOR_RESET << std::endl;
+                
+                int i = 1;
+                for(const auto& app : failList){ // Display failed rollbacks
+                    std::cout << ANSI_COLOR_RED << i << ".  " << app << ANSI_COLOR_RESET << std::endl;
+                    i++;
+                }
+            }
+        }
+
+
+        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett subparam
+            
+            analyzer anly(jackettInfo.configPaths, "Jackett", exePath, logfile); // Initialize class
+
+            std::vector<std::string> jackettSaves;
+            anly.get_all_saves(jackettSaves);
+
+
+            if(argv[3] == NULL){ // default behavior. Use latest save. No 2subparam provided
+            
+                if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
+                    std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
+                }
+                else{ // Archive not empty
+                    synchronizer sync("Jackett", exePath, logfile); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), jackettInfo.configPaths) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+
+
+            else if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced restore of Jackett with latest save..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& process : jackettInfo.processNames){
+                    proc.killProcess(process.data());
+                }
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+
+
+                if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
+                    std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
+                }
+                else{ // Archive not empty
+                    synchronizer sync("Jackett", exePath, logfile); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), jackettInfo.configPaths) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+
+            
+            else if(std::find(jackettSaves.begin(), jackettSaves.end(), std::string(argv[3])) != jackettSaves.end()){ // Specific save date 2subparam. Check if date is valid.
+
+                if(std::string(argv[4]) == "--force"){ // '--force' 3subparam
+                    std::cout << ANSI_COLOR_161 << "Forced restore of Jackett with specific save..." << ANSI_COLOR_RESET << std::endl;
+                    std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+                    
+                    Process proc;
+                    for(const auto& process : jackettInfo.processNames){
+                        proc.killProcess(process.data());
+                    }
+                    std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+                }
+
+                
+                synchronizer sync("Jackett", exePath, logfile); // Initialize class
+
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit"), jackettInfo.configPaths) == 1){ // Restore from user defined save date<
+                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+
+            else{ // Invalid 2subparameter (not null + not valid)
+                std::cerr << "Fatal: '" << argv[3] << "' is not a valid date." << std::endl;
+                std::cout << "To view all save dates use 'cfgs --show jackett'" << std::endl;
+            }
+        }
+
+
+        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr subparam
+            analyzer anly(prowlarrInfo.configPaths, prowlarrInfo.programName, exePath, logfile); // Initialize class
+
+            std::vector<std::string> prowlarrSaves;
+            anly.get_all_saves(prowlarrSaves);
+
+
+            if(argv[3] == NULL){ // default behavior. Use latest save. No 2subparam provided
+
+                if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of Prowlarr." << std::endl;
+                    std::cout << "Use 'cfgs --sync prowlarr' to create one." << std::endl;
+                }
+                else{ // Archive not empty
+                    synchronizer sync(prowlarrInfo.programName, exePath, logfile); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), prowlarrInfo.configPaths) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+
+
+            else if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced restore of Prowlarr with latest save..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& process : prowlarrInfo.processNames){
+                    proc.killProcess(process.data());
+                }
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+
+
+                if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of Prowlarr." << std::endl;
+                    std::cout << "Use 'cfgs --sync prowlarr' to create one." << std::endl;
+                }
+                else{ // Archive not empty
+                    synchronizer sync(prowlarrInfo.programName, exePath, logfile); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), prowlarrInfo.configPaths) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+
+
+            else if(std::find(prowlarrSaves.begin(), prowlarrSaves.end(), std::string(argv[3])) != prowlarrSaves.end()){ // Specific save date 2subparam. Check if date is valid.
+
+                if(std::string(argv[4]) == "--force"){ // '--force' 3subparam
+                    std::cout << ANSI_COLOR_161 << "Forced restore of Prowlarr with specific save..." << ANSI_COLOR_RESET << std::endl;
+                    std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+                    
+                    Process proc;
+                    for(const auto& process : prowlarrInfo.processNames){
+                        proc.killProcess(process.data());
+                    }
+                    std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+                }
+
+
+                synchronizer sync(prowlarrInfo.programName, exePath, logfile); // Initialize class
+
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit"), prowlarrInfo.configPaths) == 1){ // Restore from user defined save date
+                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+
+            else{ // Invalid 2subparameter (not null + not valid)
+                std::cerr << "Fatal: '" << argv[3] << "' is not a valid date." << std::endl;
+                std::cout << "To view all save dates use 'cfgs --show prowlarr'" << std::endl;
+            }
+        }
+        
+
+        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent subparam
+            analyzer anly(qbittorrentInfo.configPaths, "qBittorrent", exePath, logfile); // Initialize class
+
+            std::vector<std::string> qbittorrentSaves;
+            anly.get_all_saves(qbittorrentSaves);
+
+
+            if(argv[3] == NULL){ // default behavior. Use latest save. No 2subparam provided
+
+                if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of qBittorrent." << std::endl;
+                    std::cout << "Use 'cfgs --sync qbittorrent' to create one." << std::endl;
+                }
+                else{ // Archive not empty
+                    synchronizer sync("qBittorrent", exePath, logfile); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), qbittorrentInfo.configPaths) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+            
+            else if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
+                std::cout << ANSI_COLOR_161 << "Forced restore of qBittorrent with latest save..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& process : qbittorrentInfo.processNames){
+                    proc.killProcess(process.data());
+                }
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+                
+                if(anly.is_archive_empty() == 1){ // Archive empty
+                    std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
+                    std::cout << "Use 'cfgs --sync qbittorrent' to create one." << std::endl;
+                }
+                else{ // Archive not empty
+                    synchronizer sync("qBittorrent", exePath, logfile); // Initialize class
+
+                    if(sync.restore_config(anly.get_newest_backup_path(), pt.get<int>("recyclelimit"), qbittorrentInfo.configPaths) == 1){ // Restore from newest save
+                        std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                    }
+                    else{
+                        std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+
+            else if(std::find(qbittorrentSaves.begin(), qbittorrentSaves.end(), std::string(argv[3])) != qbittorrentSaves.end()){ // Specific save date 2subparam. Check if date is valid.
+
+                std::cout << ANSI_COLOR_161 << "Forced restore of qBittorrent with specific save..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+                Process proc;
+                for(const auto& process : qbittorrentInfo.processNames){
+                    proc.killProcess(process.data());
+                }
+                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+                synchronizer sync("qBittorrent", exePath, logfile); // Initialize class
+
+                if(sync.restore_config(std::string(argv[3]), pt.get<int>("recyclelimit"), qbittorrentInfo.configPaths) == 1){ // Restore from user defined save date
+                    std::cout << ANSI_COLOR_GREEN << "Rollback was successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cerr << ANSI_COLOR_RED << "Failed to restore config." << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+
+            else{ // Invalid 2subparameter (not null + not valid)
+                std::cerr << "Fatal: '" << argv[3] << "' is not a valid date." << std::endl;
+                std::cout << "To view all save dates use 'cfgs --show qbittorrent'" << std::endl;
+            }
+        }
+ -->
 <!--  // Fetch Index of backups
                 auto IX = anly.get_Index("Jackett", exePath);
     

@@ -148,14 +148,27 @@ class ProgramConfig {
             qBittorrent
         };
 
-        // Returns a set containing supported programs.
+        /**
+         * @brief Returns a set containing all supported programs. Includes multiple name variations. 
+         * @note Should only be used for verifying user input.
+         */
         static const std::unordered_set<std::string> get_support_list(){           
+            std::unordered_set<std::string> list = {
+                "Jackett", "jackett",
+                "Prowlarr", "prowlarr",
+                "qBittorrent", "qbittorrent"
+            };
+            
+            return list;
+        }
+
+        static const std::unordered_set<std::string> get_unique_support_list(){
             std::unordered_set<std::string> list = {
                 "Jackett",
                 "Prowlarr",
                 "qBittorrent"
             };
-            
+
             return list;
         }
 
@@ -167,7 +180,7 @@ class ProgramConfig {
         const ProgramInfo get_ProgramInfo(const std::string& pName){
             const std::string userName = get_username(); 
 
-            if(pName == "Jackett"){
+            if(pName == "Jackett" || pName == "jackett"){
                 return 
                 {
                     "Jackett",
@@ -179,7 +192,7 @@ class ProgramConfig {
                 };
             }
             
-            else if(pName == "Prowlarr"){
+            else if(pName == "Prowlarr" || pName == "prowlarr"){
                 return
                 {       
                     "Prowlarr",
@@ -190,7 +203,7 @@ class ProgramConfig {
                     {"Prowlarr.Console.exe"}
                 };
             }
-            else if(pName == "qBittorrent"){
+            else if(pName == "qBittorrent" || pName == "qbittorrent"){
                 const std::string logs = "C:\\Users\\" + userName + "\\AppData\\Local\\qBittorrent";
                 const std::string preferences = "C:\\Users\\" + userName + "\\AppData\\Roaming\\qBittorrent";
                 
