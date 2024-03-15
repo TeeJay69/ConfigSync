@@ -201,7 +201,7 @@ class ProgramConfig {
                     exeLocation + "\\ConfigArchive\\qBittorrent",
                     {{logs, "logs"}, {preferences, "preferences"}},
                     true,
-                    {"qBittorrent.exe"}
+                    {"qBittorrent.exe", "qbittorrent.exe"}
                 };
             }
         }
@@ -829,7 +829,8 @@ class organizer{
                     limit_enforcer_configarchive(maxdirs, savepath); // Self reference
                 }
                 catch(std::filesystem::filesystem_error& error){
-                    std::cerr << ANSI_COLOR_RED << "Failed to remove directory. (Class: organizer). Error Code: 38 & <" << error.what() << ">" << ANSI_COLOR_RESET << std::endl;
+                    std::cerr << ANSI_COLOR_RED << "Failed to remove directory. (Class: organizer). Error Code: 38 & <" << ">" << ANSI_COLOR_RESET << std::endl;
+                    throw cfgsexcept(error.what());
                 }
             }
         }
@@ -907,7 +908,6 @@ class synchronizer{
         
         }
 
-        
         /**
          * @brief Recursively copy a directory or a single file
          * @param source Source path
@@ -1096,7 +1096,9 @@ class synchronizer{
 
             for(const auto& pair : H.pp){
                 try{
-                   recurse_copy(std::filesystem::path(pair.second), pair.first); 
+                    std::filesystem::permissions(pair.first, std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write);
+                    std::filesystem::remove(pair.first);
+                    std::filesystem::copy_file(std::filesystem::path(pair.second), pair.first, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::update_existing);
                 }
                 catch(cfgsexcept& error){
                     std::cerr << error.what() << std::endl;
@@ -1179,13 +1181,21 @@ class synchronizer{
             const std::string dirUUID = generate_UUID();
             std::map<unsigned long long, std::string> recycleMap; // Stores recycleBin items with timestamps
 
+            if(!std::filesystem::exists(backupDir)){
+
+                std::filesystem::create_directories(backupDir);
+
+            }
+
             copy_config(backupDir, dirUUID, programPaths);
+
             
             // Load index file
             std::string indexPath = backupDir + "\\Index.csv";
             // Try to create the index file when it doesnt exist
+
             if(!std::filesystem::exists(backupDir + "\\Index.csv")){
-                
+
                 std::ofstream indexFile(indexPath);
 
                 if(!indexFile.is_open()){
@@ -1196,6 +1206,7 @@ class synchronizer{
 
                 indexFile << timestamp << "," << dirUUID << ",\n";
             }
+
             
             // Append timestamp and UUID to index
             std::ofstream indexFile(indexPath, std::ios_base::app);
@@ -1217,7 +1228,7 @@ class synchronizer{
             organizer::index_cleaner(recyclebinlimit, IX, backupDir);
             
             // Write updated index
-            std::ofstream iXfile(indexPath);
+            std::ofstream iXfile(indexPath, std::ios::trunc);
             if(iXfile.is_open()){
                 for(const auto& pair : IX.time_uuid){
                     iXfile << pair.first << "," << pair.second << ",\n";
@@ -1226,26 +1237,30 @@ class synchronizer{
             
             /* Restore: */
             // Get paths from ConfigArchive
-            const std::string databasePath = (exeLocation + "\\ConfigArchive\\" + programName + "\\" + dateDir + "\\ConfigSync-Hashbase.csv");
+            const std::string databasePath = (exeLocation + "\\ConfigArchive\\" + programName + "\\" + std::filesystem::path(dateDir).filename().string() + "\\ConfigSync-Hashbase.csv");
             hashbase H;
             database::readHashbase(databasePath, H, logfile);
 
-
             /* Get username file */
-            std::string idPath = exeLocation + "\\ConfigArchive\\" + programName + "\\" + dateDir + "\\id.bin";
+            std::string idPath = exeLocation + "\\ConfigArchive\\" + programName + "\\" + std::filesystem::path(dateDir).filename().string() + "\\id.bin";
             std::ifstream idFile(idPath);
             std::string id = database::read_lenght_prefix_encoded_string(idFile);
 
+
             if(id != ProgramConfig::get_username()){ // Check if username is still valid
+
                 transform_pathvector_new_username(H.pp, id); // Update username
             }
+
 
 
             
             // Replace config
             for(const auto& pair : H.pp){
                 try{
-                    recurse_copy(std::filesystem::path(pair.second), pair.first);
+                    std::filesystem::permissions(pair.first, std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write);
+                    std::filesystem::remove(pair.first);
+                    std::filesystem::copy_file(std::filesystem::path(pair.second), pair.first, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::update_existing);
                 }
                 catch(cfgsexcept& copyError){ // Error. Breaks for loop 
                     std::cerr << "Aborting synchronisation: ( " << copyError.what() << ")" << std::endl;
@@ -1253,6 +1268,7 @@ class synchronizer{
                     
                     // Rebuild from backup
                     if(revert_restore(dirUUID) != 1){
+
                         std::cerr << ANSI_COLOR_RED << "Fatal: Failed to rebuild from backup.\n Please verify that none of your selected programs components are missing or corrupted." << ANSI_COLOR_RESET << std::endl;
                         std::cerr << "You may need to reinstall the affected application." << std::endl;  
                         return 0;
