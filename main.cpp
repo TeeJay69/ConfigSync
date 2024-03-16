@@ -459,7 +459,65 @@ int handleStatusOption(char** argv, const boost::property_tree::ptree& pt, const
     return 1;
 }
 
+int handleShowOption(char** argv, const boost::property_tree::ptree& pt, const std::string& exePath, std::ofstream& logfile){
 
+    ProgramConfig PC(exePath);
+    const auto &supportedList = PC.get_unique_support_list();
+
+
+    if(argv[2] == NULL){ // default. No subparam provided
+        std::cerr << "Fatal: missing program argument." << std::endl;
+        std::cout << "See 'cfgs --help'." << std::endl;
+        return 0;
+    }
+
+        
+    else if(std::find(supportedList.begin(), supportedList.end(), std::string(argv[2])) != supportedList.end()){ // specific program sub option
+
+        auto const &pInfo = PC.get_ProgramInfo(std::string(argv[2]));
+
+        analyzer anly(pInfo.configPaths, pInfo.programName, exePath, logfile); // Init class
+
+        
+        if(anly.is_archive_empty() == 1) {
+            std::cout << "Archive does not contain previous snapshots of " << pInfo.programName << "." << std::endl;
+            std::cout << "Use 'cfgs sync " << pInfo.programName << "' to create one." << std::endl;
+            return 0;
+        }
+        else{
+            std::vector<std::string> saveList;
+            anly.get_all_saves(saveList);
+            anly.sortby_filename(saveList);
+
+            // Fetch Index of backups
+            const auto &IX = anly.get_Index(pInfo.programName, exePath);
+
+            std::cout << ANSI_COLOR_222 << "Showing " << pInfo.programName << ":" << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_166 << "Snapshots: " << ANSI_COLOR_RESET << std::endl;
+            unsigned i = 1;
+            for(const auto& save : saveList){ // Show all saves
+                std::cout << ANSI_COLOR_146 << i << ". " << save << ANSI_COLOR_RESET << std::endl;
+                i++;
+            }
+            
+            // Show Restore Snapshots:
+            std::cout << ANSI_COLOR_166 << "Restore Snapshots: " << ANSI_COLOR_RESET << std::endl;
+            i = 0;
+            for(const auto& pair : IX.time_uuid){
+                std::cout << ANSI_COLOR_151 << i << ". " << synchronizer::timestamp_to_string(pair.first) << ANSI_COLOR_RESET << std::endl;
+                i++;
+            }
+            std::cout << "Found " << saveList.size() << " saves and " << i << " Restore Snapshots" << std::endl;
+        }
+    }
+
+    else{
+        std::cerr << "Fatal: invalid argument. See 'cfgs --help'.\n";
+        return 0;
+    }
+
+    return 1;
+}
 
 int revertRestore(const std::string& program, const std::string& exePath, std::ofstream& logfile, std::optional<std::reference_wrapper<std::string>> op_userIn = std::nullopt){
     if(analyzer::has_backup(program, exePath)){
@@ -810,125 +868,7 @@ int main(int argc, char* argv[]){
 
 
     else if(std::string(argv[1]) == "show" || std::string(argv[1]) == "--show"){ // 'show' param
-        
-        if(argv[2] == NULL){ // default. No subparam provided
-            std::cerr << "Fatal: missing program argument." << std::endl;
-            std::cout << "See 'cfgs --help'." << std::endl;
-        }
-
-        
-        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // Jackett subparam
-
-            analyzer anly(jackettInfo.configPaths, "Jackett", exePath, logfile); // Init class
-
-            
-            if(anly.is_archive_empty() == 1) {
-                std::cout << "Archive does not contain previous saves of Jackett." << std::endl;
-                std::cout << "Use 'cfgs --sync jackett' to create one." << std::endl;
-            }
-            else{
-                std::vector<std::string> saveList;
-                anly.get_all_saves(saveList);
-                anly.sortby_filename(saveList);
-
-                // Fetch Index of backups
-                auto IX = anly.get_Index("Jackett", exePath);
-    
-                std::cout << ANSI_COLOR_222 << "Showing Jackett:" << ANSI_COLOR_RESET << std::endl;
-                std::cout << ANSI_COLOR_166 << "Snapshots: " << ANSI_COLOR_RESET << std::endl;
-                unsigned i = 1;
-                for(const auto& save : saveList){ // Show all saves
-                    std::cout << ANSI_COLOR_146 << i << ". " << save << ANSI_COLOR_RESET << std::endl;
-                    i++;
-                }
-                
-                // Show Restore Snapshots:
-                std::cout << ANSI_COLOR_166 << "Restore Snapshots: " << ANSI_COLOR_RESET << std::endl;
-                i = 0;
-                for(const auto& pair : IX.time_uuid){
-                    std::cout << ANSI_COLOR_151 << i << ". " << synchronizer::timestamp_to_string(pair.first) << ANSI_COLOR_RESET << std::endl;
-                    i++;
-                }
-                std::cout << "Found " << saveList.size() << " saves and " << i << " Restore Snapshots" << std::endl;
-            }
-        }
-
-
-        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // Prowlarr subparam
-            analyzer anly(prowlarrInfo.configPaths, "Prowlarr", exePath, logfile); // Init class
-            
-            if(anly.is_archive_empty() == 1) {
-                std::cout << "Archive does not contain previous saves of Prowlarr." << std::endl;
-                std::cout << "Use 'cfgs --sync prowlarr' to create one." << std::endl;
-            }
-            else{
-                std::vector<std::string> saveList;
-                anly.get_all_saves(saveList);
-                anly.sortby_filename(saveList);
-
-                // Fetch Index of backups
-                auto IX = anly.get_Index("Prowlarr", exePath);
-    
-                std::cout << ANSI_COLOR_222 << "Showing Prowlarr:" << ANSI_COLOR_RESET << std::endl;
-                std::cout << ANSI_COLOR_166 << "Snapshots: " << ANSI_COLOR_RESET << std::endl;
-                unsigned i = 1;
-                for(const auto& save : saveList){ // Show all saves
-                    std::cout << ANSI_COLOR_146 << i << ". " << save << ANSI_COLOR_RESET << std::endl;
-                    i++;
-                }
-                
-                // Show Restore Snapshots:
-                std::cout << ANSI_COLOR_166 << "Restore Snapshots: " << ANSI_COLOR_RESET << std::endl;
-                i = 0;
-                for(const auto& pair : IX.time_uuid){
-                    std::cout << ANSI_COLOR_151 << i << ". " << synchronizer::timestamp_to_string(pair.first) << ANSI_COLOR_RESET << std::endl;
-                    i++;
-                }
-                std::cout << "Found " << saveList.size() << " saves and " << i << " Restore Snapshots" << std::endl;
-            }
-        }
-
-
-        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // qBittorrent subparam
-
-            analyzer anly(qbittorrentInfo.configPaths, "qBittorrent", exePath, logfile); // Init class
-
-            
-            if(anly.is_archive_empty() == 1) { // Archive empty
-                std::cout << "Archive does not contain previous saves of qBittorrent." << std::endl;
-                std::cout << "Use 'cfgs --sync qbittorrent' to create a save." << std::endl;
-            }
-            else{ // Archive not empty
-                std::vector<std::string> saveList;
-                anly.get_all_saves(saveList);
-                anly.sortby_filename(saveList);
-
-                // Fetch Index of backups
-                auto IX = anly.get_Index("Prowlarr", exePath);
-    
-                std::cout << ANSI_COLOR_222 << "Showing qBittorrent:" << ANSI_COLOR_RESET << std::endl;
-                std::cout << ANSI_COLOR_166 << "Snapshots: " << ANSI_COLOR_RESET << std::endl;
-                unsigned i = 1;
-                for(const auto& save : saveList){ // Show all saves
-                    std::cout << ANSI_COLOR_146 << i << ". " << save << ANSI_COLOR_RESET << std::endl;
-                    i++;
-                }
-                
-                // Show Restore Snapshots:
-                std::cout << ANSI_COLOR_166 << "Restore Snapshots: " << ANSI_COLOR_RESET << std::endl;
-                i = 0;
-                for(const auto& pair : IX.time_uuid){
-                    std::cout << ANSI_COLOR_151 << i << ". " << synchronizer::timestamp_to_string(pair.first) << ANSI_COLOR_RESET << std::endl;
-                    i++;
-                }
-                std::cout << "Found " << saveList.size() << " saves and " << i << " Restore Snapshots" << std::endl;
-            }
-        }
-
-
-        else{
-            std::cerr << "Fatal: invalid argument. See 'cfgs --help'.\n";
-        }
+        handleShowOption(argv, pt, exePath, logfile);
     }
 
 
