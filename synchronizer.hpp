@@ -217,6 +217,8 @@ class ProgramConfig {
                     {"qBittorrent.exe", "qbittorrent.exe"}
                 };
             }
+
+            return {};
         }
 
 

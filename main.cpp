@@ -219,16 +219,14 @@ int handleSyncOption(char** argv, const boost::property_tree::ptree& pt, const s
 }
 
 int handleRestoreOption(char** argv, const boost::property_tree::ptree& pt, const std::string& exePath, std::ofstream& logfile){
-ProgramConfig progcfg(exePath);
-const auto &supportList = progcfg.get_support_list();
+    ProgramConfig PC(exePath);
+    const auto &supportList = PC.get_support_list();
 
-if(argv[2] == NULL){ // Missing argument
-    std::cout << "Fatal: Missing argument or operand." << std::endl;
+    if(argv[2] == NULL){ // Missing argument
+        std::cout << "Fatal: Missing argument or operand." << std::endl;
         std::cout << "For usage see 'cfgs --help'" << std::endl;
     }
     else if(std::string(argv[2]) == "all" || std::string(argv[2]) == "--all"){ // '--all' operand
-        ProgramConfig PC(exePath);
-
         if(std::string(argv[3]) == "--force"){ // '--force' sub operand
             std::cout << ANSI_COLOR_161 << "Forced restoring all supported programs with latest save..." << ANSI_COLOR_RESET << std::endl;
             std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
@@ -287,7 +285,7 @@ if(argv[2] == NULL){ // Missing argument
     }
     else if(std::find(supportList.begin(), supportList.end(), std::string(argv[2])) != supportList.end()){ // Single restore
 
-        const auto &programInfo = progcfg.get_ProgramInfo(std::string(argv[2]));
+        const auto &programInfo = PC.get_ProgramInfo(std::string(argv[2]));
         
         
         analyzer anly(programInfo.configPaths, programInfo.programName, exePath, logfile);
@@ -299,7 +297,7 @@ if(argv[2] == NULL){ // Missing argument
 
             if(anly.is_archive_empty() == 1){
                 std::cout << ANSI_COLOR_YELLOW << "Archive does not contain previous snapshots of Jackett." << ANSI_COLOR_RESET << std::endl;
-                std::cout << "Use 'cfgs --sync '" << programInfo.programName << "' to create one." << std::endl;
+                std::cout << "Use 'cfgs sync '" << programInfo.programName << "' to create one." << std::endl;
                 return 0;
             }
             else{
@@ -369,7 +367,7 @@ if(argv[2] == NULL){ // Missing argument
         }
         else{ // Invalid 2subparameter (not null + not valid)
             std::cerr << "Fatal: '" << argv[3] << "' is not a valid date." << std::endl;
-            std::cout << "To view all save dates use 'cfgs --show jackett'" << std::endl;
+            std::cout << "To view all save dates use 'cfgs show " << programInfo.programName << "'" << std::endl;
             return 0;
         }
     }
@@ -434,7 +432,7 @@ int handleStatusOption(char** argv, const boost::property_tree::ptree& pt, const
 
         analyzer anly(pInfo.configPaths, pInfo.programName, exePath, logfile); // Init class
             
-        std::cout << ANSI_COLOR_161 << "Status" << pInfo.programName << ":" << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_161 << "Status " << pInfo.programName << ":" << ANSI_COLOR_RESET << std::endl;
         std::cout << ANSI_COLOR_222 << "Last Save: " << std::filesystem::path(anly.get_newest_backup_path()).filename() << ANSI_COLOR_RESET << std::endl;
         
         
@@ -462,7 +460,7 @@ int handleStatusOption(char** argv, const boost::property_tree::ptree& pt, const
 int handleShowOption(char** argv, const boost::property_tree::ptree& pt, const std::string& exePath, std::ofstream& logfile){
 
     ProgramConfig PC(exePath);
-    const auto &supportedList = PC.get_unique_support_list();
+    const auto &supportedList = PC.get_support_list();
 
 
     if(argv[2] == NULL){ // default. No subparam provided
@@ -519,89 +517,220 @@ int handleShowOption(char** argv, const boost::property_tree::ptree& pt, const s
     return 1;
 }
 
-int revertRestore(const std::string& program, const std::string& exePath, std::ofstream& logfile, std::optional<std::reference_wrapper<std::string>> op_userIn = std::nullopt){
-    if(analyzer::has_backup(program, exePath)){
-        if(op_userIn.has_value()){
-            // Dereference the optional
-            auto& op_userInDeref = op_userIn->get();
+std::string* matchDate(const std::string& userInput, const std::string& programName, const Index& IX, synchronizer& syncro, std::ofstream& logfile){
+    std::string match;
+    unsigned hit = 0;
+    for(const auto& pair : IX.time_uuid){
+        // Convert unsigned long long to string and match for userInput
+        if(synchronizer::timestamp_to_string(pair.first).find(userInput) != std::string::npos){
+            hit++;
+            match = pair.second; // we want uuid
+        }
+        else if(pair.second.find(userInput) != std::string::npos){
+            hit++;
+            match = pair.second; // we want uuid
+        }
+    }
 
-            std::cout << ANSI_COLOR_166 << "Reverting specified " << program << " restore:" << ANSI_COLOR_RESET << std::endl;
-            std::cout << ANSI_COLOR_222 << "Fetching index..." << ANSI_COLOR_RESET << std::endl;
-            std::cout << ANSI_COLOR_222 << "Verifying provided date or UUID..." << ANSI_COLOR_RESET << std::endl;
+    logfile << logs::ms("matchDate userInput hits: ") << hit << "Program:" << programName << "\n";
 
-            // Get index
-            Index IX = analyzer::get_Index(program, exePath);
+    if(hit > 1){
+        // More than 1 hit, can't allow that...
+        logfile << ANSI_COLOR_RED << logs::ms("Fatal: provided date or uuid was not unique.") << ANSI_COLOR_RESET << std::endl;
+        std::cerr << ANSI_COLOR_RED << "Fatal: provided date or uuid was not unique." << ANSI_COLOR_RESET << std::endl;
+        return {};
+    }
+    else if(hit == 0){
+        // No match, cant have that either...
+        logfile << ANSI_COLOR_RED << logs::ms("Fatal: provided date or uuid is invalid.") << ANSI_COLOR_RESET << std::endl;
+        std::cerr << ANSI_COLOR_RED << "Fatal: provided date or uuid is invalid." << ANSI_COLOR_RESET << std::endl;
+        return {};
+    }
 
-            synchronizer sync(exePath, program, logfile);
+    return &match;
+}
 
-            std::string match;
-            unsigned hit = 0;
-            for(const auto& pair : IX.time_uuid){
-                // Convert unsigned long long to string and match for userInput
-                if(synchronizer::timestamp_to_string(pair.first).find(op_userInDeref) != std::string::npos){
-                    hit++;
-                    match = pair.second; // we want uuid
+int handleRevertOption(char** argv, const boost::property_tree::ptree& pt, const std::string& exePath, std::ofstream& logfile){
+
+    ProgramConfig PC(exePath);
+    const auto &supportedList = PC.get_support_list();
+    
+    if(argv[2] == NULL){
+        std::cerr << ANSI_COLOR_RED << "Fatal: missing argument or value. See 'cfgs --help'." << ANSI_COLOR_RESET << std::endl;
+    }
+    
+    else if(std::string(argv[2]) == "--all"){ // '--all' sub operand
+
+        if(std::string(argv[3]) == "--force"){ // '--force' sub sub operand
+            std::cout << ANSI_COLOR_161 << "Forced revert of all programs:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+            Process proc;
+            for(const auto& app : PC.get_unique_support_list()){
+                for(const auto& process : PC.get_ProgramInfo(app).processNames){
+                    proc.killProcess(process.data());
                 }
-                else if(pair.second.find(op_userInDeref) != std::string::npos){
-                    hit++;
-                    match = pair.second; // we want uuid
-                }
             }
 
-            logfile << logs::ms("revertRestore userInput hits: ") << hit << "Program:" << program << "\n";
-
-            // More than 1 hit, can't allow that...
-            if(hit > 1){
-                std::cerr << ANSI_COLOR_RED << "Fatal: provided date or uuid was not unique. See 'cfgs show " << program << "'" << ANSI_COLOR_RESET << std::endl;
-                return 0;
-            }
-            else if(hit == 0){
-                // No match, cant have that either...
-                std::cerr << ANSI_COLOR_RED << "Fatal: provided date or uuid is invalid. See 'cfgs show " << program << "'" << ANSI_COLOR_RESET << std::endl;
-                return 0;
-            }
-            
-            std::cout << ANSI_COLOR_222 << "Found a unique match..." << ANSI_COLOR_RESET << std::endl;
-            std::cout << ANSI_COLOR_222 << "Starting revert..." << ANSI_COLOR_RESET << std::endl;
-            // Try to undo last restore wit the match uuid
-            if(!sync.revert_restore(match) != 1){
-                std::cerr << ANSI_COLOR_RED << "Error: Failed to revert last restore.\n";
-                logfile << logs::ms("Error: Failed to revert last restore.\n");
-                throw cfgsexcept("Please verify that none of your selected programs components are missing or corrupted");
-                return 0;
-            }
-
-            std::cout << ANSI_COLOR_222 << "Revert finished, cleaning up..." << ANSI_COLOR_RESET << std::endl;
-            std::cout << ANSI_COLOR_GREEN << "Revert was successfull!" << ANSI_COLOR_RESET << std::endl;
-            return 1;
+            std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_166 << "Reverting all restores:" << ANSI_COLOR_RESET << std::endl;
         }
         else{
-            std::cout << ANSI_COLOR_166 << "Reverting last " << program << " restore:" << ANSI_COLOR_RESET << std::endl;
-            std::cout << ANSI_COLOR_222 << "Fetching index..." << ANSI_COLOR_RESET << std::endl;
-            // Get index
-            Index IX = analyzer::get_Index(program, exePath);
+            std::cout << ANSI_COLOR_166 << "Reverting all restores:" << ANSI_COLOR_RESET << std::endl;
+        }
 
-            synchronizer sync(exePath, program, logfile);
+        std::vector<std::string> revertSuccessList;
+        std::vector<std::string> revertFailList;
+        std::vector<std::string> neverRestoredList; // no restore made ergo no revert possible
+
+        for(const auto& app : PC.get_unique_support_list()){
+
+            if(analyzer::has_backup(app, exePath)){
+                // no specific date
+                std::cout << ANSI_COLOR_222 << "Reverting last " << app << " restore:" << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Fetching index..." << ANSI_COLOR_RESET << std::endl;
+                // Get index
+                Index IX = analyzer::get_Index(app, exePath);
+
+                synchronizer sync(exePath, app, logfile);
+                
+                std::cout << ANSI_COLOR_222 << "Starting revert..." << ANSI_COLOR_RESET << std::endl;
+                // Try to undo last restore
+                if(sync.revert_restore(IX.time_uuid.back().second) != 1){
+                    revertFailList.push_back(app);
+                }
+                else{
+                    revertSuccessList.push_back(app);
+                }
+
+
+                std::cout << ANSI_COLOR_222 << "Revert finished, cleaning up..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_GREEN << "Revert was successfull!" << ANSI_COLOR_RESET << std::endl;
+            }
+            else{
+                neverRestoredList.push_back(app);
+            }
+        }
+
+        std::cout << ANSI_COLOR_222 << "Preparing Summary..." << ANSI_COLOR_RESET << std::endl;
+        if(!revertSuccessList.empty()){
+            std::cout << ANSI_COLOR_GREEN << "Successfull:" << ANSI_COLOR_RESET << std::endl;
+            unsigned i = 1;
+            for(const auto& elem : revertSuccessList){
+                std::cout << ANSI_COLOR_GREEN << i << ". " << elem << ANSI_COLOR_RESET << std::endl;
+                i++;
+            }
+        }
+        
+        if(!neverRestoredList.empty()){
+            std::cout << ANSI_COLOR_YELLOW << "Never restored:" << ANSI_COLOR_RESET << std::endl;
+            unsigned ii = 1;
+            for(const auto& elem : neverRestoredList){
+                std::cout << ANSI_COLOR_YELLOW << ii << ". " << elem << ANSI_COLOR_RESET << std::endl;
+                ii++;
+            }
+        }
+
+        if(!revertFailList.empty()){
+            std::cout << ANSI_COLOR_RED << "Failed:" << ANSI_COLOR_RESET << std::endl;
+            unsigned iii = 1;
+            for(const auto& elem : revertFailList){
+                std::cout << ANSI_COLOR_RED << iii << ". " << elem << ANSI_COLOR_RESET << std::endl;
+                iii++;
+            }
+
+            std::cout << ANSI_COLOR_RED << "Warning! At least one program restore could not be reverted. Please verify that none of that programs components are missing or corrupted!" << std::endl;
+            logfile << logs::ms("Error: Failed to revert last restore.\n");
+        }
+    }
+    else if(std::find(supportedList.begin(), supportedList.end(), std::string(argv[2])) != supportedList.end()){ // specific program sub option
+        const auto &pInfo = PC.get_ProgramInfo(std::string(argv[2]));
+        // Get Index
+        Index IX = analyzer::get_Index(pInfo.programName, exePath);
+        synchronizer sync(exePath, pInfo.programName, logfile);
+        
+        if(argv[3] == NULL){ // no specific restore date 
+            std::cout << ANSI_COLOR_161 << "Revert of last " << pInfo.programName << " restore:" << ANSI_COLOR_RESET << std::endl; 
             
-            std::cout << ANSI_COLOR_222 << "Starting revert..." << ANSI_COLOR_RESET << std::endl;
-            // Try to undo last restore
-            if(!sync.revert_restore(IX.time_uuid.back().second) != 1){
-                std::cerr << ANSI_COLOR_RED << "Error: Failed to revert last restore.\n";
-                logfile << logs::ms("Error: Failed to revert last restore.\n");
-                throw cfgsexcept("Please verify that none of your selected programs components are missing or corrupted");
+            if(analyzer::has_backup(pInfo.programName, exePath) != 1){
+                std::cout << ANSI_COLOR_RED << "Fatal: No previous restore of " << pInfo.programName << " exists to revert" << ANSI_COLOR_RESET << std::endl;
                 return 0;
             }
 
-            std::cout << ANSI_COLOR_222 << "Revert finished, cleaning up..." << ANSI_COLOR_RESET << std::endl;
-            std::cout << ANSI_COLOR_GREEN << "Revert was successfull!" << ANSI_COLOR_RESET << std::endl;
+            // Try to undo last restore
+            if(sync.revert_restore(IX.time_uuid.back().second) != 1){
+                std::cout << ANSI_COLOR_RED << "Failed to revert the last restore!\nPlease verify that none of that programs components are missing or corrupted!" << ANSI_COLOR_RESET << std::endl;
+                return 0;
+            }
+            else{
+                // std::cout << ANSI_COLOR_222 << "Revert finished, cleaning up..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_GREEN << "Revert was successfull!" << ANSI_COLOR_RESET << std::endl;
+            }
+        }
 
-            return 1;
+        else if(std::string(argv[3]) == "--force"){ // '--force' operand
+            std::cout << ANSI_COLOR_161 << "Forced revert of last " << pInfo.programName << " restore:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
+
+            Process proc;
+            for(const auto& process : pInfo.processNames){
+                    proc.killProcess(process.data());
+            }
+            std::cout << ANSI_COLOR_222 << "Kill streak! finished..." << ANSI_COLOR_RESET << std::endl;
+            
+            if(analyzer::has_backup(pInfo.programName, exePath) != 1){
+                std::cout << ANSI_COLOR_RED << "Fatal: No previous restore of " << pInfo.programName << " exists to revert" << ANSI_COLOR_RESET << std::endl;
+                return 0;
+            }
+            // Try to undo last restore
+            if(sync.revert_restore(IX.time_uuid.back().second) != 1){
+                std::cout << ANSI_COLOR_RED << "Failed to revert the last restore!\nPlease verify that none of that programs components are missing or corrupted!" << ANSI_COLOR_RESET << std::endl;
+                return 0;
+            }
+            else{
+                // std::cout << ANSI_COLOR_222 << "Revert finished, cleaning up..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_GREEN << "Revert was successfull!" << ANSI_COLOR_RESET << std::endl;
+            }
+        }
+
+        else{ // Specific restore specified
+            if(std::string(argv[4]) == "--force"){ // '--force' operand
+                std::cout << ANSI_COLOR_166 << "Forced revert of specified restore from " << pInfo.programName << " :" << ANSI_COLOR_RESET << std::endl;
+                Process proc;
+                for(const auto& process : pInfo.processNames){
+                        proc.killProcess(process.data());
+                }
+                std::cout << ANSI_COLOR_222 << "Kill streak! finished..." << ANSI_COLOR_RESET << std::endl;
+            }
+            else{
+                std::cout << ANSI_COLOR_166 << "Reverting specified restore of " << pInfo.programName << " :" << ANSI_COLOR_RESET << std::endl;
+            }
+
+            std::cout << ANSI_COLOR_222 << "Verifying provided date or UUID..." << ANSI_COLOR_RESET << std::endl;
+            std::string *match = matchDate(std::string(argv[3]), pInfo.programName, IX, sync, logfile);
+            if(!match->empty()){
+                std::cout << ANSI_COLOR_222 << "Found a unique match..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Starting revert..." << ANSI_COLOR_RESET << std::endl;
+                // Try to undo last restore wit the match uuid
+                if(!sync.revert_restore(*match) != 1){
+                    std::cerr << ANSI_COLOR_RED << "Error: Failed to revert specified restore.\n";
+                    logfile << logs::ms("Error: Failed to revert specified restore.\n");
+                    throw cfgsexcept("Please verify that none of your selected programs components are missing or corrupted");
+                    return 0;
+                }
+
+                std::cout << ANSI_COLOR_222 << "Revert finished, cleaning up..." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_GREEN << "Revert was successfull!" << ANSI_COLOR_RESET << std::endl;
+            }
+            else{
+                return 0;
+            }
         }
     }
     else{
-        std::cerr << ANSI_COLOR_RED << "Fatal: no previous restore found. See 'cfgs --help'." << ANSI_COLOR_RESET << std::endl;
+        std::cerr << "Fatal: invalid argument. See 'cfgs --settings'." << std::endl;
     }
-
+    
     return 1;
 }
 
@@ -890,113 +1019,7 @@ int main(int argc, char* argv[]){
 
 
     else if(std::string(argv[1]) == "revert"){ // 'revert' param
-
-        if(argv[2] == NULL){
-            std::cerr << ANSI_COLOR_RED << "Fatal: missing argument or value. See 'cfgs --help'." << ANSI_COLOR_RESET << std::endl;
-        }
-
-        else if(std::string(argv[2]) == "--all"){ // '--all' subparam
-
-            if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
-                std::cout << ANSI_COLOR_161 << "Forced revert of all programs:" << ANSI_COLOR_RESET << std::endl;
-                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
-
-                Process proc;
-                for(const auto& app : PC.get_unique_support_list()){
-                    for(const auto& process : PC.get_ProgramInfo(app).processNames){
-                        proc.killProcess(process.data());
-                    }
-                }
-
-                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
-            }
-            std::cout << ANSI_COLOR_166 << "Reverting all restores:" << ANSI_COLOR_RESET << std::endl;
-    
-            for(const auto& app : PC.get_unique_support_list()){
-                revertRestore(app, exePath, logfile, std::nullopt);
-            }
-        }
-
-        else if(std::string(argv[2]) == "Jackett" || std::string(argv[2]) == "jackett"){ // 'Jackett' subparam
-            if(argv[3] != NULL){
-                // Create optional
-                std::string input = std::string(argv[3]);
-                std::optional<std::reference_wrapper<std::string>> userInputRef = std::ref(input);
-                // Try to revert
-                revertRestore("Jackett", exePath, logfile, userInputRef);
-            }
-
-            else if(std::string(argv[3]) == "--force"){ // 'force' 2subparam
-                std::cout << ANSI_COLOR_161 << "Forced revert of Jackett:" << ANSI_COLOR_RESET << std::endl;
-                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
-
-                Process proc;
-                for(const auto& process : jackettInfo.processNames){
-                        proc.killProcess(process.data());
-                }
-
-                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
-            }
-
-            else{
-                revertRestore("Jackett", exePath, logfile);
-            }
-        }
-
-        else if(std::string(argv[2]) == "Prowlarr" || std::string(argv[2]) == "prowlarr"){ // 'Prowlarr' subparam
-            if(argv[3] != NULL){
-                // Create optional
-                std::string input = std::string(argv[3]);
-                std::optional<std::reference_wrapper<std::string>> userInputRef = std::ref(input);
-                // Try to revert
-                revertRestore("Prowlarr", exePath, logfile, userInputRef);
-            }
-            
-            else if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
-                std::cout << ANSI_COLOR_161 << "Forced revert of Prowlarr:" << ANSI_COLOR_RESET << std::endl;
-                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
-
-                Process proc;
-                for(const auto& process : prowlarrInfo.processNames){
-                        proc.killProcess(process.data());
-                }
-
-                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
-            }
-            else{
-                revertRestore("Prowlarr", exePath, logfile);
-            }
-        }
-        
-        else if(std::string(argv[2]) == "qBittorrent" || std::string(argv[2]) == "qbittorrent"){ // 'qBittorrent' subparam
-            if(argv[3] != NULL){
-                // Create optional
-                std::string input = std::string(argv[3]);
-                std::optional<std::reference_wrapper<std::string>> userInputRef = std::ref(input);
-                // Try to revert
-                revertRestore("qBittorrent", exePath, logfile, userInputRef);
-            }
-
-            else if(std::string(argv[3]) == "--force"){ // '--force' 2subparam
-                std::cout << ANSI_COLOR_161 << "Forced revert of qBittorrent:" << ANSI_COLOR_RESET << std::endl;
-                std::cout << ANSI_COLOR_222 << "Killing all running instances..." << ANSI_COLOR_RESET << std::endl;
-
-                Process proc;
-                for(const auto& process : qbittorrentInfo.processNames){
-                    proc.killProcess(process.data());
-                }
-
-                std::cout << ANSI_COLOR_222 << "Kill streak finished..." << ANSI_COLOR_RESET << std::endl;
-            }
-            
-            else{
-                revertRestore("qBittorrent", exePath, logfile);
-            }
-        }
-        
-        else{
-            std::cerr << "Fatal: invalid argument. See 'cfgs --settings'." << std::endl;
-        }
+        handleRevertOption(argv, pt, exePath, logfile);
     }
 
 
