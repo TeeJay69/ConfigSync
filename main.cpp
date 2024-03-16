@@ -383,10 +383,9 @@ if(argv[2] == NULL){ // Missing argument
 
 int handleStatusOption(char** argv, const boost::property_tree::ptree& pt, const std::string& exePath, std::ofstream& logfile){
     ProgramConfig PC(exePath);
-    const auto &supportList = PC.get_support_list();
+    const auto& supportList = PC.get_support_list();
     
     if(argv[2] == NULL){ // default 
-        if(argv[2] == NULL){ // default: all. subparam
 
         std::cout << ANSI_COLOR_166 << "Status:" << ANSI_COLOR_RESET << std::endl;
 
@@ -435,22 +434,21 @@ int handleStatusOption(char** argv, const boost::property_tree::ptree& pt, const
 
         analyzer anly(pInfo.configPaths, pInfo.programName, exePath, logfile); // Init class
             
-            std::cout << ANSI_COLOR_161 << "Status" << pInfo.programName << ":" << ANSI_COLOR_RESET << std::endl;
-            std::cout << ANSI_COLOR_222 << "Last Save: " << anly.get_newest_backup_path() << ANSI_COLOR_RESET << std::endl;
-            
-            
-            if(anly.is_archive_empty() == 1){ // Check if save exists
-                std::cerr << ANSI_COLOR_RED << "Error: No previous snapshot exists for" << pInfo.programName << " ." << ANSI_COLOR_RESET << std::endl;
-                return 0;
-            }
-            else{ // Save exists
+        std::cout << ANSI_COLOR_161 << "Status" << pInfo.programName << ":" << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_222 << "Last Save: " << std::filesystem::path(anly.get_newest_backup_path()).filename() << ANSI_COLOR_RESET << std::endl;
+        
+        
+        if(anly.is_archive_empty() == 1){ // Check if save exists
+            std::cerr << ANSI_COLOR_RED << "Error: No previous snapshot exists for" << pInfo.programName << " ." << ANSI_COLOR_RESET << std::endl;
+            return 0;
+        }
+        else{ // Save exists
 
-                if(anly.is_identical() == 1){ // Compare config
-                    std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
-                }
-                else{
-                    std::cout << ANSI_COLOR_RED << "Config is out of sync!" << ANSI_COLOR_RESET << std::endl;
-                }
+            if(anly.is_identical() == 1){ // Compare config
+                std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
+            }
+            else{
+                std::cout << ANSI_COLOR_RED << "Config is out of sync!" << ANSI_COLOR_RESET << std::endl;
             }
         }
     }
@@ -1370,7 +1368,12 @@ int main(int argc, char* argv[]){
             }
         }
     }
+    
 
+    else{
+        std::cerr << "Fatal: '" << argv[1] << "' is not a ConfigSync command.\n";
+        return 1;
+    }
 
     
     return 0;
