@@ -10,7 +10,7 @@
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
 ; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
-AppId={{BC6D21CD-7E45-4D18-8CC5-59D8B86BD1E3}
+AppId={{4A8B95B-FC79-46AA-9F3A-4B309A933FF9}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 ;AppVerName={#MyAppName} {#MyAppVersion}
@@ -18,26 +18,39 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={autopf}\{#MyAppName}
+DefaultDirName={localappdata}\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile=C:\Data\TJ\Software\Coding\ConfigSync\Copyright-Disclaimer.md
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
-;PrivilegesRequired=lowest
+PrivilegesRequired=lowest  
 OutputDir=C:\Data\TJ\Software\Coding\ConfigSync
 OutputBaseFilename=ConfigSync-Setup
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
+; Tell Windows Explorer to reload the environment
+ChangesEnvironment=yes
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{localappdata}\ConfigSync"
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "C:\Data\TJ\Software\Coding\ConfigSync\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Data\TJ\Software\Coding\ConfigSync\changelog.md"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Data\TJ\Software\Coding\Conf{270EADCE-55E1-472B-A3A3-253AFBE4A24B}igSync\{#MyAppExeName}"; DestDir: "{localappdata}\ConfigSync"; Flags: ignoreversion
+Source: "C:\Data\TJ\Software\Coding\ConfigSync\changelog.md"; DestDir: "{localappdata}\ConfigSync";Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
 
+[Registry]
+Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; \
+    ValueData: "{olddata};{localappdata}\{#MyAppName}"; \
+    Flags: preservestringtype uninsdeletevalue
+ 
+ ;Flags: preservestringtype uninsdeletevalue
+ ;ValueName: "Path"; ValueData: "{olddata};{localappdata}\ConfigSync\"; \
+ ;Root: HKLM; Subkey: "SYSTEM\CurrentControlSet\Control\Session Manager\Environment"; ValueType: expandsz; \

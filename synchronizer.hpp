@@ -86,7 +86,7 @@ class logs{
                 fvec.push_back(x);
             }
 
-            if(fvec.size() - 1  > limit){
+            if(fvec.size() > limit){
                 
                 std::sort(fvec.begin(), fvec.end());
                 try{
@@ -156,7 +156,9 @@ class ProgramConfig {
             std::unordered_set<std::string> list = {
                 "Jackett", "jackett",
                 "Prowlarr", "prowlarr",
-                "qBittorrent", "qbittorrent"
+                "qBittorrent", "qbittorrent",
+                "JDownloader", "jdownloader",
+                "Jdownloader", "jDownloader",
             };
             
             return list;
@@ -166,7 +168,8 @@ class ProgramConfig {
             std::unordered_set<std::string> list = {
                 "Jackett",
                 "Prowlarr",
-                "qBittorrent"
+                "qBittorrent",
+                "JDownloader"
             };
 
             return list;
@@ -215,6 +218,19 @@ class ProgramConfig {
                     {{logs, "logs"}, {preferences, "preferences"}},
                     true,
                     {"qBittorrent.exe", "qbittorrent.exe"}
+                };
+            }
+            else if(pName == "JDownloader" || pName == "jdownloader" || pName == "Jdownloader" || pName == "jDownloader"){
+                const std::string cfg = "C:\\Users\\" + userName + "\\AppData\\Local\\JDownloader 2.0\\cfg";
+
+                return
+                {
+                    "JDownloader",
+                    {cfg},
+                    exeLocation + "\\ConfigArchive\\JDownloader",
+                    {},
+                    false,
+                    {"JDownloader2.exe"}
                 };
             }
 
@@ -633,6 +649,13 @@ class analyzer{
         
         // Check if a programs archive is empty
         int is_archive_empty(){
+            if(!std::filesystem::exists(configArchive)){
+                std::filesystem::create_directories(configArchive);
+            }
+            if(!std::filesystem::exists(archivePath)){
+                std::filesystem::create_directories(archivePath);
+            }
+
             if(std::filesystem::is_empty(configArchive) || std::filesystem::is_empty(archivePath)){
                 return 1;
             }

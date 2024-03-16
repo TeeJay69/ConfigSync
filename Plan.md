@@ -144,10 +144,11 @@ Install-Location
 - [x] Catch `Ctrl + C`
 - [x] Format --help message.
 - [x] License stuff. Include license in installer. Display license in help message.
+- [ ] Installer must add install directory to path
 - [ ] Add disclaimer for runas admin before restoring. (Folder access) (something like, may require running from elevated command prompt)
 - [ ] Add logging
 - [ ] Add more verbose messages.
-- [x] Support pointing to existing Archive during installation (Copy existing Archive to installation directory). (Indirectly implemented by the way the program logic works)
+- [ ] Support pointing to existing Archive during installation with setup (Copy existing Archive to installation directory). (Indirectly implemented by the way the program logic works)
 - [ ] Support CMake
 - [ ] Doxygen comments
 

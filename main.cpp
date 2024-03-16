@@ -19,6 +19,7 @@
 #include <boost\filesystem\path.hpp>
 #include <boost\property_tree\ptree.hpp>
 #include <boost\property_tree\json_parser.hpp>
+#include <boost/dll.hpp>
 #include "synchronizer.hpp"
 
 
@@ -411,8 +412,6 @@ int handleStatusOption(char** argv, const boost::property_tree::ptree& pt, const
                 }
             }
         }
-
-        std::cout << "Status:" << std::endl;
         
         for(const auto& app : inSyncList){ // Up to date apps
             std::cout << ANSI_COLOR_GREEN << "Up to date: " << app << ANSI_COLOR_RESET << std::endl;
@@ -433,7 +432,6 @@ int handleStatusOption(char** argv, const boost::property_tree::ptree& pt, const
         analyzer anly(pInfo.configPaths, pInfo.programName, exePath, logfile); // Init class
             
         std::cout << ANSI_COLOR_161 << "Status " << pInfo.programName << ":" << ANSI_COLOR_RESET << std::endl;
-        std::cout << ANSI_COLOR_222 << "Last Save: " << std::filesystem::path(anly.get_newest_backup_path()).filename() << ANSI_COLOR_RESET << std::endl;
         
         
         if(anly.is_archive_empty() == 1){ // Check if save exists
@@ -441,6 +439,7 @@ int handleStatusOption(char** argv, const boost::property_tree::ptree& pt, const
             return 0;
         }
         else{ // Save exists
+            std::cout << ANSI_COLOR_222 << "Last Save: " << std::filesystem::path(anly.get_newest_backup_path()).filename() << ANSI_COLOR_RESET << std::endl;
 
             if(anly.is_identical() == 1){ // Compare config
                 std::cout << ANSI_COLOR_GREEN << "Config is up to date!" << ANSI_COLOR_RESET << std::endl;
@@ -818,18 +817,16 @@ class defaultsetting{
 };
 
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[]){   
 
 
     // Catches exit signal Ctrl+C
     std::signal(SIGINT, exitSignalHandler);
     // Enables colors in windows command processor
     enableColors();
-    // Get location of exe
-    boost::filesystem::path exePathBfs(boost::filesystem::initial_path<boost::filesystem::path>());
-    exePathBfs = (boost::filesystem::system_complete(boost::filesystem::path(argv[0])));
-
-    const std::string exePath = exePathBfs.parent_path().string();
+    
+    // Get location of program
+    const std::string exePath = boost::dll::program_location().parent_path().string();
     const std::string settingsPath = exePath + "\\settings.json";
     const std::string batPath = exePath + "\\cfgs.bat";
     const std::string taskName = "ConfigSyncTask";
@@ -839,11 +836,6 @@ int main(int argc, char* argv[]){
     defaultsetting DS;
     ProgramConfig PC(exePath);
 
-    const auto jackettInfo = PC.get_ProgramInfo("Jackett");
-    const auto prowlarrInfo = PC.get_ProgramInfo("Prowlarr");
-    const auto qbittorrentInfo = PC.get_ProgramInfo("qBittorrent");
-
-    
     // Settings @section
     boost::property_tree::ptree pt;
 
@@ -1067,10 +1059,10 @@ int main(int argc, char* argv[]){
                 counter--;
             }
             
-            const std::string codeComm = "cmd /c code \"" + exePath + "\\config.json\"";
+            const std::string codeComm = "cmd /c code \"" + exePath + "\\settings.json\"";
 
             if(system(codeComm.c_str()) != 0){ // Open config with vscode
-                const std::string notepadComm = "cmd /c notepad \"" + exePath + "\\config.json\"";
+                const std::string notepadComm = "cmd /c notepad \"" + exePath + "\\settings.json\"";
                 std::system(notepadComm.c_str()); // Open with notepad
             }
 
