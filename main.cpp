@@ -64,6 +64,16 @@ void exitSignalHandler(int signum){
     }
 }
 
+int argcmp(char** argv, int* argc, const char* cmp){
+    for(int i = 0; i < *argc; i++){
+        if(strcmp(argv[i], cmp) == 0){
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 int path_check(const std::vector<std::string>& paths){
     for(const auto& item : paths){ // Check if program exist
         if(!std::filesystem::exists(item)){
@@ -733,6 +743,7 @@ int handleRevertOption(char** argv, const boost::property_tree::ptree& pt, const
     return 1;
 }
 
+
 /**
  * @brief Functions for managing scheduled tasks.
  * 
@@ -831,6 +842,9 @@ int main(int argc, char* argv[]){
     const std::string batPath = exePath + "\\cfgs.bat";
     const std::string taskName = "ConfigSyncTask";
     std::ofstream logfile = logs::session_log(exePath, 50); // Create logfileile
+
+    // Universal operands:
+    int verbose = 0;
     
     // Classes
     defaultsetting DS;
@@ -929,13 +943,17 @@ int main(int argc, char* argv[]){
 
 
     /* Parse command line options: */
-     
+
     if(argv[1] == NULL){ // No params, display Copyright Notice
         std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber. All rights reserved." << std::endl;
         std::cout << "Synchronize program configurations." << std::endl;
         std::cout << "See 'cfgs --help' for usage." << std::endl;
         std::exit(EXIT_SUCCESS);
+    }
+
+    if(argcmp(argv, &argc, "--verbose") == 1 || argcmp(argv, &argc, "-v") == 1){
+        verbose = 1;
     }
 
     else if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version"){ // Version param
@@ -971,7 +989,6 @@ int main(int argc, char* argv[]){
         std::cout << "[...] --force                 Kills running instances before, to avoid errors.\n";
         std::exit(EXIT_SUCCESS);
     }
-    
 
     else if(std::string(argv[1]) == "sync"){ // Sync param
         handleSyncOption(argv, pt, exePath, logfile);

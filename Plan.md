@@ -144,11 +144,11 @@ Install-Location
 - [x] Catch `Ctrl + C`
 - [x] Format --help message.
 - [x] License stuff. Include license in installer. Display license in help message.
-- [ ] Installer must add install directory to path
+- [x] Installer must add install directory to path
 - [ ] Add disclaimer for runas admin before restoring. (Folder access) (something like, may require running from elevated command prompt)
+- [ ] Support pointing to existing Archive during installation with setup (Copy existing Archive to installation directory). (Indirectly implemented by the way the program logic works)
 - [ ] Add logging
 - [ ] Add more verbose messages.
-- [ ] Support pointing to existing Archive during installation with setup (Copy existing Archive to installation directory). (Indirectly implemented by the way the program logic works)
 - [ ] Support CMake
 - [ ] Doxygen comments
 
@@ -157,10 +157,10 @@ Install-Location
 ## Reevaluate:
 
 // TODO: Make database path copy function self referencing with error message parameter. Use only this function wherever you copy database paths
+- [Declined] ~~Add id to hashbase file.~~
 - [x] Sync argument shouldnt default to all programs. 'sync --all' for synchronizing all programs
-- [x] ~~Message 'Config is in sync' instead of 'Config is up to date'~~
-- [x] ~~Add id to hashbase file.~~
-- [ ] Display last save for every program, 'cfgs status' --default 
+- [x] Display last save for every program, 'cfgs status' --default 
+- [] Message 'Config is in sync' instead of 'Config is up to date's
 - [ ] Change 'Rollback complete' to 'Successfully restored <program name>' or 'Restored <programname> successfully'
 
 

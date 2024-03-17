@@ -25,6 +25,8 @@
 #include "synchronizer.hpp"
 #include "ANSIcolor.hpp"
 
+extern int verbose;
+
 struct hashbase{
     std::vector<std::pair<std::string, std::string>> hh;
     std::vector<std::pair<std::string, std::string>> pp;
@@ -145,7 +147,9 @@ class ProgramConfig {
         enum supported {
             Jackett,
             Prowlarr,
-            qBittorrent
+            qBittorrent,
+            JDownloader,
+            Deemix,
         };
 
         /**
@@ -157,8 +161,9 @@ class ProgramConfig {
                 "Jackett", "jackett",
                 "Prowlarr", "prowlarr",
                 "qBittorrent", "qbittorrent",
-                "JDownloader", "jdownloader",
-                "Jdownloader", "jDownloader",
+                "JDownloader", "jdownloader", "Jdownloader", "jDownloader",
+                "Deemix", "deemix",
+                "PowerToys", "powertoys", "Microsoft.PowerToys", "microsoft.powertoys",
             };
             
             return list;
@@ -169,7 +174,9 @@ class ProgramConfig {
                 "Jackett",
                 "Prowlarr",
                 "qBittorrent",
-                "JDownloader"
+                "JDownloader",
+                "Deemix",
+                "Microsoft.PowerToys",
             };
 
             return list;
@@ -191,7 +198,7 @@ class ProgramConfig {
                     exeLocation + "\\ConfigArchive\\Jackett",
                     {},
                     false,
-                    {"JackettTray.exe", "JackettConsole.exe"}
+                    {"JackettTray.exe", "JackettConsole.exe"},
                 };
             }
             
@@ -203,7 +210,7 @@ class ProgramConfig {
                     exeLocation + "\\ConfigArchive\\Prowlarr",
                     {},
                     false,
-                    {"Prowlarr.Console.exe"}
+                    {"Prowlarr.Console.exe"},
                 };
             }
             else if(pName == "qBittorrent" || pName == "qbittorrent"){
@@ -217,7 +224,7 @@ class ProgramConfig {
                     exeLocation + "\\ConfigArchive\\qBittorrent",
                     {{logs, "logs"}, {preferences, "preferences"}},
                     true,
-                    {"qBittorrent.exe", "qbittorrent.exe"}
+                    {"qBittorrent.exe", "qbittorrent.exe"},
                 };
             }
             else if(pName == "JDownloader" || pName == "jdownloader" || pName == "Jdownloader" || pName == "jDownloader"){
@@ -230,7 +237,31 @@ class ProgramConfig {
                     exeLocation + "\\ConfigArchive\\JDownloader",
                     {},
                     false,
-                    {"JDownloader2.exe"}
+                    {"JDownloader2.exe"},
+                };
+            }
+            else if(pName == "Deemix" || pName == "deemix"){
+                const std::string roaming = "C:\\Users\\" + userName + "\\AppData\\Roaming\\deemix";
+                return
+                {
+                    "Deemix",
+                    {roaming},
+                    exeLocation + "\\ConfigArchive\\JDownloader",
+                    {},
+                    false,
+                    {"win-x64-latest.exe", "deemix-gui.exe"},
+                };
+            }
+            else if(pName == "Microsoft.PowerToys" || pName == "microsoft.powertoys" || pName == "PowerToys" || pName == "powertoys"){
+                const std::string local = "C:\\Users\\" + userName + "\\AppData\\Local\\Microsoft\\PowerToys";
+                return
+                {
+                    "Microsoft.PowerToys",
+                    {local},
+                    exeLocation + "\\ConfigArchive\\Microsoft.PowerToys",
+                    {},
+                    false,
+                    {"PowerToys.ActionRunner.exe","PowerToys.AlwaysOnTop.exe", "PowerToys.Awake.exe", "PowerToys.ColorPickerUI.exe", "PowerToys.CropAndLock.exe", "PowerToys.exe", "PowerToys.FancyZones.exe", "PowerToys.FancyZonesEditor.exe","PowerToys.GcodePreviewHandler.exe","PowerToys.GcodeThumbnailProvider.exe","PowerToys.ImageResizer.exe","PowerToys.MarkdownPreviewHandler.exe","PowerToys.MonacoPreviewHandler.exe","PowerToys.MouseJumpUI.exe","PowerToys.MouseWithoutBorders.exe","PowerToys.MouseWithoutBordersHelper.exe","PowerToys.MouseWithoutBordersService.exe","PowerToys.PdfPreviewHandler.exe","PowerToys.PdfThumbnailProvider.exe","PowerToys.PowerAccent.exe","PowerToys.PowerLauncher.exe","PowerToys.PowerOCR.exe","PowerToys.QoiPreviewHandler.exe","PowerToys.QoiThumbnailProvider.exe","PowerToys.ShortcutGuide.exe","PowerToys.StlThumbnailProvider.exe","PowerToys.SvgPreviewHandler.exe","PowerToys.SvgThumbnailProvider.exe","PowerToys.Update.exe","PowerToys.KeyboardManagerEditor.exe","PowerToys.KeyboardManagerEngine.exe","PowerToys.BugReportTool.exe","PowerToys.StylesReportTool.exe","PowerToys.WebcamReportTool.exe","PowerToys.EnvironmentVariables.exe","PowerToys.FileLocksmithUI.exe","PowerToys.Hosts.exe","PowerToys.MeasureToolUI.exe","PowerToys.Peek.UI.exe","PowerToys.PowerRename.exe","PowerToys.RegistryPreview.exe","PowerToys.Settings.exe","RestartAgent.exe",}   
                 };
             }
 
@@ -1075,37 +1106,45 @@ class synchronizer{
             }
 
             for(const auto& item : programPaths){
-                std::string groupName;
-                if(std::filesystem::is_directory(item)){
-                    if(groupFlag == 1 && id.contains(item)){ // Assign group or default name
-                        groupName = id[item];
+                if(std::filesystem::exists(item)){
+                    std::string groupName;
+                    if(std::filesystem::is_directory(item)){
+                        if(groupFlag == 1 && id.contains(item)){ // Assign group or default name
+                            groupName = id[item];
+                        }
+                        else{
+                            groupName = "Directories";
+                        }
+
+                        const std::string destination = archivePathAbs + "\\" + dateDir + "\\" + groupName;
+                        try{
+                            recurse_copy(item, destination, std::nullopt, ppRef); // Copy and load into vector
+                        }
+                        catch(cfgsexcept& except){
+                            std::cerr << except.what() << std::endl;
+                        }
                     }
                     else{
-                        groupName = "Directories";
-                    }
+                        if(groupFlag == 1 && id.contains(item)){ // Assign group or default name
+                            groupName = id[item];
+                        }
+                        else{
+                            groupName = "Single-Files";
+                        }
 
-                    const std::string destination = archivePathAbs + "\\" + dateDir + "\\" + groupName;
-                    try{
-                        recurse_copy(item, destination, std::nullopt, ppRef); // Copy and load into vector
-                    }
-                    catch(cfgsexcept& except){
-                        std::cerr << except.what() << std::endl;
+                        const std::string destination = archivePathAbs + "\\" + dateDir + "\\" + groupName;
+                        try{
+                            recurse_copy(item, destination, std::nullopt, ppRef); // Copy and load into vector
+                        }
+                        catch(cfgsexcept& err){
+                            std::cerr << err.what() << std::endl;
+                        }
                     }
                 }
                 else{
-                    if(groupFlag == 1 && id.contains(item)){ // Assign group or default name
-                        groupName = id[item];
-                    }
-                    else{
-                        groupName = "Single-Files";
-                    }
-
-                    const std::string destination = archivePathAbs + "\\" + dateDir + "\\" + groupName;
-                    try{
-                        recurse_copy(item, destination, std::nullopt, ppRef); // Copy and load into vector
-                    }
-                    catch(cfgsexcept& err){
-                        std::cerr << err.what() << std::endl;
+                    logfile << logs::ms("Config item not found, skipping: ") << "[" << item << "]" << std::endl;
+                    if(verbose){
+                        std::cout << "Program item noexist, skipped: [" << item << "]" << std::endl;
                     }
                 }
             }
