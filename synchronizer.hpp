@@ -1157,6 +1157,7 @@ class synchronizer{
             
             const boost::regex pattern("C:\\\\Users\\\\");
             const boost::regex repPattern("(?<=C:\\\\Users\\\\)(.+?)\\\\");
+            const std::string newUserReplacement = newUser + "\\";
             
             for(auto & pair : vec){
                 
@@ -1169,12 +1170,12 @@ class synchronizer{
                 /* Check key */
                 if(boost::regex_search(pair.first, keyMatches, pattern)){
                     
-                    newKey = boost::regex_replace(pair.first, repPattern, newUser);
+                    newKey = boost::regex_replace(pair.first, repPattern, newUserReplacement);
 
                     /* Search value */
                     if(boost::regex_search(pair.second, valueMatches, pattern)){
                         
-                        newValue = boost::regex_replace(pair.second, repPattern, newUser);    
+                        newValue = boost::regex_replace(pair.second, repPattern, newUserReplacement);    
 
                         /* Replace pair element */
                         pair = std::make_pair(newKey, newValue);
@@ -1187,13 +1188,107 @@ class synchronizer{
 
                 /* Check value when key did not contain username */
                 else if(boost::regex_search(pair.second, valueMatches, pattern)){
-                    newValue = boost::regex_replace(pair.second, repPattern, newUser);
-
+                    newValue = boost::regex_replace(pair.second, repPattern, newUserReplacement);
                     /* Replace value  */
                     pair = std::make_pair(pair.first, newValue);
                 }
             }
         }
+
+
+        static void transform_pathvector_new_exeLocation(std::vector<std::pair<std::string,std::string>>& vecPair, const std::string& newLocation){
+            const boost::regex singleSlashPattern("\\\\");
+            std::string newLocationDoubleSlash = boost::regex_replace(newLocation, singleSlashPattern, "\\\\\\");
+            const boost::regex repPattern("(.+?)ConfigArchive\\\\");
+            const std::string replace = newLocationDoubleSlash + "\\\\ConfigArchive\\";
+
+            for(auto& pair : vecPair){
+                std::string newValue = boost::regex_replace(pair.second, repPattern, replace);
+                pair = std::make_pair(pair.first, newValue);
+            }
+        }
+
+
+        int copy_for_restore(const std::string& backupDir, const std::string& UUID, std::vector<std::string> programPaths){
+            
+            ProgramConfig PC(exeLocation);
+            const auto appInfo = PC.get_ProgramInfo(programName);
+            
+            const std::filesystem::path datePath = (backupDir / std::filesystem::path(UUID));
+            if(!std::filesystem::exists(datePath)){ // If date dir doesnt exist, create it.
+
+                std::filesystem::create_directories(datePath);
+            }
+            
+  
+
+            // hashbase location is inside the dateDir
+            const std::string hashbasePath = backupDir + "\\" + UUID + "\\ConfigSync-Hashbase.csv";
+
+            hashbase H; // Initialize hashbase
+            std::optional<std::reference_wrapper<std::vector<std::pair<std::string,std::string>>>> ppRef = std::ref(H.pp);
+
+            /* Copy Process */
+            std::unordered_map<std::string, std::string> id;
+            int groupFlag = 0;
+            if(appInfo.hasGroups == true){ // Check for groups
+                id = appInfo.pathGroups;
+                groupFlag = 1;
+            }
+            else{
+                groupFlag = 0;
+            }
+
+            for(const auto& item : programPaths){
+                std::string groupName;
+                if(std::filesystem::is_directory(item)){
+                    if(groupFlag == 1 && id.contains(item)){ // Assign group or default name
+                        groupName = id[item];
+                    }
+                    else{
+                        groupName = "Directories";
+                    }
+
+                    const std::string destination = backupDir + "\\" + UUID + "\\" + groupName;
+                    try{
+                        recurse_copy(item, destination, std::nullopt, ppRef); // Copy and load into vector
+                    }
+                    catch(cfgsexcept& except){
+                        std::cerr << except.what() << std::endl;
+                    }
+                }
+                else{
+                    if(groupFlag == 1 && id.contains(item)){ // Assign group or default name
+                        groupName = id[item];
+                    }
+                    else{
+                        groupName = "Single-Files";
+                    }
+
+                    const std::string destination = backupDir + "\\" + UUID + "\\" + groupName;
+                    try{
+                        recurse_copy(item, destination, std::nullopt, ppRef); // Copy and load into vector
+                    }
+                    catch(cfgsexcept& err){
+                        std::cerr << err.what() << std::endl;
+                    }
+                }
+            }
+
+
+            database dbX(hashbasePath);
+
+            dbX.storeHashbase(hashbasePath, H); // Write the hashbase to file
+
+            /* Create username file */
+            std::ofstream idfile(backupDir + "\\" + UUID + "\\id.bin");
+            std::string username = ProgramConfig::get_username();
+            dbX.encodeStringWithPrefix(idfile, username);
+
+            
+            return 1;
+        }
+
 
 
         /**
@@ -1225,9 +1320,8 @@ class synchronizer{
 
             }
 
-            copy_config(backupDir, dirUUID, programPaths);
+            copy_for_restore(backupDir, dirUUID, programPaths);
 
-            
             // Load index file
             std::string indexPath = backupDir + "\\Index.csv";
             // Try to create the index file when it doesnt exist
@@ -1284,20 +1378,31 @@ class synchronizer{
             std::ifstream idFile(idPath);
             std::string id = database::read_lenght_prefix_encoded_string(idFile);
 
-
+            // std::cout << "ID: " << id;
             if(id != ProgramConfig::get_username()){ // Check if username is still valid
+                // std::cout << "Username: " << ProgramConfig::get_username();
 
-                transform_pathvector_new_username(H.pp, id); // Update username
+                transform_pathvector_new_username(H.pp, ProgramConfig::get_username()); // Update username
+                // std::cout << "H.pp first after transform: " << H.pp[0].first << "  SECOND: " << H.pp[0].second;
             }
 
-
-
+            if(!std::filesystem::exists(H.pp[0].second)){
+                transform_pathvector_new_exeLocation(H.pp, exeLocation);
+                // std::cout << "  H.pp first after exeLocation transform: " << H.pp[0].first << "  SECOND: " << H.pp[0].second;
+            }
             
             // Replace config
             for(const auto& pair : H.pp){
                 try{
-                    std::filesystem::permissions(pair.first, std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write);
-                    std::filesystem::remove(pair.first);
+                    if(std::filesystem::exists(pair.first)){
+                        std::filesystem::permissions(pair.first, std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write);
+                        std::filesystem::remove(pair.first);
+                    }
+                    else{ // File doesnt exist yet
+                        if(!std::filesystem::exists(std::filesystem::path(pair.first).parent_path())){ // Parent directory of file doesnt exist yet
+                            std::filesystem::create_directories(std::filesystem::path(pair.first).parent_path());
+                        }
+                    }
                     std::filesystem::copy_file(std::filesystem::path(pair.second), pair.first, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::update_existing);
                 }
                 catch(cfgsexcept& copyError){ // Error. Breaks for loop 
