@@ -510,12 +510,12 @@ int handleShowOption(char** argv, const boost::property_tree::ptree& pt, const s
             
             // Show Restore Snapshots:
             std::cout << ANSI_COLOR_166 << "Restore Snapshots: " << ANSI_COLOR_RESET << std::endl;
-            i = 0;
+            unsigned ii = 1;
             for(const auto& pair : IX.time_uuid){
-                std::cout << ANSI_COLOR_151 << i << ". " << synchronizer::timestamp_to_string(pair.first) << ANSI_COLOR_RESET << std::endl;
-                i++;
+                std::cout << ANSI_COLOR_151 << ii << ". " << synchronizer::timestamp_to_string(pair.first) << ANSI_COLOR_RESET << std::endl;
+                ii++;
             }
-            std::cout << "Found " << saveList.size() << " saves and " << i << " Restore Snapshots" << std::endl;
+            std::cout << "Found " << saveList.size() << " saves and " << ii << " Restore Snapshots" << std::endl;
         }
     }
 

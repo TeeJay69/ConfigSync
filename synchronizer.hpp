@@ -972,9 +972,8 @@ class synchronizer{
             
             char buffer[80];
             std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", tm);
-            
+
             return std::string(buffer);
-        
         }
 
         /**
@@ -1386,9 +1385,6 @@ class synchronizer{
                     throw cfgsexcept("Error creating index file\n");
                     logfile << logs::ms("Error creating index file\n");
                 }
-
-
-                indexFile << timestamp << "," << dirUUID << ",\n";
             }
 
             
@@ -1398,7 +1394,7 @@ class synchronizer{
                 throw cfgsexcept("Error creating index file\n");
                 logfile << logs::ms("Error creating index file\n");
             }
-            indexFile << timestamp << "," << dirUUID << ",\n";
+            indexFile << timestamp() << "," << dirUUID << ",\n";
 
             indexFile.close();
 
