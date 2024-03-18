@@ -246,7 +246,7 @@ class ProgramConfig {
                 {
                     "Deemix",
                     {roaming},
-                    exeLocation + "\\ConfigArchive\\JDownloader",
+                    exeLocation + "\\ConfigArchive\\Deemix",
                     {},
                     false,
                     {"win-x64-latest.exe", "deemix-gui.exe"},
@@ -1242,11 +1242,24 @@ class synchronizer{
             const std::string replace = newLocationDoubleSlash + "\\\\ConfigArchive\\";
 
             for(auto& pair : vecPair){
-                std::string newValue = boost::regex_replace(pair.second, repPattern, replace);
+                const std::string newValue = boost::regex_replace(pair.second, repPattern, replace);
                 pair = std::make_pair(pair.first, newValue);
             }
         }
-
+        
+        /**
+         * @brief Replace the root of paths pointing into the ConfigArchive. 
+         * @param vecPair Pathvector from hashbase
+         * @param newRoot New root
+         */
+        static void transform_pathvector_new_root(std::vector<std::pair<std::string,std::string>>& vecPair, const std::string& newRoot){
+            const boost::regex repPattern(".:");
+            
+            for(auto& pair : vecPair){
+                const std::string newValue = boost::regex_replace(pair.second, repPattern, newRoot);
+                pair = std::make_pair(pair.first, newValue);
+            }
+        }
 
         int copy_for_restore(const std::string& backupDir, const std::string& UUID, std::vector<std::string> programPaths){
             
@@ -1417,7 +1430,11 @@ class synchronizer{
             std::ifstream idFile(idPath);
             std::string id = database::read_lenght_prefix_encoded_string(idFile);
 
-            // std::cout << "ID: " << id;
+            const std::string root = std::filesystem::path(exeLocation).root_name().string();
+            if(std::filesystem::path(H.pp[0].second).root_name().string() != root){
+                transform_pathvector_new_root(H.pp, root);
+            } 
+            
             if(id != ProgramConfig::get_username()){ // Check if username is still valid
                 // std::cout << "Username: " << ProgramConfig::get_username();
 
@@ -1429,6 +1446,7 @@ class synchronizer{
                 transform_pathvector_new_exeLocation(H.pp, exeLocation);
                 // std::cout << "  H.pp first after exeLocation transform: " << H.pp[0].first << "  SECOND: " << H.pp[0].second;
             }
+            
             
             // Replace config
             for(const auto& pair : H.pp){

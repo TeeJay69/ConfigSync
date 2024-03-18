@@ -35,6 +35,7 @@
 using std::string;
 
 volatile sig_atomic_t interrupt = 0;
+int verbose = 0;
 
 void enableColors(){
     DWORD consoleMode;
@@ -838,13 +839,11 @@ int main(int argc, char* argv[]){
     
     // Get location of program
     const std::string exePath = boost::dll::program_location().parent_path().string();
+    const std::string root = boost::dll::program_location().root_name().string();
     const std::string settingsPath = exePath + "\\settings.json";
     const std::string batPath = exePath + "\\cfgs.bat";
     const std::string taskName = "ConfigSyncTask";
     std::ofstream logfile = logs::session_log(exePath, 50); // Create logfileile
-
-    // Universal operands:
-    int verbose = 0;
     
     // Classes
     defaultsetting DS;
@@ -942,7 +941,6 @@ int main(int argc, char* argv[]){
     
 
 
-    /* Parse command line options: */
 
     if(argv[1] == NULL){ // No params, display Copyright Notice
         std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
@@ -952,11 +950,13 @@ int main(int argc, char* argv[]){
         std::exit(EXIT_SUCCESS);
     }
 
+    /* Parse operands */
     if(argcmp(argv, &argc, "--verbose") == 1 || argcmp(argv, &argc, "-v") == 1){
         verbose = 1;
     }
 
-    else if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version"){ // Version param
+    /* Parse options: */
+    if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version"){ // Version param
         std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber. All rights reserved." << std::endl;
         std::cout << "Synchronize program configurations." << std::endl;
@@ -987,6 +987,8 @@ int main(int argc, char* argv[]){
         std::cout << "--version                     Display version and copyright disclaimer.\n\n";
         std::cout << "Operands:\n";
         std::cout << "[...] --force                 Kills running instances before, to avoid errors.\n";
+        std::cout << "[...] --verbose, -v           Enable verbose mode.\n";
+        if(verbose){std::cout << "Verbose mode enabled!!!"<<std::endl;}
         std::exit(EXIT_SUCCESS);
     }
 

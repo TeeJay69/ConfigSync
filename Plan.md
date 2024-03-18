@@ -183,6 +183,11 @@ Install-Location
 - [ ] Option to install on a USB stick, so that the archive is on the flash drive and restoring on a new pc is easier. (Implement as a portable release)
 
 
+## Known Bugs:
+- [Closed] Restoring from an external drive while an existing ConfigSync installation with the same ConfigArchive is present on another drive  is not possible. (Fixed by changing order of checks used before transforming pathvectors)
+
+
+
 ## Trashcan:
 <!-- 
         else if(std::string(argv[2]) == "all" || std::string(argv[2]) == "--all"){ // '--all' subparam
