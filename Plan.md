@@ -7,10 +7,10 @@
     - [x] qBittorrent
     - [x] Prowlarr
     - [x] Jackett
-    - [ ] JDownloader
-    - [ ] Microsoft PowerToys
-    - [ ] bckup Compress-Log
+    - [x] JDownloader
+    - [x] Microsoft PowerToys
     - [ ] Cura Slicer
+    - [ ] bckup Compress-Log
       [ ]   - Backup whole install in ProgramData\Jackett
     - [ ] Fusion360
     - [ ] Chrome
@@ -181,7 +181,8 @@ Install-Location
 - [ ] Verify settings file using hash function.
 - [ ] Support running program through explorer
 - [ ] Option to install on a USB stick, so that the archive is on the flash drive and restoring on a new pc is easier. (Implement as a portable release)
-
+- [ ] Option to open archive in explorer
+- [ ] Option to open log file when program paths not found (The warning message)
 
 ## Known Bugs:
 - [Closed] Restoring from an external drive while an existing ConfigSync installation with the same ConfigArchive is present on another drive  is not possible. (Fixed by changing order of checks used before transforming pathvectors)

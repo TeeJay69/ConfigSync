@@ -143,14 +143,6 @@ class ProgramConfig {
             const bool hasGroups;
             const std::vector<std::string> processNames;
         };
-        
-        enum supported {
-            Jackett,
-            Prowlarr,
-            qBittorrent,
-            JDownloader,
-            Deemix,
-        };
 
         /**
          * @brief Returns a set containing all supported programs. Includes multiple name variations. 
@@ -164,19 +156,25 @@ class ProgramConfig {
                 "JDownloader", "jdownloader", "Jdownloader", "jDownloader",
                 "Deemix", "deemix",
                 "PowerToys", "powertoys", "Microsoft.PowerToys", "microsoft.powertoys",
+                "VisualStudioCode", "VsCode", "vscode", "Vscode", "VScode", "VSCODE",
+                "Visual-Studio-Code", "visual-studio-code", "VSCode", "Microsoft.VisualStudioCode",
+                "CuraSlicer", "UltimakerCura", "Ultimaker-Cura", "Ultimaker.Cura", "ultimaker.cura",
+                "Cura", "Cura-Slicer", "Cura-slicer", "cura" 
             };
             
             return list;
         }
 
-        static const std::unordered_set<std::string> get_unique_support_list(){
-            std::unordered_set<std::string> list = {
+        static const std::set<std::string> get_unique_support_list(){
+            std::set<std::string> list = {
                 "Jackett",
                 "Prowlarr",
                 "qBittorrent",
                 "JDownloader",
                 "Deemix",
                 "Microsoft.PowerToys",
+                "Microsoft.VisualStudioCode",
+                "Ultimaker.Cura",
             };
 
             return list;
@@ -185,6 +183,31 @@ class ProgramConfig {
         static const std::string get_username(){
             const std::string x = std::getenv("username");
             return x;
+        }
+
+        /**
+         * @brief Get current installed version of Cura Slicer
+         * @param userName Username
+         * @note only versions above 4.0 will be returned 
+         */
+        static const std::string Get_Cura_Version(const std::string& userName){
+            const std::string roamingPath = "C:\\Users\\" + userName + "\\AppData\\Roaming\\cura\\";
+            unsigned i = 0; // matches
+            std::string ret;
+            for(const auto& entry : std::filesystem::directory_iterator(roamingPath)){
+                if(std::filesystem::is_directory(entry.path())){
+                    const std::string fname = entry.path().filename().string();
+                    if(std::stof(fname) >= 4.0){ // Check version
+                        i++;
+                        ret = fname;
+                    }
+                }
+            }
+            if(i <= 1){
+                return ret;
+            }
+            
+            return {};
         }
 
         const ProgramInfo get_ProgramInfo(const std::string& pName){
@@ -262,6 +285,34 @@ class ProgramConfig {
                     {},
                     false,
                     {"PowerToys.ActionRunner.exe","PowerToys.AlwaysOnTop.exe", "PowerToys.Awake.exe", "PowerToys.ColorPickerUI.exe", "PowerToys.CropAndLock.exe", "PowerToys.exe", "PowerToys.FancyZones.exe", "PowerToys.FancyZonesEditor.exe","PowerToys.GcodePreviewHandler.exe","PowerToys.GcodeThumbnailProvider.exe","PowerToys.ImageResizer.exe","PowerToys.MarkdownPreviewHandler.exe","PowerToys.MonacoPreviewHandler.exe","PowerToys.MouseJumpUI.exe","PowerToys.MouseWithoutBorders.exe","PowerToys.MouseWithoutBordersHelper.exe","PowerToys.MouseWithoutBordersService.exe","PowerToys.PdfPreviewHandler.exe","PowerToys.PdfThumbnailProvider.exe","PowerToys.PowerAccent.exe","PowerToys.PowerLauncher.exe","PowerToys.PowerOCR.exe","PowerToys.QoiPreviewHandler.exe","PowerToys.QoiThumbnailProvider.exe","PowerToys.ShortcutGuide.exe","PowerToys.StlThumbnailProvider.exe","PowerToys.SvgPreviewHandler.exe","PowerToys.SvgThumbnailProvider.exe","PowerToys.Update.exe","PowerToys.KeyboardManagerEditor.exe","PowerToys.KeyboardManagerEngine.exe","PowerToys.BugReportTool.exe","PowerToys.StylesReportTool.exe","PowerToys.WebcamReportTool.exe","PowerToys.EnvironmentVariables.exe","PowerToys.FileLocksmithUI.exe","PowerToys.Hosts.exe","PowerToys.MeasureToolUI.exe","PowerToys.Peek.UI.exe","PowerToys.PowerRename.exe","PowerToys.RegistryPreview.exe","PowerToys.Settings.exe","RestartAgent.exe",}   
+                };
+            }
+            else if(pName == "Microsoft.VisualStudioCode" || pName == "VisualStudioCode" || pName == "VsCode" || pName == "vscode" || pName == "Vscode" || pName == "VScode" || pName == "VSCODE" || pName == "Visual-Studio-Code" || pName == "visual-studio-code" || pName == "VSCode"){
+                const std::string settings = "C:\\Users\\" + userName + "\\AppData\\Roaming\\Code\\User\\settings.json";
+                const std::string keybindings = "C:\\Users\\" + userName + "\\AppData\\Roaming\\Code\\User\\keybindings.json";
+                const std::string tasks = "C:\\Users\\" + userName + "\\AppData\\Roaming\\Code\\User\\tasks.json";
+                return
+                {
+                    "Microsoft.VisualStudioCode",
+                    {settings, keybindings, tasks},
+                    exeLocation + "\\ConfigArchive\\Microsoft.VisualStudioCode",
+                    {},
+                    false,
+                    {"Code.exe", "cpptools.exe"}
+                };
+            }
+
+            else if(pName == "CuraSlicer" || pName == "UltimakerCura" || pName == "Ultimaker-Cura" || pName == "Ultimaker.Cura" || pName == "ultimaker.cura" || pName == "Cura" || pName == "Cura-Slicer" || pName == "Cura-slicer" || pName == "cura") {
+                const std::string curaVersion = Get_Cura_Version(userName);
+                const std::string roaming = "C:\\Users\\" + userName + "\\AppData\\Roaming\\cura\\" + curaVersion;
+                return
+                {
+                    "Ultimaker.Cura",
+                    {roaming},
+                    exeLocation + "\\ConfigArchive\\Ultimaker.Cura",
+                    {},
+                    false,
+                    {"UltiMaker-Cura.exe", "CuraEngine.exe"}
                 };
             }
 

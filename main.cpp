@@ -1,7 +1,7 @@
 #include <iostream>
 #include <filesystem>
 #include <algorithm>
-#include <vector>
+#include <vector>   
 #include <cstdlib>
 #include <map>
 #include <chrono>
@@ -501,8 +501,8 @@ int handleShowOption(char** argv, const boost::property_tree::ptree& pt, const s
             const auto &IX = anly.get_Index(pInfo.programName, exePath);
 
             std::cout << ANSI_COLOR_222 << "Showing " << pInfo.programName << ":" << ANSI_COLOR_RESET << std::endl;
-            std::cout << ANSI_COLOR_166 << "Snapshots: " << ANSI_COLOR_RESET << std::endl;
             unsigned i = 1;
+            std::cout << ANSI_COLOR_166 << "Snapshots: " << ANSI_COLOR_RESET << std::endl;
             for(const auto& save : saveList){ // Show all saves
                 std::cout << ANSI_COLOR_146 << i << ". " << save << ANSI_COLOR_RESET << std::endl;
                 i++;
@@ -510,12 +510,17 @@ int handleShowOption(char** argv, const boost::property_tree::ptree& pt, const s
             
             // Show Restore Snapshots:
             std::cout << ANSI_COLOR_166 << "Restore Snapshots: " << ANSI_COLOR_RESET << std::endl;
-            unsigned ii = 1;
+            unsigned ii = 0;
             for(const auto& pair : IX.time_uuid){
-                std::cout << ANSI_COLOR_151 << ii << ". " << synchronizer::timestamp_to_string(pair.first) << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_151 << ii + 1 << ". " << synchronizer::timestamp_to_string(pair.first) << ANSI_COLOR_RESET << std::endl;
                 ii++;
             }
-            std::cout << "Found " << saveList.size() << " saves and " << ii << " Restore Snapshots" << std::endl;
+            if(saveList.size() == 1){
+                std::cout << "Found " << saveList.size() << " save and " << ii << " Restore Snapshots" << std::endl;
+            }
+            else{
+                std::cout << "Found " << saveList.size() << " saves and " << ii << " Restore Snapshots" << std::endl;
+            }
         }
     }
 
@@ -870,7 +875,7 @@ int main(int argc, char* argv[]){
         pt.put("savelimit", DS.savelimit);
         pt.put("task", DS.task);
         pt.put("taskfrequency", DS.taskfrequency);
-
+    
 
         try{
             std::cout << "Writing settings file..." << std::endl;
@@ -943,7 +948,7 @@ int main(int argc, char* argv[]){
 
 
     if(argv[1] == NULL){ // No params, display Copyright Notice
-        std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
+        std::cout << "ConfigSync (JW-CoreUtils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber. All rights reserved." << std::endl;
         std::cout << "Synchronize program configurations." << std::endl;
         std::cout << "See 'cfgs --help' for usage." << std::endl;
