@@ -1,12 +1,11 @@
 Files:
 main.cpp
-analyzer.hpp
-programs.hpp
 synchronizer.hpp
-database.hpp
-organizer.hpp
-ANSIcolor.hpp
 .restorepoint
 Plan.md
+changelog.md
 .versiontool
+ISS.iss
+ANSIcolor.hpp
+Copyright-Disclaimer.md
 ######

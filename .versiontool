@@ -1,11 +1,9 @@
 Files and directories included in version:
 main.cpp
-programs.hpp
-analyzer.hpp
 synchronizer.hpp
-database.hpp
-organizer.hpp
 ANSIcolor.hpp
+ConfigSync-Setup.exe
+ISS.iss
 ----------
 Compile command:
 g++ main.cpp -std=c++23 -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -lbcrypt -lssl -lcrypto -l:libboost_filesystem-mgw13-mt-x64-1_84.a -lz
@@ -14,40 +12,5 @@ Alias:
 configsync
 cfgs
 cfgsync
-----------zz
-
- ntdll.dll => /c/Windows/SYSTEM32/ntdll.dll (0x7ffa84b10000)
-        KERNEL32.DLL => /c/Windows/System32/KERNEL32.DLL (0x7ffa84300000)
-        KERNELBASE.dll => /c/Windows/System32/KERNELBASE.dll (0x7ffa821d0000)
-        bcrypt.dll => /c/Windows/System32/bcrypt.dll (0x7ffa82880000)
-        ucrtbase.dll => /c/Windows/System32/ucrtbase.dll (0x7ffa82710000)
-        libwinpthread-1.dll => /ucrt64/bin/libwinpthread-1.dll (0x7ffa73580000)
-        libcrypto-3-x64.dll => /ucrt64/bin/libcrypto-3-x64.dll (0x7ffa05360000)
-        ADVAPI32.dll => /c/Windows/System32/ADVAPI32.dll (0x7ffa82e40000)
-        msvcrt.dll => /c/Windows/System32/msvcrt.dll (0x7ffa84260000)
-        sechost.dll => /c/Windows/System32/sechost.dll (0x7ffa82b50000)
-        RPCRT4.dll => /c/Windows/System32/RPCRT4.dll (0x7ffa83f40000)
-        CRYPT32.dll => /c/Windows/System32/CRYPT32.dll (0x7ffa82580000)
-        USER32.dll => /c/Windows/System32/USER32.dll (0x7ffa848e0000)
-        win32u.dll => /c/Windows/System32/win32u.dll (0x7ffa826e0000)
-        GDI32.dll => /c/Windows/System32/GDI32.dll (0x7ffa84aa0000)
-        gdi32full.dll => /c/Windows/System32/gdi32full.dll (0x7ffa828b0000)
-        msvcp_win.dll => /c/Windows/System32/msvcp_win.dll (0x7ffa82ab0000)
-        WS2_32.dll => /c/Windows/System32/WS2_32.dll (0x7ffa83880000)
-ntdll.dll => /c/Windows/SYSTEM32/ntdll.dll (0x7ffa84b10000)
-        KERNEL32.DLL => /c/Windows/System32/KERNEL32.DLL (0x7ffa84300000)
-        KERNELBASE.dll => /c/Windows/System32/KERNELBASE.dll (0x7ffa821d0000)
-        bcrypt.dll => /c/Windows/System32/bcrypt.dll (0x7ffa82880000)
-        ucrtbase.dll => /c/Windows/System32/ucrtbase.dll (0x7ffa82710000)
-        libcrypto-3-x64.dll => /ucrt64/bin/libcrypto-3-x64.dll (0x7ff9f9720000)
-        ADVAPI32.dll => /c/Windows/System32/ADVAPI32.dll (0x7ffa82e40000)
-        msvcrt.dll => /c/Windows/System32/msvcrt.dll (0x7ffa84260000)
-        sechost.dll => /c/Windows/System32/sechost.dll (0x7ffa82b50000)
-        RPCRT4.dll => /c/Windows/System32/RPCRT4.dll (0x7ffa83f40000)
-        CRYPT32.dll => /c/Windows/System32/CRYPT32.dll (0x7ffa82580000)
-        USER32.dll => /c/Windows/System32/USER32.dll (0x7ffa848e0000)
-        win32u.dll => /c/Windows/System32/win32u.dll (0x7ffa826e0000)
-        GDI32.dll => /c/Windows/System32/GDI32.dll (0x7ffa84aa0000)
-        gdi32full.dll => /c/Windows/System32/gdi32full.dll (0x7ffa828b0000)
-        msvcp_win.dll => /c/Windows/System32/msvcp_win.dll (0x7ffa82ab0000)
-        WS2_32.dll => /c/Windows/System32/WS2_32.dll (0x7ffa83880000)
+ConfigSync
+----------
