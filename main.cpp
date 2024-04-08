@@ -35,8 +35,8 @@
 using std::string;
 
 volatile sig_atomic_t interrupt = 0;
-int verbose = 0;
 
+int verbose = 0;
 void enableColors(){
     DWORD consoleMode;
     HANDLE outputHandle = GetStdHandle(STD_OUTPUT_HANDLE);

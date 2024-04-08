@@ -945,6 +945,7 @@ class organizer{
                 std::sort(itemList.begin(), itemList.end());
                 
                 try{
+                    std::filesystem::permissions(itemList[0], std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write);
                     std::filesystem::remove(itemList[0]); // remove oldest save
                     limit_enforcer_configarchive(maxdirs, savepath); // Self reference
                 }
