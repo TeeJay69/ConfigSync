@@ -4,3 +4,8 @@ ConfigArchive
 logs
 ConfigBackup
 Versions
+tests/*.exe
+restorepoint-v1.0.0.exe
+settings.json
+ConfigSync.exe
+settings.json

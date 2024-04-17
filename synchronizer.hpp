@@ -58,14 +58,14 @@ class cfgsexcept : public std::exception {
  * @param path Target
  * @note Can delete read only files. Permissions are modified before removal.
  */
-static void recurse_remove(const std::filesystem::path& path){
+void recurse_remove(const std::filesystem::path& path){
     for(const auto& entry : std::filesystem::recursive_directory_iterator(path)){
         if(entry.is_directory()){
             recurse_remove(entry);
         }
         else{
-            std::filesystem::permissions(entry, std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write);
-            std::filesystem::remove(entry);/*  */
+            std::filesystem::permissions(entry, std::filesystem::perms::all);
+            std::filesystem::remove(entry);
         }
     }
 }
@@ -945,8 +945,7 @@ class organizer{
                 std::sort(itemList.begin(), itemList.end());
                 
                 try{
-                    std::filesystem::permissions(itemList[0], std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write);
-                    std::filesystem::remove(itemList[0]); // remove oldest save
+                    recurse_remove(itemList[0]); // remove oldest save
                     limit_enforcer_configarchive(maxdirs, savepath); // Self reference
                 }
                 catch(std::filesystem::filesystem_error& error){
@@ -1224,7 +1223,7 @@ class synchronizer{
 
             for(const auto& pair : H.pp){
                 try{
-                    std::filesystem::permissions(pair.first, std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write);
+                    std::filesystem::permissions(pair.first, std::filesystem::perms::all);
                     std::filesystem::remove(pair.first);
                     std::filesystem::copy_file(std::filesystem::path(pair.second), pair.first, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::update_existing);
                 }
@@ -1500,7 +1499,7 @@ class synchronizer{
             for(const auto& pair : H.pp){
                 try{
                     if(std::filesystem::exists(pair.first)){
-                        std::filesystem::permissions(pair.first, std::filesystem::perms::owner_write | std::filesystem::perms::group_write | std::filesystem::perms::others_write);
+                        std::filesystem::permissions(pair.first, std::filesystem::perms::all);
                         std::filesystem::remove(pair.first);
                     }
                     else{ // File doesnt exist yet

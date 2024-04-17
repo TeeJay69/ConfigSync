@@ -827,8 +827,8 @@ class task{
  */
 class defaultsetting{
     public:
-        const int savelimit = 3;
-        const int recyclelimit = 3;
+        const int savelimit = 60;
+        const int recyclelimit = 60;
         const bool task = false;
         const std::string taskfrequency = "daily,1";
 };
@@ -969,7 +969,7 @@ int main(int argc, char* argv[]){
     }
 
     else if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h"){ // Help message param
-        std::cout << "ConfigSync (JW-Coreutils) " << VERSION << std::endl;
+        std::cout << "ConfigSync (JW-CoreUtils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
         std::cout << "usage: cfgs [OPTIONS]... [PROGRAM]" << std::endl;
         std::cout << std::endl;
@@ -1058,7 +1058,7 @@ int main(int argc, char* argv[]){
 
             std::cout << "For reset, see 'cfgs settings.reset'" << std::endl;
         }
-
+        
         else if(std::string(argv[2]) == "--help"){
             std::cout << "Settings options overview:\n";
             std::cout << "Usage: settings.[SETTING] [VALUE]\n";

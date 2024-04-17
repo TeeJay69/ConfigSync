@@ -1,7 +1,0 @@
-
-Error: 87
-
-The /Image option is missing a required argument. 
-For more information, refer to the help by running DISM /Image /?.
-
-The DISM log file can be found at X:\windows\Logs\DISM\dism.log
