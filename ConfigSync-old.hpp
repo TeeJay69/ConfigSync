@@ -1,5 +1,5 @@
-#ifndef SYNCHRONIZER_HPP
-#define SYNCHRONIZER_HPP
+#ifndef CONFIGSYNC_HPP
+#define CONFIGSYNC_HPP
 
 #include <iostream>
 #include <string>
