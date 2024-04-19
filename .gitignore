@@ -10,3 +10,8 @@ settings.json
 ConfigSync.exe
 settings.json
 main-old.cpp
+plan-old.md
+~.gitignore
+.gitignore.swp
+..gitinore.un~
+ConfigSync-old.hpp

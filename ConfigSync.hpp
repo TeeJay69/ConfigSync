@@ -35,6 +35,7 @@ extern const std::string uName;
 extern const int log_limit_extern;
 extern std::string pLocat;
 extern const std::string sessionStamp;
+extern std::string archiveDir;
 
 namespace CS {
     class Args {
@@ -70,6 +71,20 @@ namespace CS {
                         if(i + 1 < argc){
                             buff = argv[i+1]; // I dunno if we have to resize buff before assigning, we'll see if it fails...
                             return 1;
+                        }
+                    }
+                }
+                return 0;
+            }
+
+            static int argfcmp(std::string& buff, char** argv, int argc, const char* cmp[], int cmp_size){
+                for(int i = 0; i < cmp_size; i++){
+                    for(int ii = 0; ii < argc; ii++){
+                        if(strcmp(argv[ii], cmp[i]) == 0){
+                            if(ii + 1 < argc){
+                                buff = argv[i + 1];
+                                return 1;
+                            }
                         }
                     }
                 }
@@ -119,6 +134,16 @@ namespace CS {
                 const uint64_t t = std::chrono::system_clock::to_time_t(timePoint);
                 
                 return t;
+            }
+
+            static const uint64_t day_timestamp() {
+                // Get the current time point
+                std::chrono::time_point<std::chrono::system_clock> timePoint = std::chrono::system_clock::now();
+                // Convert to time_t (seconds since the Unix epoch)
+                const uint64_t t = std::chrono::system_clock::to_time_t(timePoint);
+                // Convert to days since the epoch, then back to seconds at the start of the day
+                uint64_t dayTimestamp = (t / 86400) * 86400;
+                return dayTimestamp;
             }
 
             static unsigned long long timestamp_ull(){
@@ -352,7 +377,7 @@ namespace CS {
              * @note Optional parameter requires a map inside a reference_wrapper container, created in part with std::ref(normMap). normMap is modified and can be used like normal afterwards.
              */
             static int recurse_copy(const std::filesystem::path& source, const std::string& destination,
-                                    std::optional<std::reference_wrapper<std::map<std::string, std::string>>> map = std::nullopt,
+                                    std::optional<std::reference_wrapper<std::unordered_map<std::string, std::string>>> map = std::nullopt,
                                     std::optional<std::reference_wrapper<std::vector<std::pair<std::string,std::string>>>> pp = std::nullopt){
 
                 if(std::filesystem::is_directory(source)){
@@ -560,15 +585,15 @@ namespace CS {
             struct has_save_traits<T, std::void_t<
                 decltype(std::declval<T>().userName),
                 decltype(std::declval<T>().driveLetter),
-                decltype(std::declval<T>().pathMap)
+                decltype(std::declval<T>().pathVec)
                 >> : std::integral_constant<bool,
                 std::is_same<decltype(std::declval<T>().userName), std::string>::value &&
                 std::is_same<decltype(std::declval<T>().driveLetter), std::string>::value &&
-                std::is_same<decltype(std::declval<T>().pathMap), std::unordered_map<std::string, std::string>>::value>
+                std::is_same<decltype(std::declval<T>().pathVec), std::vector<std::pair<std::string, std::string>>>::value>
             {};
 
             template <typename T, typename std::enable_if<has_save_traits<T>::value, int>::type = 0> 
-            static inline void serialize(std::ofstream& of, std::unordered_map<std::string, std::unordered_map<uint64_t, T>>& m){
+            static inline void serialize(std::ofstream& of, std::unordered_map<std::string, std::map<uint64_t, T>>& m){
                 if(!of){throw std::runtime_error("invalid ofstream");}
                 size_t mSize = m.size();
                 of.write((char *)&mSize, sizeof(mSize));
@@ -586,22 +611,22 @@ namespace CS {
                         size_t driveSz = nestpair.second.driveLetter.length();
                         of.write((char *)&driveSz, sizeof(driveSz));
                         of.write(nestpair.second.driveLetter.c_str(), driveSz);
-                        size_t pathmapSz = nestpair.second.pathMap.size();
-                        of.write((char *)&pathmapSz, sizeof(pathmapSz));
-                        for(const auto& pathpair : nestpair.second.pathMap){
-                            size_t pathKeySz = pathpair.first.length();
-                            of.write((char *)&pathKeySz, sizeof(pathKeySz));
-                            of.write(pathpair.first.c_str(), pathKeySz);
-                            size_t pathValSz = pathpair.second.length();
-                            of.write((char *)&pathValSz, sizeof(pathValSz));
-                            of.write(pathpair.second.c_str(), pathValSz);
+                        size_t pathvecSz = nestpair.second.pathVec.size();
+                        of.write((char *)&pathvecSz, sizeof(pathvecSz));
+                        for(const auto& pathpair : nestpair.second.pathVec){
+                            size_t pathASz = pathpair.first.length();
+                            of.write((char *)&pathASz, sizeof(pathASz));
+                            of.write(pathpair.first.c_str(), pathASz);
+                            size_t pathBSz = pathpair.second.length();
+                            of.write((char *)&pathBSz, sizeof(pathBSz));
+                            of.write(pathpair.second.c_str(), pathBSz);
                         }
                     }
                 }
             }
 
             template <typename T, typename std::enable_if<has_save_traits<T>::value, int>::type = 0>
-            static inline void deserialize(std::ifstream& in, std::unordered_map<std::string, std::unordered_map<uint64_t, T>>& m){
+            static inline void deserialize(std::ifstream& in, std::unordered_map<std::string, std::map<uint64_t, T>>& m){
                 if(!in){throw std::runtime_error("invalid ifstream");}
                 size_t contElem;
                 size_t *contElemP = &contElem;
@@ -629,21 +654,21 @@ namespace CS {
                         in.read((char *)driveSz, sizeof(driveSzStack));
                         std::string drive(*driveSz, '\0');
                         in.read(drive.data(), *driveSz);
-                        size_t pathmapSzStack;
-                        size_t *pathmapSz = &pathmapSzStack;
-                        in.read((char *)pathmapSz, sizeof(pathmapSzStack));
-                        for(unsigned iii = 0; iii < *pathmapSz; iii++){
-                            size_t pathKeySzStack;
-                            size_t *pathKeySz = pathKeySzStack;
-                            in.read((char *)pathKeySz, sizeof(pathKeySzStack));
-                            std::string pathKey(*pathKeySz, '\0');
-                            in.read(pathKey.data(), *pathKeySz);
-                            size_t pathValSzStack;
-                            size_t *pathValSz = &pathValSzStack;
-                            in.read((char *)pathValSz, sizeof(pathValSzStack));
-                            std::string pathVal(*pathValSz, '\0');
-                            in.read(pathVal.data(), *pathValSz);
-                            T save = {uname, drive, {{pathKey, pathVal}}};
+                        size_t pathvecSzStack;
+                        size_t *pathvecSz = &pathvecSzStack;
+                        in.read((char *)pathvecSz, sizeof(pathvecSzStack));
+                        for(unsigned iii = 0; iii < *pathvecSz; iii++){
+                            size_t pathASzStack;
+                            size_t *pathASz = pathASzStack;
+                            in.read((char *)pathASz, sizeof(pathASzStack));
+                            std::string pathA(*pathASz, '\0');
+                            in.read(pathA.data(), *pathASz);
+                            size_t pathBSzStack;
+                            size_t *pathBSz = &pathBSzStack;
+                            in.read((char *)pathBSz, sizeof(pathBSzStack));
+                            std::string pathB(*pathBSz, '\0');
+                            in.read(pathB.data(), *pathBSz);
+                            T save = {uname, drive, {std::make_pair(pathA, pathB)}};
                             m[key] = {{ull, save}};
                         }
                     }
@@ -665,7 +690,7 @@ namespace CS {
 
             class Mgm {
                 private:
-                    std::unordered_map<std::string, PInfo> programs;
+                    std::unordered_map<std::string, PInfo> _programs;
                     std::unordered_map<std::string, std::string> aliasMap;
                     std::set<std::string, CS::Utility::CaseInsensitiveCompare> sup;
                 public:
@@ -694,13 +719,13 @@ namespace CS {
                         add("Ultimaker.Cura", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\cura\\" + get_cura_vers()}, {"UltiMaker-Cura.exe", "CuraEngine.exe"});
                         setAlias("Ultimaker.Cura", {"CuraSlicer", "UltimakerCura", "Ultimaker-Cura", "Ultimaker.Cura", "ultimaker.cura", "Cura", "Cura-Slicer", "Cura-slicer", "cura"});
 
-                        for(const auto& pair : programs){
+                        for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
                     }
 
                     inline void add(const std::string& name, const std::vector<std::string>& paths, const std::vector<std::string>& procNames){
-                        programs[name] = PInfo(name, paths, procNames);
+                        _programs[name] = PInfo(name, paths, procNames);
                     }
 
                     inline void setAlias(const std::string& canonical, const std::vector<std::string>& aliases){
@@ -714,7 +739,7 @@ namespace CS {
                     }
 
                     inline int checkName(const std::string& name){
-                        if(programs.find(name) != programs.end()){
+                        if(_programs.find(name) != _programs.end()){
                             return 1;
                         }
                         else if(aliasMap.find(name) == aliasMap.end()){
@@ -724,7 +749,7 @@ namespace CS {
                     }
 
                     inline std::string get_canonical(const std::string& name){
-                        if(programs.find(name) != programs.end()){
+                        if(_programs.find(name) != _programs.end()){
                             return name;
                         }
                         auto aliasIt = aliasMap.find(name);
@@ -756,6 +781,10 @@ namespace CS {
                             return ret;
                         }
                         return {};
+                    }
+
+                    inline std::unordered_map<std::string,PInfo>& programs(){
+                        return _programs;
                     }
             };
     };
@@ -798,12 +827,13 @@ namespace CS {
             struct InternalSave {
                 std::string userName;
                 std::string driveLetter;
-                std::unordered_map<std::string, std::string> pathMap;
+                std::vector<std::pair<std::string,std::string>> pathVec;
                 InternalSave() = default;
-                InternalSave(const std::string& username, const std::string& drive, const std::unordered_map<std::string, std::string>& paths) : userName {username}, driveLetter {drive}, pathMap {paths} {}
+                InternalSave(const std::string& username, const std::string& drive, const std::vector<std::pair<std::string,std::string>>& paths)
+                 : userName {username}, driveLetter {drive}, pathVec {paths} {}
             };
             const std::string _file;
-            std::unordered_map<std::string, std::unordered_map<uint64_t, InternalSave>> _saves;
+            std::unordered_map<std::string, std::map<uint64_t, InternalSave>> _saves;
 
         public:
             Saves(const std::string& fpath) : _file(fpath) {}
@@ -812,7 +842,7 @@ namespace CS {
                 std::string program;
                 std::string username;
                 std::string driveletter;
-                std::unordered_map<std::string, std::string> pathmap;
+                std::vector<std::pair<std::string,std::string>> pathvec;
             };
 
             inline int load(){
@@ -843,16 +873,16 @@ namespace CS {
                 return 1;
             }
 
-            inline void add(const std::string& program, const uint64_t& tst, const std::string& username, const std::string& driveletter, const std::unordered_map<std::string, std::string>& pathmap){
-                _saves[program][tst] = InternalSave(username, driveletter, pathmap);
+            inline void add(const std::string& program, const std::string& username, const std::string& driveletter, const std::vector<std::pair<std::string,std::string>>& pathvec, const uint64_t& tst){
+                _saves[program][tst] = InternalSave(username, driveletter, pathvec);
             }
 
-            inline void add(const std::string& program, const std::string& username, const std::string& drive, const std::unordered_map<std::string,std::string>& pathmap){
-                _saves[program][CS::Utility::timestamp()] = InternalSave(username, drive, pathmap);
+            inline void add(const std::string& program, const std::string& username, const std::string& drive, const std::vector<std::pair<std::string,std::string>>& pathvec){
+                _saves[program][CS::Utility::timestamp()] = InternalSave(username, drive, pathvec);
             }
 
             inline void add(const PublicSave& ps_){
-                _saves[ps_.program][CS::Utility::timestamp()] = InternalSave(ps_.username, ps_.driveletter, ps_.pathmap);
+                _saves[ps_.program][CS::Utility::timestamp()] = InternalSave(ps_.username, ps_.driveletter, ps_.pathvec);
             }
 
             inline int erase_program(const std::string& prog){
@@ -868,7 +898,108 @@ namespace CS {
                 }
                 return 1;
             }
+
+            inline int find_save(const std::string& prog, const uint64_t& tst){
+                if(_saves[prog].find(tst) == _saves[prog].end()){
+                    return 0;
+                }
+                return 1;
+            }
+
+            inline uint64_t get_last_tst(const std::string& prog){
+                if(_saves.find(prog) == _saves.end()){
+                    return 0;
+                }
+
+                return _saves[prog].rbegin()->first;
+            }
+
+            inline InternalSave get_lastsave(const std::string& prog){
+                if(_saves.find(prog) == _saves.end()){
+                    return {};
+                }
+
+                return _saves[prog].rbegin()->second;
+            }
+
+            inline uint64_t get_oldest_tst(const std::string& prog){
+                return _saves[prog].rend()->first;
+            }
+
+            inline InternalSave get_oldestsave(const std::string& prog){
+                return _saves[prog].rend()->second;
+            }
+
+            inline std::unordered_map<std::string, std::map<uint64_t, InternalSave>>& saves(){
+                return _saves;
+            }
     };
+
+    class Task {
+        public:
+            /**
+             * @brief Creates a new task in the windows task scheduler.
+             * @param taskname The name for the scheduled task.
+             * @param target The file path to the target of the task.
+             * @param taskfrequency The intervall and frequency of the scheduled task. Ftring format: '<daily/hourly>,<value>'
+             * @return 1 for success. 0 for error.
+             */
+            static const int create(const std::string& taskname, const std::string& target, const std::string& taskfrequency){
+                
+                std::stringstream ss(taskfrequency);
+                std::string token;
+
+                const std::string timeframe;
+                const std::string intervall;
+                std::vector<std::string> list;
+
+                while(getline(ss, token, ',')){
+                    list.push_back(token);
+                }
+
+                const std::string com = "cmd /c \"schtasks /create /tn \"" + taskname + "\" /tr \"\\\"" + target + "\\\"sync\" /sc " + list[0] + " /mo " + list[1] + " >NUL 2>&1\"";
+
+                if(std::system(com.c_str()) != 0){
+                    return 0;
+                }
+
+                return 1;
+            }
+
+
+            /**
+             * @brief Removes a task from the windows task scheduler.
+             * @param taskname The name as identifier for the task.
+             * @return 1 for success. 0 for error.
+             */
+            static const int remove(const std::string& taskname){
+
+                const std::string com = "cmd /c \"schtasks /delete /tn \"" + taskname + "\" /F >NUL 2>&1\"";
+
+                if(std::system(com.c_str()) != 0){
+                    return 0;
+                }
+
+                return 1;
+            }
+
+            /**
+             * @brief Status check for scheduled tasks.
+             * @param taskname The name as identifier for the task.
+             * @return 1 if the task exists, 0 if it does not exist.
+             */
+            static const int exists(const std::string& taskname){
+
+                const std::string com = "cmd /c \"schtasks /query /tn " + taskname + " >NUL 2>&1\"";
+
+                if(std::system(com.c_str()) != 0){
+                    return 0;
+                }
+
+                return 1;
+            }
+    };
+
     class Process{
         public:
 

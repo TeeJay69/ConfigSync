@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <vector>   
 #include <cstdlib>
-#include <map>
+#include <unordered_map>
 #include <chrono>
 #include <thread>
 #include <set>
@@ -40,6 +40,25 @@ std::string pLocat;
 std::string pLocatFull;
 std::string root;
 const std::string taskName = "ConfigSyncTask";
+std::string archiveDir;
+std::string savesFile;
+
+class Defaultsetting{
+    public:
+        const int savelimit = 60;
+        const int recyclelimit = 60;
+        const bool task = false;
+        const std::string taskfrequency = "daily,1";
+
+        void writeDefault(boost::property_tree::ptree& pt){
+            pt.put("settingsID", SETTINGS_ID); // Settings identifier for updates
+            pt.put("savelimit", savelimit);
+            pt.put("recyclelimit", recyclelimit);
+            pt.put("task", task);
+            pt.put("taskfrequency", taskfrequency);
+        }
+};
+
 void enableColors(){
     DWORD consoleMode;
     HANDLE outputHandle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -68,97 +87,69 @@ void exitSignalHandler(int signum){
     }
 }
 
-/**
- * @brief Functions for managing scheduled tasks.
- * 
- */
-class task{
-    public:
-        /**
-         * @brief Creates a new task in the windows task scheduler.
-         * @param taskname The name for the scheduled task.
-         * @param target The file path to the target of the task.
-         * @param taskfrequency The intervall and frequency of the scheduled task. Ftring format: '<daily/hourly>,<value>'
-         * @return 1 for success. 0 for error.
-         */
-        static const int createtask(const std::string& taskname, const std::string& target, const std::string& taskfrequency){
+
+inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree& pt){
+    CS::Programs::Mgm mgm;
+    if(argv[2] == NULL){
+        std::cerr << "Fatal: Missing argument or value." << std::endl;
+    }
+    else if(mgm.checkName(std::string(argv[2])) == 1){ // single program
+        const std::string canName = mgm.get_canonical(std::string(argv[2]));
+        std::string date;
+        const char* cmp[] = {"--date", "-d"};
+        if(CS::Args::argfcmp(date, argv, argc, cmp, sizeof(cmp) / sizeof(cmp[0])) == 1){
+            // ...
+        }
+        else{
+            CS::Saves S(savesFile);
+            S.load();
+            uint64_t tst = CS::Utility::timestamp();
+            const std::string dayDir = archiveDir + "\\" + canName + "\\" + CS::Utility::ymd_date();
+            const std::string tstDir = dayDir + "\\" + std::to_string(tst);
+
+            if(!std::filesystem::exists(tstDir)){
+                std::filesystem::create_directories(tstDir);
+            }
+            else{
+                CS::Filesystem::recurse_remove(tstDir);
+                std::filesystem::create_directories(tstDir);
+            }
             
-            std::stringstream ss(taskfrequency);
-            std::string token;
-
-            const std::string timeframe;
-            const std::string intervall;
-            std::vector<std::string> list;
-
-            while(getline(ss, token, ',')){
-                list.push_back(token);
+            std::vector<std::pair<std::string,std::string>> pathvec;
+            std::optional<std::reference_wrapper<std::vector<std::pair<std::string,std::string>>>> pvecRef = std::ref(pathvec);
+            unsigned id = 1;
+            for(const auto& el : mgm.programs()[canName].paths){
+                const std::string dest = tstDir + "\\" + std::to_string(id);
+                if(!std::filesystem::exists(el)){
+                    CS::Logs log;
+                    log.msg("Warning: Program path not found. " + el);
+                    continue;
+                }
+                CS::Filesystem::recurse_copy(el, dest, std::nullopt, pvecRef);
+                id++;
             }
 
-            const std::string com = "cmd /c \"schtasks /create /tn \"" + taskname + "\" /tr \"\\\"" + target + "\\\"sync\" /sc " + list[0] + " /mo " + list[1] + " >NUL 2>&1\"";
-
-            if(std::system(com.c_str()) != 0){
-                return 0;
+            S.add(canName, uName, root, pathvec);
+            if(S.saves()[canName].size() > pt.get<int>("savelimit")){
+                uint64_t oldestTst = S.get_oldest_tst(canName);
+                CS::Filesystem::recurse_remove(dayDir + "\\" + std::to_string(oldestTst));
+                S.erase_save(canName, oldestTst);
             }
-
-            return 1;
+            
+            S.save();
         }
-
-
-        /**
-         * @brief Removes a task from the windows task scheduler.
-         * @param taskname The name as identifier for the task.
-         * @return 1 for success. 0 for error.
-         */
-        static const int removetask(const std::string& taskname){
-
-            const std::string com = "cmd /c \"schtasks /delete /tn \"" + taskname + "\" /F >NUL 2>&1\"";
-
-            if(std::system(com.c_str()) != 0){
-                return 0;
-            }
-
-            return 1;
+    }
+    else if(std::string(argv[2]) == "--all"){
+        std::string date;
+        const char* cmp[] = {"--date", "-d"};
+        if(CS::Args::argfcmp(date, argv, argc, cmp, sizeof(cmp) / sizeof(cmp[0])) == 1){ // Latest save from or before the given date
+            // ...
         }
-
-        /**
-         * @brief Status check for scheduled tasks.
-         * @param taskname The name as identifier for the task.
-         * @return 1 if the task exists, 0 if it does not exist.
-         */
-        static const int exists(const std::string& taskname){
-
-            const std::string com = "cmd /c \"schtasks /query /tn " + taskname + " >NUL 2>&1\"";
-
-            if(std::system(com.c_str()) != 0){
-                return 0;
-            }
-
-            return 1;
+        else{
+            
         }
-};
-
-
-/** 
- * @brief Default setting values
- * @note Strings must be lowercase.
- *
- */
-class defaultsetting{
-    public:
-        const int savelimit = 60;
-        const int recyclelimit = 60;
-        const bool task = false;
-        const std::string taskfrequency = "daily,1";
-
-        void writeDefault(boost::property_tree::ptree& pt){
-            pt.put("settingsID", SETTINGS_ID); // Settings identifier for updates
-            pt.put("savelimit", savelimit);
-            pt.put("recyclelimit", recyclelimit);
-            pt.put("task", task);
-            pt.put("taskfrequency", taskfrequency);
-        }
-};
-
+    }
+}
 
 int main(int argc, char* argv[]){   
     std::signal(SIGINT, exitSignalHandler);
@@ -167,6 +158,8 @@ int main(int argc, char* argv[]){
     pLocatFull = boost::dll::program_location().string();
     pLocat = boost::dll::program_location().parent_path().string();
     root = boost::dll::program_location().root_name().string();
+    archiveDir = pLocat + "\\ConfigArchive";
+    savesFile = pLocat + "\\objects\\Saves.bin";
     const std::string settingsPath = pLocat + "\\settings.json"; 
     CS::Logs logs;
     logs.init();
@@ -212,9 +205,8 @@ int main(int argc, char* argv[]){
     if(settingsID == 0){ // Failed to retrieve settingsID (file might be corrupt)
         std::cerr << "Error: Failed to extract settingsID from " << settingsPath << std::endl;
         std::cout << "Restoring settings file..." << std::endl;
-        
-        pt.put("settingsID", SETTINGS_ID); // Settings identifier
-
+        Defaultsetting DS;
+        pt.put("settingsID", SETTINGS_ID);
         pt.put("recyclelimit", DS.recyclelimit);
         pt.put("savelimit", DS.savelimit);
         pt.put("task", DS.task);
@@ -224,31 +216,31 @@ int main(int argc, char* argv[]){
 
     else if(settingsID != SETTINGS_ID){ // Differing settingsID
         //! merge config.
-        // Write this section when you create a version that made changes to the config file.
-        // Create the new config file after merging.
+        // Create the new config file after m
+        
+
+
+erging.
     }
     else{
         // Do nothing, pt contains correct config
     }
 
     /* Ensure that task setting reflects reality. */
-    if(pt.get<bool>("task") == true && !task::exists(taskName)){ // Task setting is true and task doesnt exist
-        if(task::createtask(taskName, pLocatFull, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);} // Create task
+    if(pt.get<bool>("task") == true && !CS::Task::exists(taskName)){ // Task setting is true and task doesnt exist
     }
 
-    else if(pt.get<bool>("task") == false && task::exists(taskName)){ // Task setting is false and task exists
+    
+    else if(pt.get<bool>("task") == false && CS::Task::exists(taskName)){ // Task setting is false and task exists
         if(task::removetask(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);} // Remove existing task
         std::exit(EXIT_FAILURE);
     }
-    
-    else if(pt.get<bool>("task") == false && !task::exists(taskName)){
+    else if(pt.get<bool>("task") == false && !CS::Task::exists(taskName)){
         // Do nothing.
     }
-    
-    else if(pt.get<bool>("task") == true && task::exists(taskName)){
+    else if(pt.get<bool>("task") == true && CS::Task::exists(taskName)){
         // Do nothing.
     }
-    
     else{
         std::cerr << "File: [" << __FILE__ << "] Line: [" << __LINE__ << "] This should never happen!\n";
     }
@@ -263,19 +255,14 @@ int main(int argc, char* argv[]){
         std::cout << "See 'cfgs --help' for usage." << std::endl;
         std::exit(EXIT_SUCCESS);
     }
-
-    /* Parse operands */
-    if(CS::Args::argcmp(argv, argc, "--verbose") == 1 || CS::Args::argcmp(argv, argc, "-v") == 1){
+    else if(CS::Args::argcmp(argv, argc, "--verbose") == 1 || CS::Args::argcmp(argv, argc, "-v") == 1){
         verbose = 1;
     }
-
-    /* Parse options: */
-    if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version"){ // Version param
+    else if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version"){ // Version param
         std::cout << "ConfigSync (JW-Coreutils) " << ANSI_COLOR_36 << VERSION << ANSI_COLOR_RESET << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber. All rights reserved." << std::endl;
         std::exit(EXIT_SUCCESS);
     }
-
     else if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h"){ // Help message param
         std::cout << "ConfigSync (JW-CoreUtils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
@@ -303,6 +290,10 @@ int main(int argc, char* argv[]){
         std::cout << "[...] --verbose, -v           Enable verbose mode.\n";
         if(verbose){std::cout << "Verbose mode enabled!!!"<<std::endl;}
         std::exit(EXIT_SUCCESS);
+    }
+
+    else if(std::string(argv[1]) == "sync"){
+
     }
 
     else{
