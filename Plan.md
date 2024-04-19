@@ -33,12 +33,15 @@ generation
 ## Feature Dev:
 - Command line options:
     + sync [PROGRAM]
-        - [ ] --all (-a) (synchronize all supported programs)
+        - [x] --all (-a) (synchronize all supported programs)
         - Operands:
             - [ ] --message (-m) (Add a note to that save)
     + restore [PROGRAM] (Defaults to latest save)
         - [ ] --date (-d) (specify a specific save. Uses save from that date or if unavailble, the latest save before that date)
+    + check
+        - [x] --task (-t) (ensure that task status reflects settings)
     + show
+
         - 
         + Some default included registers (lists):
             - [x] package-managers

@@ -43,6 +43,17 @@ const std::string taskName = "ConfigSyncTask";
 std::string archiveDir;
 std::string savesFile;
 
+
+std::string CS::Logs::logDir;
+std::string CS::Logs::logPath;
+std::ofstream CS::Logs::logf;
+
+inline void CS::Logs::init(){
+    logDir = pLocat + "\\logs.log";
+    logPath = logDir + "\\" + timestamp();
+    logf = create_log(logPath);
+}
+
 class Defaultsetting{
     public:
         const int savelimit = 60;
@@ -87,38 +98,92 @@ void exitSignalHandler(int signum){
     }
 }
 
-
 inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree& pt){
     CS::Programs::Mgm mgm;
     if(argv[2] == NULL){
         std::cerr << "Fatal: Missing argument or value." << std::endl;
     }
     else if(mgm.checkName(std::string(argv[2])) == 1){ // single program
+        std::string msg;
+        const char* cmp[] = {"--message", "-m"};
+        size_t cmpSize = sizeof(cmp) / sizeof(cmp[0]);
+        int msgFlag= 0;
+        if(CS::Args::argfcmp(msg, argv, argc, cmp, cmpSize) == 1){
+            msgFlag = 1;
+        }
+
         const std::string canName = mgm.get_canonical(std::string(argv[2]));
-        std::string date;
-        const char* cmp[] = {"--date", "-d"};
-        if(CS::Args::argfcmp(date, argv, argc, cmp, sizeof(cmp) / sizeof(cmp[0])) == 1){
-            // ...
+    
+        CS::Saves S(savesFile);
+        S.load();
+        uint64_t tst = CS::Utility::timestamp();
+        const std::string dayDir = archiveDir + "\\" + canName + "\\" + CS::Utility::ymd_date();
+        const std::string tstDir = dayDir + "\\" + std::to_string(tst);
+
+        if(!std::filesystem::exists(tstDir)){
+            std::filesystem::create_directories(tstDir);
         }
         else{
-            CS::Saves S(savesFile);
-            S.load();
-            uint64_t tst = CS::Utility::timestamp();
-            const std::string dayDir = archiveDir + "\\" + canName + "\\" + CS::Utility::ymd_date();
-            const std::string tstDir = dayDir + "\\" + std::to_string(tst);
+            CS::Filesystem::recurse_remove(tstDir);
+            std::filesystem::create_directories(tstDir);
+        }
+        
+        std::vector<std::pair<std::string,std::string>> pathvec;
+        std::optional<std::reference_wrapper<std::vector<std::pair<std::string,std::string>>>> pvecRef = std::ref(pathvec);
+        unsigned id = 1;
+        for(const auto& el : mgm.programs()[canName].paths){
+            const std::string dest = tstDir + "\\" + std::to_string(id);
+            if(!std::filesystem::exists(el)){
+                CS::Logs log;
+                log.msg("Warning: Program path not found. " + el);
+                continue;
+            }
+            CS::Filesystem::recurse_copy(el, dest, std::nullopt, pvecRef);
+            id++;
+        }
 
+        if(msgFlag == 1){
+            S.add(canName, uName, root, msg, pathvec, tst);
+        }
+        else{
+            S.add(canName, uName, root, "", pathvec, tst);
+        }
+
+        if(S.saves()[canName].size() > pt.get<int>("savelimit")){
+            uint64_t oldestTst = S.get_oldest_tst(canName);
+            CS::Filesystem::recurse_remove(dayDir + "\\" + std::to_string(oldestTst));
+            S.erase_save(canName, oldestTst);
+        }
+        
+        S.save();
+    }
+    else if(std::string(argv[2]) == "--all" || std::string(argv[2]) == "-a"){
+        std::string msg;
+        const char* cmp[] = {"--message", "-m"};
+        size_t cmpSize = sizeof(cmp) / sizeof(cmp[0]);
+        int msgFlag= 0;
+        if(CS::Args::argfcmp(msg, argv, argc, cmp, cmpSize == 1)){
+            msgFlag = 1;
+        }
+
+        CS::Saves S(savesFile);
+        S.load();
+
+        for(const auto& prog : mgm.get_supported()){
+            uint64_t tst = CS::Utility::timestamp();
+            const std::string dayDir = archiveDir + "\\" + prog + "\\" + CS::Utility::ymd_date();
+            const std::string tstDir = dayDir + "\\" + std::to_string(tst);
             if(!std::filesystem::exists(tstDir)){
-                std::filesystem::create_directories(tstDir);
+            std::filesystem::create_directories(tstDir);
             }
             else{
                 CS::Filesystem::recurse_remove(tstDir);
                 std::filesystem::create_directories(tstDir);
             }
-            
             std::vector<std::pair<std::string,std::string>> pathvec;
             std::optional<std::reference_wrapper<std::vector<std::pair<std::string,std::string>>>> pvecRef = std::ref(pathvec);
             unsigned id = 1;
-            for(const auto& el : mgm.programs()[canName].paths){
+            for(const auto& el : mgm.programs()[prog].paths){
                 const std::string dest = tstDir + "\\" + std::to_string(id);
                 if(!std::filesystem::exists(el)){
                     CS::Logs log;
@@ -127,29 +192,54 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
                 }
                 CS::Filesystem::recurse_copy(el, dest, std::nullopt, pvecRef);
                 id++;
-            }
 
-            S.add(canName, uName, root, pathvec);
-            if(S.saves()[canName].size() > pt.get<int>("savelimit")){
-                uint64_t oldestTst = S.get_oldest_tst(canName);
-                CS::Filesystem::recurse_remove(dayDir + "\\" + std::to_string(oldestTst));
-                S.erase_save(canName, oldestTst);
+                if(msgFlag == 1){
+                    S.add(prog, uName, root, msg, pathvec, tst);
+                }
+                else{
+                    S.add(prog, uName, root, "", pathvec, tst);
+                }
+
+                if(S.saves()[prog].size() > pt.get<int>("savelimit")){
+                    uint64_t oldestTst = S.get_oldest_tst(prog);
+                    CS::Filesystem::recurse_remove(dayDir + "\\" + std::to_string(oldestTst));
+                    S.erase_save(prog, oldestTst);
+                }
             }
-            
-            S.save();
         }
-    }
-    else if(std::string(argv[2]) == "--all"){
-        std::string date;
-        const char* cmp[] = {"--date", "-d"};
-        if(CS::Args::argfcmp(date, argv, argc, cmp, sizeof(cmp) / sizeof(cmp[0])) == 1){ // Latest save from or before the given date
-            // ...
-        }
-        else{
-            
-        }
+
+        S.save();
     }
 }
+
+inline void handleCheckOption(char* argv[], int argc, boost::property_tree::ptree& pt){
+    if(argv[2] == NULL){
+        std::cerr << "Fatal: Missing argument or value." << std::endl;
+    }
+    else if(std::string(argv[2]) == "--task" || std::string(argv[2]) == "-t"){
+        /* Ensure that task setting reflects reality. */
+        if(pt.get<bool>("task") == true && !CS::Task::exists(taskName)){ // Task setting is true and task doesnt exist
+            if(CS::Task::create(taskName, pLocatFull, pt.get<std::string>("taskfrequency")) != 1){std::cerr << "Errror: failed to create task." << std::endl; exit(EXIT_FAILURE);} 
+        }
+        else if(pt.get<bool>("task") == false && CS::Task::exists(taskName)){ // Task setting is false and task exists
+            if(CS::Task::remove(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);} // Remove existing task
+            std::exit(EXIT_FAILURE);
+        }
+        else if(pt.get<bool>("task") == false && !CS::Task::exists(taskName)){
+            // Do nothing.
+        }
+        else if(pt.get<bool>("task") == true && CS::Task::exists(taskName)){
+            // Do nothing.
+        }
+        else{
+            std::cerr << "File: [" << __FILE__ << "] Line: [" << __LINE__ << "] This should never happen!\n";
+        }
+    }
+    else{
+        std::cerr << "Fatal: '" << argv[2] << "' is not a configsync command." << std::endl;
+    }
+}
+
 
 int main(int argc, char* argv[]){   
     std::signal(SIGINT, exitSignalHandler);
@@ -161,9 +251,7 @@ int main(int argc, char* argv[]){
     archiveDir = pLocat + "\\ConfigArchive";
     savesFile = pLocat + "\\objects\\Saves.bin";
     const std::string settingsPath = pLocat + "\\settings.json"; 
-    CS::Logs logs;
-    logs.init();
-
+    CS::Logs::init();
     boost::property_tree::ptree pt;
 
     try{ // Try parsing the settings file.
@@ -216,37 +304,11 @@ int main(int argc, char* argv[]){
 
     else if(settingsID != SETTINGS_ID){ // Differing settingsID
         //! merge config.
-        // Create the new config file after m
-        
-
-
-erging.
+        // Create the new config file after merging
     }
     else{
         // Do nothing, pt contains correct config
     }
-
-    /* Ensure that task setting reflects reality. */
-    if(pt.get<bool>("task") == true && !CS::Task::exists(taskName)){ // Task setting is true and task doesnt exist
-    }
-
-    
-    else if(pt.get<bool>("task") == false && CS::Task::exists(taskName)){ // Task setting is false and task exists
-        if(task::removetask(taskName) != 1){std::cerr << "Errror: failed to remove task." << std::endl; exit(EXIT_FAILURE);} // Remove existing task
-        std::exit(EXIT_FAILURE);
-    }
-    else if(pt.get<bool>("task") == false && !CS::Task::exists(taskName)){
-        // Do nothing.
-    }
-    else if(pt.get<bool>("task") == true && CS::Task::exists(taskName)){
-        // Do nothing.
-    }
-    else{
-        std::cerr << "File: [" << __FILE__ << "] Line: [" << __LINE__ << "] This should never happen!\n";
-    }
-    
-
-
 
     if(argv[1] == NULL){ // No params, display Copyright Notice
         std::cout << "ConfigSync (JW-CoreUtils) " << VERSION << std::endl;
@@ -258,7 +320,7 @@ erging.
     else if(CS::Args::argcmp(argv, argc, "--verbose") == 1 || CS::Args::argcmp(argv, argc, "-v") == 1){
         verbose = 1;
     }
-    else if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version"){ // Version param
+    else if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version" || std::string(argv[1]) == "-v"){ // Version param
         std::cout << "ConfigSync (JW-Coreutils) " << ANSI_COLOR_36 << VERSION << ANSI_COLOR_RESET << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber. All rights reserved." << std::endl;
         std::exit(EXIT_SUCCESS);
@@ -293,9 +355,12 @@ erging.
     }
 
     else if(std::string(argv[1]) == "sync"){
-
+        handleSyncOption(argv, argc, pt);
     }
 
+    else if(std::string(argv[1]) == "check"){
+        handleCheckOption(argv, argc, pt);
+    }
     else{
         std::cerr << "Fatal: '" << argv[1] << "' is not a ConfigSync command.\n";
         return 1;

@@ -77,7 +77,7 @@ namespace CS {
                 return 0;
             }
 
-            static int argfcmp(std::string& buff, char** argv, int argc, const char* cmp[], int cmp_size){
+            static int argfcmp(std::string& buff, char** argv, int argc, const char* cmp[], size_t cmp_size){
                 for(int i = 0; i < cmp_size; i++){
                     for(int ii = 0; ii < argc; ii++){
                         if(strcmp(argv[ii], cmp[i]) == 0){
@@ -275,14 +275,9 @@ namespace CS {
             static std::ofstream logf;
             
         public:
-            // Call only once in your program!
-            inline void init(){
-                logDir = pLocat + "\\logs";
-                logPath = logDir + "\\" + timestamp();
-                logf = create_log(logPath);
-            }
-            
-            inline const std::string timestamp(){
+            static inline void init();
+
+            static inline const std::string timestamp(){
                 auto now = std::chrono::system_clock::now();
                 std::string formatted_time = std::format("{0:%F_%Y-%M-%S}", now);
 
@@ -290,7 +285,7 @@ namespace CS {
             }
 
 
-            inline void log_cleaner(const std::string& dir, const unsigned& limit){
+            static inline void log_cleaner(const std::string& dir, const unsigned& limit){
 
                 std::vector<std::filesystem::path> fvec;
                 for(const auto& x : std::filesystem::directory_iterator(dir)){
@@ -310,7 +305,7 @@ namespace CS {
                 }
             }
 
-            inline std::ofstream create_log(const std::string& path){
+            static inline std::ofstream create_log(const std::string& path){
                 if(!std::filesystem::exists(logDir)){
                     std::filesystem::create_directories(logDir);
                 }
@@ -323,7 +318,7 @@ namespace CS {
                 return logf;
             }
 
-            inline void msg(const std::string& message){
+            static inline void msg(const std::string& message){
                 const std::string msg = timestamp() + ":    " + message;
                 logf << msg << std::endl;
             }
@@ -585,10 +580,12 @@ namespace CS {
             struct has_save_traits<T, std::void_t<
                 decltype(std::declval<T>().userName),
                 decltype(std::declval<T>().driveLetter),
+                decltype(std::declval<T>().message),
                 decltype(std::declval<T>().pathVec)
                 >> : std::integral_constant<bool,
                 std::is_same<decltype(std::declval<T>().userName), std::string>::value &&
                 std::is_same<decltype(std::declval<T>().driveLetter), std::string>::value &&
+                std::is_same<decltype(std::declval<T>().message), std::string>::value &&
                 std::is_same<decltype(std::declval<T>().pathVec), std::vector<std::pair<std::string, std::string>>>::value>
             {};
 
@@ -611,6 +608,9 @@ namespace CS {
                         size_t driveSz = nestpair.second.driveLetter.length();
                         of.write((char *)&driveSz, sizeof(driveSz));
                         of.write(nestpair.second.driveLetter.c_str(), driveSz);
+                        size_t messageSz = nestpair.second.message.length();
+                        of.write((char *)&messageSz, sizeof(messageSz));
+                        of.write(nestpair.second.message.c_str(), messageSz);
                         size_t pathvecSz = nestpair.second.pathVec.size();
                         of.write((char *)&pathvecSz, sizeof(pathvecSz));
                         for(const auto& pathpair : nestpair.second.pathVec){
@@ -654,12 +654,17 @@ namespace CS {
                         in.read((char *)driveSz, sizeof(driveSzStack));
                         std::string drive(*driveSz, '\0');
                         in.read(drive.data(), *driveSz);
+                        size_t messageSzStack;
+                        size_t *messageSz = &messageSzStack;
+                        in.read((char *)messageSz, sizeof(messageSzStack));
+                        std::string message(*messageSz, '\0');
+                        in.read(message.data(), *messageSz);
                         size_t pathvecSzStack;
                         size_t *pathvecSz = &pathvecSzStack;
                         in.read((char *)pathvecSz, sizeof(pathvecSzStack));
                         for(unsigned iii = 0; iii < *pathvecSz; iii++){
                             size_t pathASzStack;
-                            size_t *pathASz = pathASzStack;
+                            size_t *pathASz = &pathASzStack;
                             in.read((char *)pathASz, sizeof(pathASzStack));
                             std::string pathA(*pathASz, '\0');
                             in.read(pathA.data(), *pathASz);
@@ -668,8 +673,8 @@ namespace CS {
                             in.read((char *)pathBSz, sizeof(pathBSzStack));
                             std::string pathB(*pathBSz, '\0');
                             in.read(pathB.data(), *pathBSz);
-                            T save = {uname, drive, {std::make_pair(pathA, pathB)}};
-                            m[key] = {{ull, save}};
+                            T save = {uname, drive, message, {{std::make_pair(pathA, pathB)}}};
+                            m[key][*ull] = save;
                         }
                     }
                 }
@@ -827,10 +832,11 @@ namespace CS {
             struct InternalSave {
                 std::string userName;
                 std::string driveLetter;
+                std::string message;
                 std::vector<std::pair<std::string,std::string>> pathVec;
                 InternalSave() = default;
-                InternalSave(const std::string& username, const std::string& drive, const std::vector<std::pair<std::string,std::string>>& paths)
-                 : userName {username}, driveLetter {drive}, pathVec {paths} {}
+                InternalSave(const std::string& username, const std::string& drive, const std::string& message, const std::vector<std::pair<std::string,std::string>>& paths)
+                 : userName {username}, driveLetter {drive}, message {message}, pathVec {paths} {}
             };
             const std::string _file;
             std::unordered_map<std::string, std::map<uint64_t, InternalSave>> _saves;
@@ -842,6 +848,7 @@ namespace CS {
                 std::string program;
                 std::string username;
                 std::string driveletter;
+                std::string message;
                 std::vector<std::pair<std::string,std::string>> pathvec;
             };
 
@@ -873,16 +880,16 @@ namespace CS {
                 return 1;
             }
 
-            inline void add(const std::string& program, const std::string& username, const std::string& driveletter, const std::vector<std::pair<std::string,std::string>>& pathvec, const uint64_t& tst){
-                _saves[program][tst] = InternalSave(username, driveletter, pathvec);
+            inline void add(const std::string& program, const std::string& username, const std::string& driveletter,  const std::string& message, const std::vector<std::pair<std::string,std::string>>& pathvec, const uint64_t& tst){
+                _saves[program][tst] = InternalSave(username, driveletter, message, pathvec);
             }
 
-            inline void add(const std::string& program, const std::string& username, const std::string& drive, const std::vector<std::pair<std::string,std::string>>& pathvec){
-                _saves[program][CS::Utility::timestamp()] = InternalSave(username, drive, pathvec);
+            inline void add(const std::string& program, const std::string& username, const std::string& drive, const std::string& message, const std::vector<std::pair<std::string,std::string>>& pathvec){
+                _saves[program][CS::Utility::timestamp()] = InternalSave(username, drive, message, pathvec);
             }
 
             inline void add(const PublicSave& ps_){
-                _saves[ps_.program][CS::Utility::timestamp()] = InternalSave(ps_.username, ps_.driveletter, ps_.pathvec);
+                _saves[ps_.program][CS::Utility::timestamp()] = InternalSave(ps_.username, ps_.driveletter,  ps_.message, ps_.pathvec);
             }
 
             inline int erase_program(const std::string& prog){
@@ -957,7 +964,7 @@ namespace CS {
                     list.push_back(token);
                 }
 
-                const std::string com = "cmd /c \"schtasks /create /tn \"" + taskname + "\" /tr \"\\\"" + target + "\\\"sync\" /sc " + list[0] + " /mo " + list[1] + " >NUL 2>&1\"";
+                const std::string com = "cmd /c \"schtasks /create /tn \"" + taskname + "\" /tr \"\\\"" + target + "\\\"sync --all\" /sc " + list[0] + " /mo " + list[1] + " >NUL 2>&1\"";
 
                 if(std::system(com.c_str()) != 0){
                     return 0;

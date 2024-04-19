@@ -6,7 +6,7 @@ ConfigSync-Setup.exe
 ISS.iss
 ----------
 Compile command:
-g++ main.cpp -o ConfigSync.exe -std=c++23 -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -lbcrypt -lssl -lcrypto -l:libboost_filesystem-mgw13-mt-x64-1_84.a -lz
+g++ main.cpp -o ConfigSync.exe -std=c++23 -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -lbcrypt -lssl -lcrypto -l:libboost_filesystem-mgw13-mt-x64-1_84.a -lz -O3
 ----------
 Alias:
 configsync
