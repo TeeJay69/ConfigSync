@@ -213,7 +213,7 @@ namespace CS {
             }
 
 
-            std::string get_sha256hash(const std::string& fname){
+            static inline std::string get_sha256hash(const std::string& fname){
                 FILE *file;
 
                 unsigned char buf[8192];
@@ -244,6 +244,35 @@ namespace CS {
 
                     return ss.str();
                 }
+            }
+
+            static inline std::string get_sha256hash_cpp(std::ifstream& file) {
+                // Buffer for reading from file
+                unsigned char buf[8192];
+                // Output SHA256 hash
+                unsigned char output[SHA256_DIGEST_LENGTH];
+                // SHA256 context
+                SHA256_CTX sha256;
+                
+                if (!file.is_open()) {
+                    const std::string err = "Error: Failed to open file to hash.\n";
+                    throw std::runtime_error(err.c_str());
+                }
+
+                SHA256_Init(&sha256);
+                // Read from the file stream
+                while (file.read(reinterpret_cast<char*>(buf), sizeof(buf)) || file.gcount() != 0) {
+                    SHA256_Update(&sha256, buf, file.gcount());
+                }
+                SHA256_Final(output, &sha256);
+
+                // Convert hash to hexadecimal string
+                std::stringstream ss;
+                for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+                    ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(output[i]);
+                }
+
+                return ss.str();
             }
             
             static std::string ymd_date(){
@@ -662,6 +691,7 @@ namespace CS {
                         size_t pathvecSzStack;
                         size_t *pathvecSz = &pathvecSzStack;
                         in.read((char *)pathvecSz, sizeof(pathvecSzStack));
+                        std::vector<std::pair<std::string,std::string>> vec;
                         for(unsigned iii = 0; iii < *pathvecSz; iii++){
                             size_t pathASzStack;
                             size_t *pathASz = &pathASzStack;
@@ -673,9 +703,10 @@ namespace CS {
                             in.read((char *)pathBSz, sizeof(pathBSzStack));
                             std::string pathB(*pathBSz, '\0');
                             in.read(pathB.data(), *pathBSz);
-                            T save = {uname, drive, message, {{std::make_pair(pathA, pathB)}}};
-                            m[key][*ull] = save;
+                            vec.push_back(std::make_pair(pathA,pathB));
                         }
+                        T save = {uname, drive, message, vec};
+                        m[key][*ull] = save;
                     }
                 }
             }
@@ -900,7 +931,7 @@ namespace CS {
             }
 
             inline int erase_save(const std::string& prog, const uint64_t& tst){
-                if(_saves[prog].erase(tst) != 1){
+                if(_saves.at(prog).erase(tst) != 1){
                     return 0;
                 }
                 return 1;
@@ -918,7 +949,7 @@ namespace CS {
                     return 0;
                 }
 
-                return _saves[prog].rbegin()->first;
+                return _saves.at(prog).rbegin()->first;
             }
 
             inline InternalSave get_lastsave(const std::string& prog){
@@ -926,18 +957,26 @@ namespace CS {
                     return {};
                 }
 
-                return _saves[prog].rbegin()->second;
+                return _saves.at(prog).rbegin()->second;
             }
 
             inline uint64_t get_oldest_tst(const std::string& prog){
-                return _saves[prog].rend()->first;
+                return _saves.at(prog).rend()->first;
             }
 
             inline InternalSave get_oldestsave(const std::string& prog){
-                return _saves[prog].rend()->second;
+                return _saves.at(prog).rend()->second;
             }
 
-            inline std::unordered_map<std::string, std::map<uint64_t, InternalSave>>& saves(){
+            inline int exists(const std::string& prog){
+                if(_saves.find(prog) == _saves.end()){
+                    return 0;
+                }
+
+                return 1;
+            }
+
+            inline const std::unordered_map<std::string, std::map<uint64_t, InternalSave>>& saves(){
                 return _saves;
             }
     };

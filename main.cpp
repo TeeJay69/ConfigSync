@@ -21,6 +21,8 @@
 #include <boost\property_tree\json_parser.hpp>
 #include <boost/dll.hpp>
 #include "ConfigSync.hpp"
+#include <fstream>
+
 
 
 #ifdef DEBUG
@@ -49,8 +51,8 @@ std::string CS::Logs::logPath;
 std::ofstream CS::Logs::logf;
 
 inline void CS::Logs::init(){
-    logDir = pLocat + "\\logs.log";
-    logPath = logDir + "\\" + timestamp();
+    logDir = pLocat + "\\logs";
+    logPath = logDir + "\\" + timestamp() + ".log";
     logf = create_log(logPath);
 }
 
@@ -113,9 +115,42 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         }
 
         const std::string canName = mgm.get_canonical(std::string(argv[2]));
-    
+        std::cout << ANSI_COLOR_161 << "Synchronizing " << canName << ":" << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_222 << "Fetching files..." << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_222 << "Starting synchronization..." << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_222 << "Computing hashes..." << ANSI_COLOR_RESET << std::endl;
         CS::Saves S(savesFile);
         S.load();
+        unsigned loadFlag = 1;
+        if(S.load() != 1){
+            loadFlag = 0;
+        }
+        int equal = 1;
+        if(loadFlag != 0){
+            if(S.exists(canName)){
+                for(const auto& pair : S.get_lastsave(canName).pathVec){
+                    if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                        equal = 0;
+                        break;
+                    }
+                }
+            }
+            else{
+                equal = 0;
+            }
+        }
+        else{
+            equal = 0;
+        }
+
+        if(equal == 1){
+            std::cout << ANSI_COLOR_66 << canName + " config is up to date." << ANSI_COLOR_RESET << std::endl;
+            CS::Logs::msg("Hashes identical: " + canName);
+            return;
+        }
+        std::cout << ANSI_COLOR_138 << canName << " config is out of sync! Synchronizing..." << ANSI_COLOR_RESET << std::endl;
+        CS::Logs::msg("Hashes differ: " + canName);
+    
         uint64_t tst = CS::Utility::timestamp();
         const std::string dayDir = archiveDir + "\\" + canName + "\\" + CS::Utility::ymd_date();
         const std::string tstDir = dayDir + "\\" + std::to_string(tst);
@@ -131,11 +166,10 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         std::vector<std::pair<std::string,std::string>> pathvec;
         std::optional<std::reference_wrapper<std::vector<std::pair<std::string,std::string>>>> pvecRef = std::ref(pathvec);
         unsigned id = 1;
-        for(const auto& el : mgm.programs()[canName].paths){
+        for(const auto& el : mgm.programs().at(canName).paths){
             const std::string dest = tstDir + "\\" + std::to_string(id);
             if(!std::filesystem::exists(el)){
-                CS::Logs log;
-                log.msg("Warning: Program path not found. " + el);
+                CS::Logs::msg("Warning: Program path not found. [" + el + "]");
                 continue;
             }
             CS::Filesystem::recurse_copy(el, dest, std::nullopt, pvecRef);
@@ -149,15 +183,17 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
             S.add(canName, uName, root, "", pathvec, tst);
         }
 
-        if(S.saves()[canName].size() > pt.get<int>("savelimit")){
+        if(S.saves().at(canName).size() > pt.get<int>("savelimit")){
             uint64_t oldestTst = S.get_oldest_tst(canName);
             CS::Filesystem::recurse_remove(dayDir + "\\" + std::to_string(oldestTst));
             S.erase_save(canName, oldestTst);
         }
-        
+
+        std::cout << ANSI_COLOR_GREEN << "Synchronization of " << canName << " finished." << ANSI_COLOR_RESET << std::endl;
         S.save();
     }
     else if(std::string(argv[2]) == "--all" || std::string(argv[2]) == "-a"){
+        std::cout << ANSI_COLOR_161 << "Synchronizing all programs:" << ANSI_COLOR_RESET << std::endl;
         std::string msg;
         const char* cmp[] = {"--message", "-m"};
         size_t cmpSize = sizeof(cmp) / sizeof(cmp[0]);
@@ -166,10 +202,42 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
             msgFlag = 1;
         }
 
+        std::cout << ANSI_COLOR_222 << "Fetching programs..." << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_222 << "Starting synchronization..." << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_222 << "Computing hashes..." << ANSI_COLOR_RESET << std::endl;
         CS::Saves S(savesFile);
-        S.load();
-
+        unsigned loadFlag = 1;
+        if(S.load() != 1){
+            loadFlag = 0;
+        }
+        std::vector<std::string> synced;
         for(const auto& prog : mgm.get_supported()){
+            unsigned equal = 1;
+            if(loadFlag != 0){
+                if(S.exists(prog)){
+                    for(const auto& pair : S.get_lastsave(prog).pathVec){
+                        if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                            equal = 0;
+                            break;
+                        }
+                    }
+                }
+                else{
+                    equal = 0;
+                }
+            }
+            else{
+                equal = 0;
+            }
+
+            if(equal == 1){
+                std::cout << ANSI_COLOR_66 << prog + " config is up to date." << ANSI_COLOR_RESET << std::endl;
+                CS::Logs::msg("Hashes identical: " + prog);
+                continue;
+            }
+            std::cout << ANSI_COLOR_138 << prog << " config is out of sync! Synchronizing..." << ANSI_COLOR_RESET << std::endl;
+            CS::Logs::msg("Hashes differ: " + prog);
+            
             uint64_t tst = CS::Utility::timestamp();
             const std::string dayDir = archiveDir + "\\" + prog + "\\" + CS::Utility::ymd_date();
             const std::string tstDir = dayDir + "\\" + std::to_string(tst);
@@ -192,23 +260,35 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
                 }
                 CS::Filesystem::recurse_copy(el, dest, std::nullopt, pvecRef);
                 id++;
-
-                if(msgFlag == 1){
-                    S.add(prog, uName, root, msg, pathvec, tst);
-                }
-                else{
-                    S.add(prog, uName, root, "", pathvec, tst);
-                }
-
-                if(S.saves()[prog].size() > pt.get<int>("savelimit")){
-                    uint64_t oldestTst = S.get_oldest_tst(prog);
-                    CS::Filesystem::recurse_remove(dayDir + "\\" + std::to_string(oldestTst));
-                    S.erase_save(prog, oldestTst);
-                }
             }
-        }
+            // // for(const auto& pair : pathvec){
+            //     std::cout << "pathvec: " << pair.first << std::endl;
+            if(msgFlag == 1){
+                S.add(prog, uName, root, msg, pathvec, tst);
+            }
+            else{
+                S.add(prog, uName, root, "", pathvec, tst);
+            }
 
+            if(S.saves().at(prog).size() > pt.get<int>("savelimit")){
+                uint64_t oldestTst = S.get_oldest_tst(prog);
+                CS::Filesystem::recurse_remove(dayDir + "\\" + std::to_string(oldestTst));
+                S.erase_save(prog, oldestTst);
+            }
+            synced.push_back(prog);
+        }
+        std::cout << ANSI_COLOR_222 << "Preparing summary..." << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_161 << "Synced programs:" << ANSI_COLOR_RESET << std::endl;
+        unsigned i = 1;
+        for(const auto& elem : synced){
+            std::cout << ANSI_COLOR_GREEN << i << "." << elem << ANSI_COLOR_RESET << std::endl;
+            i++;
+        }
+        std::cout << ANSI_COLOR_GREEN << "Synchronization finished!" << ANSI_COLOR_RESET << std::endl;
         S.save();
+    }
+    else{
+        std::cerr << "Fatal: '" << argv[2] << "' is not a ConfigSync command. See 'configsync --help'." << std::endl;
     }
 }
 
@@ -236,7 +316,7 @@ inline void handleCheckOption(char* argv[], int argc, boost::property_tree::ptre
         }
     }
     else{
-        std::cerr << "Fatal: '" << argv[2] << "' is not a configsync command." << std::endl;
+        std::cerr << "Fatal: '" << argv[2] << "' is not a ConfigSync command. See 'configsync --help'." << std::endl;
     }
 }
 

@@ -1,11 +1,14 @@
 Files:
 main.cpp
-synchronizer.hpp
+ConfigSync.hpp
+ConfigSync-old.hpp
+main-old.cpp
 .restorepoint
-Plan.md
+plan.md
 changelog.md
 .versiontool
 ISS.iss
 ANSIcolor.hpp
 Copyright-Disclaimer.md
+.gitignore
 ######
