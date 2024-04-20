@@ -525,6 +525,70 @@ inline void handleRestoreOption(char* argv[], int argc){
     }
 }
 
+
+inline void handleShowOption(char* argv[], int argc){
+    CS::Programs::Mgm mgm;
+    if(argv[2] == NULL){
+        std::cerr << "Fatal: Missing argument or value." << std::endl;
+    }
+    else if(mgm.checkName(std::string(argv[2])) == 1){
+        const std::string canName = mgm.get_canonical(std::string(argv[2]));
+        CS::Saves S(savesFile);
+        if(S.load() == 0){
+            std::cerr << "Fatal: No previous saves found. See 'configsync --help'." << std::endl;
+            return;
+        }
+
+        std::cout << ANSI_COLOR_222 << canName << ":" << ANSI_COLOR_RESET << std::endl;
+        std::cout << ANSI_COLOR_166 << "Saves:" << ANSI_COLOR_RESET << std::endl;
+        std::vector<uint64_t> resVec; 
+        unsigned i = 1;
+        for(const auto& save : S.saves().at(canName)){
+            if(save.second.message != "Pre-Restore-Backup"){
+                if(!save.second.message.empty()){
+                    std::cout << ANSI_COLOR_146 << i << ". " << CS::Utility::timestamp_to_str(save.first) << ANSI_COLOR_RESET << " - " << save.second.message << std::endl;
+                }
+                else{
+                    std::cout << ANSI_COLOR_146 << i << ". " << CS::Utility::timestamp_to_str(save.first) << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+            else{
+                resVec.emplace_back(save.first);
+            }
+            i++;
+        }
+        std::cout << std::endl;
+        if(!resVec.empty()){
+            std::cout << ANSI_COLOR_166 << "Pre-Restore-Backups:" << ANSI_COLOR_RESET << std::endl;
+            unsigned ii = 1;
+            for(const auto& tst : resVec){
+                std::cout << ANSI_COLOR_151 << ii << ". " << CS::Utility::timestamp_to_str(tst) << ANSI_COLOR_RESET << std::endl;
+                ii++;
+            }
+            if(i - 1 == 1){
+                std::cout << "Found " << ANSI_COLOR_GREEN << i - 1 << ANSI_COLOR_RESET << " save and ";
+            }
+            else{
+                std::cout << "Found " << ANSI_COLOR_GREEN <<  i - 1 << ANSI_COLOR_RESET << " saves and ";
+            }
+            if(ii - 1 == 1){
+                std::cout << ANSI_COLOR_GREEN << ii - 1 << ANSI_COLOR_RESET << " Pre-Restore-Backup." << std::endl; 
+            }
+            else{
+                std::cout << ANSI_COLOR_GREEN << ii - 1 << ANSI_COLOR_RESET << " Pre-Restore-Backups." << std::endl;
+            }
+        }
+        else{
+            if(i - 1 == 1){
+                std::cout << "Found " << ANSI_COLOR_GREEN << i - 1 << ANSI_COLOR_RESET << " save." << std::endl;
+            }
+            else{
+                std::cout << "Found " << ANSI_COLOR_GREEN << i - 1 << ANSI_COLOR_RESET << " saves." << std::endl;
+            }
+        }
+    }
+}
+
 int main(int argc, char* argv[]){   
     std::signal(SIGINT, exitSignalHandler);
     enableColors();
@@ -645,6 +709,9 @@ int main(int argc, char* argv[]){
 
     else if(std::string(argv[1]) == "check"){
         handleCheckOption(argv, argc, pt);
+    }
+    else if(std::string(argv[1]) == "show"){
+        handleShowOption(argv, argc);
     }
     else{
         std::cerr << "Fatal: '" << argv[1] << "' is not a ConfigSync command.\n";
