@@ -123,6 +123,15 @@ namespace CS {
                 }
             };
 
+            static int replaceSubstr(std::string& str, const std::string& substr, const std::string& __rep){
+                size_t pos = str.find(substr);
+                if(pos == std::string::npos){
+                    return 0;
+                }
+                str.replace(pos, substr.length(), __rep);
+                return 1;
+            }
+
             static const std::string generate_UUID(){
                 boost::uuids::random_generator generator;
                 const boost::uuids::uuid UUID = generator();
@@ -165,6 +174,25 @@ namespace CS {
                 return std::string(buffer);
             }
 
+            template<typename T, typename std::enable_if<std::is_integral<T>::value, T>::type* = nullptr>
+            static const T str_to_timestamp(const std::string& datetime) {
+                std::tm tm = {};
+                std::istringstream ss(datetime);
+                ss >> std::get_time(&tm, "%Y-%m-%d %H:%M");
+
+                if (ss.fail()) {
+                    ss.clear(); // Clear the error state
+                    ss.str(datetime); // Reset the stringstream with the original input
+                    // Try parsing without hour and minute
+                    ss >> std::get_time(&tm, "%Y-%m-%d");
+                    if (ss.fail()) {
+                        return 0;
+                    }
+                }
+                std::time_t timestamp = std::mktime(&tm);
+                return static_cast<T>(timestamp);
+            }
+
             void sortby_filename(std::vector<std::string>& filenames){
                 std::sort(filenames.begin(), filenames.end(), [this](const std::string& path1, const std::string& path2){
                     std::string filename1 = std::filesystem::path(path1).filename().generic_string();
@@ -174,7 +202,7 @@ namespace CS {
             }
 
             std::string get_md5hash(const std::string& fname){ 
-                char buffer[4096]; 
+                char buffer[16384]; 
                 unsigned char digest[MD5_DIGEST_LENGTH]; 
 
                 std::stringstream ss; 
@@ -978,6 +1006,54 @@ namespace CS {
 
             inline const std::unordered_map<std::string, std::map<uint64_t, InternalSave>>& saves(){
                 return _saves;
+            }
+
+            inline int cmp_root(const std::string& __prog, const uint64_t __date, const std::string __root){
+                if(_saves.at(__prog).at(__date).driveLetter != __root){
+                    return 0;
+                }
+
+                return 1;
+            }
+
+            inline int replace_root(const std::string& __prog, const uint64_t __date, const std::string __root){
+                size_t pos = _saves.at(__prog).at(__date).pathVec[0].second.find(":");
+                std::string substr = _saves.at(__prog).at(__date).pathVec[0].second.substr(pos - 1, 2);
+
+                for(std::pair<std::string,std::string>& pair : _saves.at(__prog).at(__date).pathVec){
+                    if(pos == std::string::npos){
+                        return 0;
+                    }
+                    CS::Utility::replaceSubstr(pair.second, substr, __root);
+                }
+                
+                return 1;
+            }
+
+            inline int cmp_uname(const std::string& __prog, const uint64_t __date, const std::string& uname){
+                if(_saves.at(__prog).at(__date).userName != uName){
+                    return 0;
+                }
+                return 1;
+            }
+
+            inline void replace_uname(const std::string& __prog, const uint64_t __date, const std::string& uname){
+                for(std::pair<std::string,std::string>& pair : _saves.at(__prog).at(__date).pathVec){
+                    const std::string pat = "Users\\";
+                    const size_t pos = pair.first.find(pat);
+                    if(pos != std::string::npos){
+                        const size_t posx = pos + pat.length();
+                        const size_t posend = pair.first.find_first_of("\\", posx);
+                        pair.first.replace(posx, posend - posx, uname);
+
+                    }
+                    const size_t pos1 = pair.second.find(pat);
+                    if(pos1 != std::string::npos){
+                        const size_t posEndPat = pos1 + pat.length();
+                        const size_t posMatchEnd = pair.second.find_first_of("\\", posEndPat);
+                        pair.second.replace(posEndPat, posMatchEnd - posEndPat, uname);
+                    }
+                }
             }
     };
 

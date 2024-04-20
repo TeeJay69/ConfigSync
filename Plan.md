@@ -37,34 +37,17 @@ generation
         - Operands:
             - [ ] --message (-m) (Add a note to that save)
     + restore [PROGRAM] (Defaults to latest save)
-        - [ ] --date (-d) (specify a specific save. Uses save from that date or if unavailble, the latest save before that date)
+        - [ ] --all (-a) (restore config of all supported programs)
+        - Operands:
+            - [ ] --date (-d) (specify a specific save. Uses save from that date or if unavailble, the latest save before that date)
     + check
         - [x] --task (-t) (ensure that task status reflects settings)
-    + show
-
-        - 
-        + Some default included registers (lists):
-            - [x] package-managers
-            - [ ] basic (Some basic utilities)
-            - [ ] microsoft (Installs microsoft tools like PowerToys, PowerShell, Sysinternals Suite)
-
+    + show [PROGRAM] (Display saves)
+        - [ ] --explorer (-e) (Open save archive in explorer)
     + list
-        - [x] List all supported programs
-        - [x] --installed (-i) (Display all installed programs)
-    + show [PROGRAM]
-        - [x] Display information about an installed program
-    + upgrade
-        - [x] --all (-a) (Upgrade all available packages)
-        - [x] --register (-r) (Upgrade all programs from register)
-        - [ ] --list (-l) (Show all upgradeable packages)
-    + search
-    + path [PROGRAM]
-        - [ ] --check (Check if the programs path is present in the environment variables of the registry hives (default: both hives))
-        - [ ] --add (Add the program to the path (default: both (prompt for elevation))
-        - [ ] --remove (Remove a program from the HKCU or HKLM path (default: both))
-        - Operands:    
-            - [ ] --user (Check only for the presence in HKCU)
-            - [ ] --system (Check only for the presence in HKLM SYSTEM)
+        - [ ] List all supported programs
+    + undo [PROGRAM]
+        - [ ] --all (Undo the most recent restore for all programs)
     + settings
         - [ ] settings.editor (vim, notepad, VSCode) (Preferred editor when opening files from this program.)
     + version
