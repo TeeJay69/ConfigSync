@@ -738,6 +738,95 @@ inline void handleShowOption(char* argv[], int argc){
     }
 }
 
+inline void handleStatusOption(char* argv[], int argc){
+    CS::Programs::Mgm mgm;
+    if(argv[2] == NULL){
+        std::cout << ANSI_COLOR_166 << "Status:" << ANSI_COLOR_RESET << std::endl;
+        CS::Saves S(savesFile);
+        if(!S.load()){
+            std::cout << ANSI_COLOR_RED << "Never synced:" << std::endl;
+            for(const auto& prog : mgm.get_supported()){
+                std::cout << prog << ANSI_COLOR_RESET << std::endl;
+            }
+        }
+        std::vector<std::string> insync;
+        std::vector<std::string> outsync;
+        std::vector<std::string> nsync;
+        for(const auto& prog : mgm.get_supported()){
+            if(!S.exists(prog)){
+                nsync.push_back(prog);
+                continue;
+            }
+            uint64_t tst = S.get_last_tst(prog);
+            if(tst == 0){
+                std::cerr << "Warning: This should never happen. Failed to retrieve last timestamp for " << prog << std::endl;
+                CS::Logs::msg("Warning: This should never happen. Failed to retrieve last timestamp for " + prog);
+            }
+
+            unsigned int equal = 1;
+            for(const auto& pair : S.saves().at(prog).at(tst).pathVec){
+                if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                    outsync.push_back(prog);
+                    equal = 0;
+                    break;
+                }
+            }
+
+            if(equal == 1){
+                nsync.push_back(prog);
+            }
+        }
+
+        if(!insync.empty()){
+            std::cout << ANSI_COLOR_GREEN << "In sync:" << ANSI_COLOR_RESET << std::endl;
+            for(const auto& el : insync){
+                std::cout << ANSI_COLOR_GREEN << el << ANSI_COLOR_RESET << std::endl;
+            }
+        }
+        if(!outsync.empty()){
+            std::cout << ANSI_COLOR_YELLOW << "Out of sync:" << ANSI_COLOR_RESET << std::endl;
+            for(const auto& el : outsync){
+                std::cout << ANSI_COLOR_YELLOW << el << ANSI_COLOR_RESET << std::endl;
+            }
+        }
+        if(!nsync.empty()){
+            std::cout << ANSI_COLOR_RED << "Never synced:" << ANSI_COLOR_RESET << std::endl;
+            for(const auto& el : nsync){
+                std::cout << ANSI_COLOR_RED << el << ANSI_COLOR_RESET << std::endl;
+            }
+        }
+    }
+    else if(mgm.checkName(std::string(argv[2])) == 1){
+        const std::string canName = mgm.get_canonical(std::string(argv[2]));
+        std::cout << ANSI_COLOR_166 << "Status:" << ANSI_COLOR_RESET << std::endl;
+        CS::Saves S(savesFile);
+        if(!S.load()){
+            std::cout << ANSI_COLOR_RED << "Never synced: " << canName << std::endl;
+            return;
+        }
+        if(!S.exists(canName)){
+            std::cerr << "Fatal: No saves of " << canName << " found." << std::endl;
+        }
+
+        uint64_t tst = S.get_last_tst(canName);
+        if(tst == 0){
+            std::cerr << "Warning: This should never happen. Failed to retrieve last timestamp for " << canName << std::endl;
+            CS::Logs::msg("Warning: This should never happen. Failed to retrieve last timestamp for " + canName);
+        }
+
+        for(const auto& pair : S.saves().at(canName).at(tst).pathVec){
+            if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                std::cout << ANSI_COLOR_RED << "Out of Sync!" << ANSI_COLOR_RESET << std::endl;
+                return;
+            }
+        }
+        std::cout << ANSI_COLOR_GREEN << "In sync!" << ANSI_COLOR_RESET << std::endl;
+    }
+    else{
+        std::cerr << "Fatal: '" << argv[2] << "' is not a supported operand." << std::endl;
+    }
+}
+
 int main(int argc, char* argv[]){   
     std::signal(SIGINT, exitSignalHandler);
     enableColors();
@@ -863,6 +952,9 @@ int main(int argc, char* argv[]){
     }
     else if(std::string(argv[1]) == "show"){
         handleShowOption(argv, argc);
+    }
+    else if(std::string(argv[1]) == "status"){
+        handleStatusOption(argv, argc);
     }
     else{
         std::cerr << "Fatal: '" << argv[1] << "' is not a ConfigSync command.\n";

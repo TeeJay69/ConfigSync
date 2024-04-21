@@ -49,6 +49,7 @@ generation
         - [ ] List all supported programs
     + undo [PROGRAM]
         - [ ] --all (Undo the most recent restore for all programs)
+    + status [PROGRAM]->default:all
     + settings
         - [ ] settings.editor (vim, notepad, VSCode) (Preferred editor when opening files from this program.)
     + version
