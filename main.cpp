@@ -413,7 +413,7 @@ inline void handleRestoreOption(char* argv[], int argc){
         const size_t cmpSize = sizeof(cmp) / sizeof(cmp[0]);
         std::string dateVal;
         if(CS::Args::argfcmp(dateVal, argv, argc, cmp, cmpSize) == 1){
-            std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << "from " << dateVal << std::endl;
+            std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << " from " << dateVal << std::endl;
             const uint64_t dateTst = CS::Utility::str_to_timestamp<uint64_t>(dateVal);
             const uint64_t date = getNearestDate(S, canName, dateTst);
             if(date == 0 || S.find_save(canName, date) == 0){
@@ -555,6 +555,7 @@ inline void handleShowOption(char* argv[], int argc){
                 }
                 else{
                     std::cout << ANSI_COLOR_146 << i << ". " << CS::Utility::timestamp_to_str(save.first) << ANSI_COLOR_RESET << std::endl;
+                    std::cout << "tst: " << save.first << std::endl;
                 }
             }
             else{

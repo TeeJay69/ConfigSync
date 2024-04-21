@@ -169,6 +169,17 @@ namespace CS {
                 std::tm* tm = std::localtime(&ts);
                 
                 char buffer[80];
+                std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M:%S", tm);
+                return std::string(buffer);
+            }
+            
+            template<typename T, typename std::enable_if<std::is_integral<T>::value, T>::type* = nullptr>
+            static const std::string timestamp_to_str_ymdhm(const T& timestamp){
+                static_assert(std::is_integral<T>::value);
+                std::time_t ts = static_cast<std::time_t>(timestamp);
+                std::tm* tm = std::localtime(&ts);
+                
+                char buffer[80];
                 std::strftime(buffer, sizeof(buffer), "%Y-%m-%d %H:%M", tm);
 
                 return std::string(buffer);
@@ -178,8 +189,8 @@ namespace CS {
             static const T str_to_timestamp(const std::string& datetime) {
                 std::tm tm = {};
                 std::istringstream ss(datetime);
-                ss >> std::get_time(&tm, "%Y-%m-%d %H:%M");
-
+                ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+                
                 if (ss.fail()) {
                     ss.clear(); // Clear the error state
                     ss.str(datetime); // Reset the stringstream with the original input
@@ -189,8 +200,16 @@ namespace CS {
                         return 0;
                     }
                 }
-                std::time_t timestamp = std::mktime(&tm);
-                return static_cast<T>(timestamp);
+                // Manually adjust tm_isdst to -1 to ignore DST adjustments
+                tm.tm_isdst = -1;
+                // Convert tm structure to time_point (assumes local time)
+                auto time_c = std::chrono::system_clock::from_time_t(std::mktime(&tm));
+
+                // Convert time_point back to time_t, then cast to T
+                auto time_as_t = std::chrono::system_clock::to_time_t(time_c);
+
+                std::cout << "timestamp: " << time_as_t << std::endl;
+                return static_cast<T>(time_as_t);  // Cast to desired type and return
             }
 
             void sortby_filename(std::vector<std::string>& filenames){
