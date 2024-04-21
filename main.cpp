@@ -23,8 +23,6 @@
 #include "ConfigSync.hpp"
 #include <fstream>
 
-
-
 #ifdef DEBUG
 #define DEBUG_MODE 1
 #else 
@@ -381,9 +379,16 @@ inline int restoreSave(CS::Saves& S, const std::string& prog, const uint64_t dat
     checkDynamicPath(S, prog, date);
     for(const auto& pair : S.saves().at(prog).at(date).pathVec){
         if(std::filesystem::exists(pair.first)){
-            CS::Filesystem::recurse_remove(pair.first);
+            std::filesystem::permissions(pair.first, std::filesystem::perms::all);
+            if(std::filesystem::is_directory(pair.first)){
+                CS::Filesystem::recurse_remove(pair.first);
+            }
+            else{
+                std::filesystem::remove(pair.first);
+            }
         }
-        if(CS::Filesystem::recurse_copy(pair.second, pair.first) != 1){
+        std::filesystem::permissions(pair.second, std::filesystem::perms::all);
+        if(std::filesystem::copy_file(pair.second, pair.first, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::update_existing) != 1){
             return 0;
         }
     }
@@ -397,7 +402,65 @@ inline void handleRestoreOption(char* argv[], int argc){
         std::cerr << "Fatal: Missing argument or value." << std::endl;
     }
     else if(mgm.checkName(std::string(argv[2])) == 1){
-        
+        const std::string canName = mgm.get_canonical(std::string(argv[2]));
+        CS::Saves S(savesFile);
+        if(S.load() != 1){
+            std::cerr << "Fatal: No previous saves to restore." << std::endl;
+            return;
+        }
+
+        const char* cmp[] = {"--date", "-d"};
+        const size_t cmpSize = sizeof(cmp) / sizeof(cmp[0]);
+        std::string dateVal;
+        if(CS::Args::argfcmp(dateVal, argv, argc, cmp, cmpSize) == 1){
+            std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << "from " << dateVal << std::endl;
+            const uint64_t dateTst = CS::Utility::str_to_timestamp<uint64_t>(dateVal);
+            const uint64_t date = getNearestDate(S, canName, dateTst);
+            if(date == 0 || S.find_save(canName, date) == 0){
+                std::cout << "Fatal: No save of " << canName << " found." << std::endl;
+                return;
+            }
+            
+            if(preRestoreBackup(mgm, S, canName) != 1){
+                std::cerr << ANSI_COLOR_RED << "Error: Failed to create Pre-Restore-Backup, terminating..." << ANSI_COLOR_RESET << std::endl; 
+                std::exit(EXIT_FAILURE);
+            }
+
+            if(restoreSave(S, canName, date) != 1){
+                std::cerr << ANSI_COLOR_RED << "Failed to restore save." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Restoring from Pre-Restore-Backup..." << ANSI_COLOR_RESET << std::endl;
+                if(restoreSave(S, canName, S.get_last_tst(canName)) != 1){
+                    std::cerr << ANSI_COLOR_RED << "Error: Failed to restore from Pre-Restore-Backup" << ANSI_COLOR_RESET << std::endl;
+                    std::cerr << "Please ensure the target program is functioning normally." << std::endl;
+                    std::exit(EXIT_FAILURE);
+                }
+            }
+            std::cout << ANSI_COLOR_GREEN << "Restore successfull." << ANSI_COLOR_RESET << std::endl;
+        }
+        else{
+            std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << std::endl;
+            if(S.exists(canName) != 1){
+                std::cerr << "Fatal: No save of " << canName << " found." << std::endl;
+                return;
+            }
+            const uint64_t date = S.get_last_tst(canName);
+
+            if(preRestoreBackup(mgm, S, canName) != 1){
+                std::cerr << ANSI_COLOR_RED << "Error: Failed to create Pre-Restore-Backup, terminating..." << ANSI_COLOR_RESET << std::endl; 
+                std::exit(EXIT_FAILURE);
+            }
+            
+            if(restoreSave(S, canName, date) != 1){
+                std::cerr << ANSI_COLOR_RED << "Failed to restore save." << ANSI_COLOR_RESET << std::endl;
+                std::cout << ANSI_COLOR_222 << "Restoring from Pre-Restore-Backup..." << ANSI_COLOR_RESET << std::endl;
+                if(restoreSave(S, canName, S.get_last_tst(canName)) != 1){
+                    std::cerr << ANSI_COLOR_RED << "Error: Failed to restore from Pre-Restore-Backup" << ANSI_COLOR_RESET << std::endl;
+                    std::cerr << "Please ensure the target program is functioning normally." << std::endl;
+                    std::exit(EXIT_FAILURE);
+                }
+            }
+            std::cout << ANSI_COLOR_GREEN << "Restore successfull." << ANSI_COLOR_RESET << std::endl;
+        }
     }
     else if(CS::Args::argcmp(argv, argc, "--all") == 1 || CS::Args::argcmp(argv, argc, "-a") == 1){
         const char* cmp[] = {"--date", "-d"};
@@ -461,67 +524,9 @@ inline void handleRestoreOption(char* argv[], int argc){
 
             S.save();
         }
-        else if(mgm.checkName(std::string(argv[2])) == 1){
-            const std::string canName = mgm.get_canonical(std::string(argv[2]));
-            CS::Saves S(savesFile);
-            if(S.load() != 1){
-                std::cerr << "Fatal: No previous saves to restore." << std::endl;
-                return;
-            }
-
-            const char* cmp[] = {"--date", "-d"};
-            const size_t cmpSize = sizeof(cmp) / sizeof(cmp[0]);
-            std::string dateVal;
-            if(CS::Args::argfcmp(dateVal, argv, argc, cmp, cmpSize) == 1){
-                std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << "from " << dateVal << std::endl;
-                const uint64_t dateTst = CS::Utility::str_to_timestamp<uint64_t>(dateVal);
-                const uint64_t date = getNearestDate(S, canName, dateTst);
-                if(date == 0 || S.find_save(canName, date) == 0){
-                    std::cout << "Fatal: No save of " << canName << " found." << std::endl;
-                    return;
-                }
-                
-                if(preRestoreBackup(mgm, S, canName) != 1){
-                    std::cerr << ANSI_COLOR_RED << "Error: Failed to create Pre-Restore-Backup, terminating..." << ANSI_COLOR_RESET << std::endl; 
-                    std::exit(EXIT_FAILURE);
-                }
-
-                if(restoreSave(S, canName, date) != 1){
-                    std::cerr << ANSI_COLOR_RED << "Failed to restore save." << ANSI_COLOR_RESET << std::endl;
-                    std::cout << ANSI_COLOR_222 << "Restoring from Pre-Restore-Backup..." << ANSI_COLOR_RESET << std::endl;
-                    if(restoreSave(S, canName, S.get_last_tst(canName)) != 1){
-                        std::cerr << ANSI_COLOR_RED << "Error: Failed to restore from Pre-Restore-Backup" << ANSI_COLOR_RESET << std::endl;
-                        std::cerr << "Please ensure the target program is functioning normally." << std::endl;
-                        std::exit(EXIT_FAILURE);
-                    }
-                }
-                std::cout << ANSI_COLOR_GREEN << "Restore successfull." << ANSI_COLOR_RESET << std::endl;
-            }
-            else{
-                std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << std::endl;
-                if(S.exists(canName) != 1){
-                    std::cerr << "Fatal: No save of " << canName << " found." << std::endl;
-                    return;
-                }
-                const uint64_t date = S.get_last_tst(canName);
-
-                if(preRestoreBackup(mgm, S, canName) != 1){
-                    std::cerr << ANSI_COLOR_RED << "Error: Failed to create Pre-Restore-Backup, terminating..." << ANSI_COLOR_RESET << std::endl; 
-                    std::exit(EXIT_FAILURE);
-                }
-                
-                if(restoreSave(S, canName, date) != 1){
-                    std::cerr << ANSI_COLOR_RED << "Failed to restore save." << ANSI_COLOR_RESET << std::endl;
-                    std::cout << ANSI_COLOR_222 << "Restoring from Pre-Restore-Backup..." << ANSI_COLOR_RESET << std::endl;
-                    if(restoreSave(S, canName, S.get_last_tst(canName)) != 1){
-                        std::cerr << ANSI_COLOR_RED << "Error: Failed to restore from Pre-Restore-Backup" << ANSI_COLOR_RESET << std::endl;
-                        std::cerr << "Please ensure the target program is functioning normally." << std::endl;
-                        std::exit(EXIT_FAILURE);
-                    }
-                }
-                std::cout << ANSI_COLOR_GREEN << "Restore successfull." << ANSI_COLOR_RESET << std::endl;
-            }
-        }
+    }
+    else{
+        std::cerr << "Fatal: Missing argument or value. See 'configsync --help'" << std::endl;
     }
 }
 
@@ -706,9 +711,11 @@ int main(int argc, char* argv[]){
     else if(std::string(argv[1]) == "sync"){
         handleSyncOption(argv, argc, pt);
     }
-
     else if(std::string(argv[1]) == "check"){
         handleCheckOption(argv, argc, pt);
+    }
+    else if(std::string(argv[1]) == "restore"){
+        handleRestoreOption(argv, argc);
     }
     else if(std::string(argv[1]) == "show"){
         handleShowOption(argv, argc);

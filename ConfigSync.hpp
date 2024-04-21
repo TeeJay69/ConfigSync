@@ -82,7 +82,7 @@ namespace CS {
                     for(int ii = 0; ii < argc; ii++){
                         if(strcmp(argv[ii], cmp[i]) == 0){
                             if(ii + 1 < argc){
-                                buff = argv[i + 1];
+                                buff = argv[ii + 1];
                                 return 1;
                             }
                         }
