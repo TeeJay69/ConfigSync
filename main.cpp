@@ -435,6 +435,9 @@ inline void handleRestoreOption(char* argv[], int argc){
                 std::cerr << ANSI_COLOR_RED << "Error: Failed to create Pre-Restore-Backup, terminating..." << ANSI_COLOR_RESET << std::endl; 
                 std::exit(EXIT_FAILURE);
             }
+            else{
+                std::cout << ANSI_COLOR_222 << "Created Pre-Restore-Backup" << ANSI_COLOR_RESET << std::endl;
+            }
 
             if(restoreSave(S, canName, date) != 1){
                 std::cerr << ANSI_COLOR_RED << "Failed to restore save." << ANSI_COLOR_RESET << std::endl;
@@ -448,18 +451,30 @@ inline void handleRestoreOption(char* argv[], int argc){
             std::cout << ANSI_COLOR_GREEN << "Restore successfull." << ANSI_COLOR_RESET << std::endl;
         }
         else{
-            std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << std::endl;
             if(S.exists(canName) != 1){
                 std::cerr << "Fatal: No save of " << canName << " found." << std::endl;
                 return;
             }
             const uint64_t date = S.get_last_tst(canName);
+            if(CS::Args::argcmp(argv, argc, "--force") == 1 || CS::Args::argcmp(argv, argc, "-f") == 1){
+                for(const auto& proc : mgm.programs().at(canName).procNames){
+                    if(CS::Process::killProcess(proc.c_str()) == 1){
+                        std::cout << ANSI_COLOR_222 << "Killed " <<  proc << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+                std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << " - Forced:" << std::endl;
+            }
+            else{
+                std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << ":" << std::endl;
+            }
 
             if(preRestoreBackup(mgm, S, canName) != 1){
                 std::cerr << ANSI_COLOR_RED << "Error: Failed to create Pre-Restore-Backup, terminating..." << ANSI_COLOR_RESET << std::endl; 
                 std::exit(EXIT_FAILURE);
             }
-            
+            else{
+                std::cout << ANSI_COLOR_222 << "Created Pre-Restore-Backup" << ANSI_COLOR_RESET << std::endl;
+            }
             if(restoreSave(S, canName, date) != 1){
                 std::cerr << ANSI_COLOR_RED << "Failed to restore save." << ANSI_COLOR_RESET << std::endl;
                 std::cout << ANSI_COLOR_222 << "Restoring from Pre-Restore-Backup..." << ANSI_COLOR_RESET << std::endl;
@@ -514,6 +529,9 @@ inline void handleRestoreOption(char* argv[], int argc){
                 if(preRestoreBackup(mgm, S, prog) != 1){
                     std::cerr << ANSI_COLOR_RED << "Error: Failed to create Pre-Restore-Backup, terminating..." << ANSI_COLOR_RESET << std::endl; 
                     std::exit(EXIT_FAILURE);
+                }
+                else{
+                    std::cout << ANSI_COLOR_222 << "Created Pre-Restore-Backup" << ANSI_COLOR_RESET << std::endl;
                 }
                 
                 if(restoreSave(S, prog, date) != 1){
@@ -589,6 +607,9 @@ inline void handleRestoreOption(char* argv[], int argc){
                     std::cerr << ANSI_COLOR_RED << "Error: Failed to create Pre-Restore-Backup, terminating..." << ANSI_COLOR_RESET << std::endl; 
                     std::exit(EXIT_FAILURE);
                 }
+                else{
+                    std::cout << ANSI_COLOR_222 << "Created Pre-Restore-Backup" << ANSI_COLOR_RESET << std::endl;
+                }
                 
                 if(restoreSave(S, prog, date) != 1){
                     failed.push_back(prog);
@@ -660,7 +681,7 @@ inline void handleShowOption(char* argv[], int argc){
                 }
             }
             else{
-                resVec.emplace_back(save.first);
+                resVec.push_back(save.first);
             }
             i++;
         }

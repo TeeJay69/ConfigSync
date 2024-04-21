@@ -1194,7 +1194,7 @@ namespace CS {
              */
             static int killProcess(const char* processName){
                 const int x = findPID(processName);
-                if(x == NULL || x == 0){
+                if(x == 0){
                     return 0;
                 }
                 const auto adpservice = OpenProcess(PROCESS_TERMINATE, false, x);
