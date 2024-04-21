@@ -35,16 +35,16 @@ generation
     + sync [PROGRAM]
         - [x] --all (-a) (synchronize all supported programs)
         - Operands:
-            - [ ] --message (-m) (Add a note to that save)
+            - [x] --message (-m) (Add a note to that save)
     + restore [PROGRAM] (Defaults to latest save)
         - [x] --all (-a) (restore config of all supported programs)
         - Operands:
             - [x] --date (-d) (specify a specific save. Uses save from that date or if unavailble, the latest save before that date)
-            - [ ] --force (-f) (Force restore by killing running instances of the target programs)
+            - [x] --force (-f) (Force restore by killing running instances of the target programs)
     + check
         - [x] --task (-t) (ensure that task status reflects settings)
     + show [PROGRAM] (Display saves)
-        - [ ] --explorer (-e) (Open save archive in explorer)
+        - [x] --explorer (-e) (Open save archive in explorer)
     + list
         - [ ] List all supported programs
     + undo [PROGRAM]

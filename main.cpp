@@ -720,6 +720,22 @@ inline void handleShowOption(char* argv[], int argc){
             }
         }
     }
+    else if(CS::Args::argcmp(argv, argc, "--explorer") == 1 || CS::Args::argcmp(argv, argc, "-e") == 1){
+        const std::string com = "cmd /c \"explorer \"" + archiveDir + "\"\"";
+        const std::string pwshcom = "pwsh /c explorer \"" + archiveDir + "\"";
+        if(std::system(com.c_str()) != 1){ // Explorer exit code is 1 for success
+            std::cerr << ANSI_COLOR_RED << "Failed to call windows command processor." << ANSI_COLOR_RESET << std::endl;
+            std::cout << "Trying to call powershell..." << std::endl;
+            if(std::system(pwshcom.c_str()) != 1){
+                std::cerr << ANSI_COLOR_RED << "Failed to call powershell, terminating..." << ANSI_COLOR_RESET << std::endl;
+            }
+                std::exit(EXIT_FAILURE);
+        }
+        return;
+    }
+    else{
+        std::cerr << "Fatal: Missing argument or value. See 'configsync --help'" << std::endl;
+    }
 }
 
 int main(int argc, char* argv[]){   
