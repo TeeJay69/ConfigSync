@@ -345,6 +345,33 @@ inline uint64_t getNearestDate(CS::Saves& S, const std::string& prog, const uint
     return it--->first;
 }
 
+inline uint64_t getNearestResDate(CS::Saves& S, const std::string& prog, const uint64_t date){
+    if(!S.exists(prog)){
+        return 0;
+    }
+
+    if(S.find_save(prog, date) == 1){
+        if(S.saves().at(prog).at(date).message == "Pre-Restore-Backup"){
+            return date;
+        }
+    }
+
+    auto it = S.saves().at(prog).upper_bound(date);
+
+    while(true){
+        if(it == S.saves().at(prog).end()){
+            return 0;
+        }
+        if(it--->second.message != "Pre-Restore-Backup"){
+            it--;
+        }
+        else{
+            break;
+        }
+    }
+    return it->first;
+}
+
 inline int createSave(CS::Programs::Mgm& mgm, CS::Saves& S, const std::string& prog, const std::string& destDayDir, const uint64_t tst, const std::string& message){
     const std::string tstDir = destDayDir + "\\" + std::to_string(tst);
     std::vector<std::pair<std::string,std::string>> pathvec;
@@ -827,6 +854,177 @@ inline void handleStatusOption(char* argv[], int argc){
     }
 }
 
+inline int getArgsName(std::string& buff, char* argv[], int argc){
+    CS::Programs::Mgm mgm;
+    for(int i = 0; i < argc; i++){
+        if(mgm.checkName(std::string(argv[i])) == 1){
+            buff = mgm.get_canonical(std::string(argv[i]));
+            return 1;
+        }
+    }
+    return 0;
+}
+
+inline void handleUndoOption(char* argv[], int argc){
+    CS::Programs::Mgm mgm;
+    if(argv[2] == NULL){
+        std::cerr << "Fatal: Missing argument or value." << std::endl;
+    }
+    else if(CS::Args::argcmp(argv, argc, "--all") || CS::Args::argcmp(argv, argc, "-a")){
+        if(CS::Args::argcmp(argv, argc, "--restore") || CS::Args::argcmp(argv, argc, "-r")){
+            int forceFlag = 0;
+            if(CS::Args::argcmp(argv, argc, "--force") || CS::Args::argcmp(argv, argc, "-f")){
+                forceFlag = 1;
+            }
+            if(std::string dateVal; CS::Args::argfcmp(dateVal, argv, argc, "--date") || CS::Args::argfcmp(dateVal, argv, argc, "-d")){
+                CS::Saves S(savesFile);
+                if(!S.load()){
+                    std::cerr << "Fatal: Nothing to undo." << std::endl;
+                    return;
+                }
+                std::vector<std::string> success;
+                std::vector<std::string> fail;
+                if(forceFlag){
+                    std::cout << ANSI_COLOR_166 << "Undo restore all, with date - Forced:" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cout << ANSI_COLOR_166 << "Undo restore all, with date:" << ANSI_COLOR_RESET << std::endl;
+                }
+                for(const auto& prog : mgm.get_supported()){
+                    const uint64_t tstNotNear = CS::Utility::str_to_timestamp<uint64_t>(dateVal);
+                    const uint64_t tst = getNearestResDate(S, prog, tstNotNear);
+                    if(tst == 0 || !S.find_save(prog, tst)){
+                        std::cout << ANSI_COLOR_YELLOW << prog << " date not found, skipping..." << ANSI_COLOR_RESET << std::endl;
+                        fail.push_back(prog);
+                        continue;
+                    }
+                    else if(S.saves().at(prog).at(tst).message != "Pre-Restore-Backup"){ // ! Remove before release.
+                        std::cout << prog << " nearest date is unrelated to a restore, skipping..." << std::endl;
+                        fail.push_back(prog);
+                        continue;
+                    }
+                    
+                    if(forceFlag){
+                        for(const auto& proc : mgm.programs().at(prog).procNames){
+                            if(CS::Process::killProcess(proc.c_str())){
+                                std::cout << ANSI_COLOR_222 << "Killed " << proc << "." << ANSI_COLOR_RESET << std::endl;
+                            }
+                        }
+                    }
+
+                    if(restoreSave(S, prog, tst) != 1){
+                        std::cerr << ANSI_COLOR_RED << "Failed to undo restore " << prog << "." << ANSI_COLOR_RESET << std::endl;
+                        fail.push_back(prog);
+                        continue;
+                    }
+
+                    success.push_back(prog);
+                }
+                
+                if(!fail.empty()){
+                    std::cout << ANSI_COLOR_RED << "Failed:" << ANSI_COLOR_RESET << std::endl;
+                    for(const auto& el : fail){
+                        std::cout << ANSI_COLOR_RED << el << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+                if(!success.empty()){
+                    std::cout << ANSI_COLOR_GREEN << "Success:" << ANSI_COLOR_RESET << std::endl;
+                    for(const auto& el : success){
+                        std::cout << ANSI_COLOR_GREEN << el << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+            else{
+                CS::Saves S(savesFile);
+                if(!S.load()){
+                    std::cerr << "Fatal: Nothing to undo." << std::endl;
+                    return;
+                }
+                std::vector<std::string> success;
+                std::vector<std::string> fail;
+                if(forceFlag){
+                    std::cout << ANSI_COLOR_166 << "Undo restore all - Forced:" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cout << ANSI_COLOR_166 << "Undo restore all:" << ANSI_COLOR_RESET << std::endl;
+                }
+                for(const auto& prog : mgm.get_supported()){
+                    const uint64_t tst = getNearestResDate(S, prog, S.get_last_tst(prog));
+                    if(tst == 0 || !S.find_save(prog, tst)){
+                        std::cout << ANSI_COLOR_YELLOW << prog << " date not found, skipping..." << ANSI_COLOR_RESET << std::endl;
+                        fail.push_back(prog);
+                        continue;
+                    }
+                    else if(S.saves().at(prog).at(tst).message != "Pre-Restore-Backup"){ // ! Remove before release.
+                        std::cout << prog << " nearest date is unrelated to a restore, skipping..." << std::endl;
+                        fail.push_back(prog);
+                        continue;
+                    }
+
+                    if(forceFlag){
+                        for(const auto& proc : mgm.programs().at(prog).procNames){
+                            if(CS::Process::killProcess(proc.c_str())){
+                                std::cout << ANSI_COLOR_222 << "Killed " << proc << "." << ANSI_COLOR_RESET << std::endl;
+                            }
+                        }
+                    }
+
+                    if(restoreSave(S, prog, tst) != 1){
+                        std::cerr << ANSI_COLOR_RED << "Failed to undo restore " << prog << "." << ANSI_COLOR_RESET << std::endl;
+                        fail.push_back(prog);
+                        continue;
+                    }
+
+                    success.push_back(prog);
+                }
+                
+                if(!fail.empty()){
+                    std::cout << ANSI_COLOR_RED << "Failed:" << ANSI_COLOR_RESET << std::endl;
+                    for(const auto& el : fail){
+                        std::cout << ANSI_COLOR_RED << el << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+                if(!success.empty()){
+                    std::cout << ANSI_COLOR_GREEN << "Success:" << ANSI_COLOR_RESET << std::endl;
+                    for(const auto& el : success){
+                        std::cout << ANSI_COLOR_GREEN << el << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+        }
+        else if(CS::Args::argcmp(argv, argc, "--save") || CS::Args::argcmp(argv, argc, "-s")){
+            if(std::string date; CS::Args::argfcmp(date, argv, argc, "--date") || CS::Args::argfcmp(date, argv, argc, "-d")){
+                
+            }
+            else{
+
+            }
+        }
+    }
+    else if(std::string canName; getArgsName(canName, argv, argc) == 1){
+        if(CS::Args::argcmp(argv, argc, "--restore") || CS::Args::argcmp(argv, argc, "-r")){
+            if(std::string date; CS::Args::argfcmp(date, argv, argc, "--date") || CS::Args::argfcmp(date, argv, argc, "-d")){
+
+            }
+            else{
+
+            }
+
+        }
+        else if(CS::Args::argcmp(argv, argc, "--save") || CS::Args::argcmp(argv, argc, "-s")){
+            if(std::string date; CS::Args::argfcmp(date, argv, argc, "--date") || CS::Args::argfcmp(date, argv, argc, "-d")){
+
+            }
+            else{
+
+            }
+        }
+        else{
+            std::cerr << "Fatal: Unrecognized argument. See 'configsync --help'." << std::endl;
+        }
+    }
+}
+
 int main(int argc, char* argv[]){   
     std::signal(SIGINT, exitSignalHandler);
     enableColors();
@@ -955,6 +1153,9 @@ int main(int argc, char* argv[]){
     }
     else if(std::string(argv[1]) == "status"){
         handleStatusOption(argv, argc);
+    }
+    else if(std::string(argv[1]) == "undo"){
+        handleUndoOption(argv, argc);
     }
     else{
         std::cerr << "Fatal: '" << argv[1] << "' is not a ConfigSync command.\n";

@@ -48,7 +48,11 @@ generation
     + list
         - [ ] List all supported programs
     + undo [PROGRAM]
-        - [ ] --all (Undo the most recent restore for all programs)
+        - [ ] --restore (-r) (Undo the most recent restore of a program)
+        - [ ] --save (-s) (Undo the most recent save of a program)
+        - Operands:
+            - [ ] --all (Undo an action for all programs)
+            - [ ] --date (Undo a specific action from a specific date)
     + status [PROGRAM]->default:all
     + settings
         - [ ] settings.editor (vim, notepad, VSCode) (Preferred editor when opening files from this program.)
