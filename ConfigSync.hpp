@@ -208,7 +208,7 @@ namespace CS {
                 // Convert time_point back to time_t, then cast to T
                 auto time_as_t = std::chrono::system_clock::to_time_t(time_c);
 
-                std::cout << "timestamp: " << time_as_t << std::endl;
+                // std::cout << "timestamp: " << time_as_t << std::endl;
                 return static_cast<T>(time_as_t);  // Cast to desired type and return
             }
 

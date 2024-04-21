@@ -449,6 +449,7 @@ inline void handleRestoreOption(char* argv[], int argc){
                 }
             }
             std::cout << ANSI_COLOR_GREEN << "Restore successfull." << ANSI_COLOR_RESET << std::endl;
+            S.save();
         }
         else{
             if(S.exists(canName) != 1){
@@ -485,6 +486,7 @@ inline void handleRestoreOption(char* argv[], int argc){
                 }
             }
             std::cout << ANSI_COLOR_GREEN << "Restore successfull." << ANSI_COLOR_RESET << std::endl;
+            S.save();
         }
     }
     else if(CS::Args::argcmp(argv, argc, "--all") == 1 || CS::Args::argcmp(argv, argc, "-a") == 1){
@@ -645,7 +647,6 @@ inline void handleRestoreOption(char* argv[], int argc){
             }
 
             S.save();
-
         }
     }
     else{
@@ -670,6 +671,8 @@ inline void handleShowOption(char* argv[], int argc){
         std::cout << ANSI_COLOR_222 << canName << ":" << ANSI_COLOR_RESET << std::endl;
         std::cout << ANSI_COLOR_166 << "Saves:" << ANSI_COLOR_RESET << std::endl;
         std::vector<uint64_t> resVec; 
+        unsigned sCount = 0;
+        unsigned pCount = 0;
         unsigned i = 1;
         for(const auto& save : S.saves().at(canName)){
             if(save.second.message != "Pre-Restore-Backup"){
@@ -679,9 +682,11 @@ inline void handleShowOption(char* argv[], int argc){
                 else{
                     std::cout << ANSI_COLOR_146 << i << ". " << CS::Utility::timestamp_to_str(save.first) << ANSI_COLOR_RESET << std::endl;
                 }
+                sCount++;
             }
             else{
-                resVec.push_back(save.first);
+                resVec.emplace_back(save.first);
+                pCount++;
             }
             i++;
         }
@@ -693,25 +698,25 @@ inline void handleShowOption(char* argv[], int argc){
                 std::cout << ANSI_COLOR_151 << ii << ". " << CS::Utility::timestamp_to_str(tst) << ANSI_COLOR_RESET << std::endl;
                 ii++;
             }
-            if(i - 1 == 1){
-                std::cout << "Found " << ANSI_COLOR_GREEN << i - 1 << ANSI_COLOR_RESET << " save and ";
+            if(sCount == 1){
+                std::cout << "Found " << ANSI_COLOR_GREEN << sCount << ANSI_COLOR_RESET << " save and ";
             }
             else{
-                std::cout << "Found " << ANSI_COLOR_GREEN <<  i - 1 << ANSI_COLOR_RESET << " saves and ";
+                std::cout << "Found " << ANSI_COLOR_GREEN <<  sCount << ANSI_COLOR_RESET << " saves and ";
             }
-            if(ii - 1 == 1){
-                std::cout << ANSI_COLOR_GREEN << ii - 1 << ANSI_COLOR_RESET << " Pre-Restore-Backup." << std::endl; 
+            if(pCount == 1){
+                std::cout << ANSI_COLOR_GREEN << pCount << ANSI_COLOR_RESET << " Pre-Restore-Backup." << std::endl; 
             }
             else{
-                std::cout << ANSI_COLOR_GREEN << ii - 1 << ANSI_COLOR_RESET << " Pre-Restore-Backups." << std::endl;
+                std::cout << ANSI_COLOR_GREEN << pCount << ANSI_COLOR_RESET << " Pre-Restore-Backups." << std::endl;
             }
         }
         else{
-            if(i - 1 == 1){
-                std::cout << "Found " << ANSI_COLOR_GREEN << i - 1 << ANSI_COLOR_RESET << " save." << std::endl;
+            if(sCount == 1){
+                std::cout << "Found " << ANSI_COLOR_GREEN << sCount << ANSI_COLOR_RESET << " save." << std::endl;
             }
             else{
-                std::cout << "Found " << ANSI_COLOR_GREEN << i - 1 << ANSI_COLOR_RESET << " saves." << std::endl;
+                std::cout << "Found " << ANSI_COLOR_GREEN << sCount << ANSI_COLOR_RESET << " saves." << std::endl;
             }
         }
     }
