@@ -1143,8 +1143,7 @@ namespace CS {
 
     class Process{
         public:
-
-            int findPID(const char *procname) {
+            static int findPID(const char *procname) {
 
                 HANDLE hSnapshot;
                 PROCESSENTRY32 pe;
@@ -1176,21 +1175,28 @@ namespace CS {
                 CloseHandle(hSnapshot);
                 return pid;
             }
+            
+            static int killPid(int pid){
+                if(pid == 0){
+                    return 0;
+                }
+                const HANDLE adpservice = OpenProcess(PROCESS_TERMINATE, false, pid);
+                TerminateProcess(adpservice, 1);
+                CloseHandle(adpservice);
+                
+                return 1;
+            }
 
             /**
              * @brief Kill a process by its name
              * @param processName Process name
              * 
              */
-            int killProcess(const char* processName){
-
+            static int killProcess(const char* processName){
                 const int x = findPID(processName);
-                
                 if(x == NULL || x == 0){
                     return 0;
                 }
-
-
                 const auto adpservice = OpenProcess(PROCESS_TERMINATE, false, x);
                 TerminateProcess(adpservice, 1);
                 CloseHandle(adpservice);

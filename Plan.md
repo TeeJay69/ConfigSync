@@ -37,9 +37,10 @@ generation
         - Operands:
             - [ ] --message (-m) (Add a note to that save)
     + restore [PROGRAM] (Defaults to latest save)
-        - [ ] --all (-a) (restore config of all supported programs)
+        - [x] --all (-a) (restore config of all supported programs)
         - Operands:
-            - [ ] --date (-d) (specify a specific save. Uses save from that date or if unavailble, the latest save before that date)
+            - [x] --date (-d) (specify a specific save. Uses save from that date or if unavailble, the latest save before that date)
+            - [ ] --force (-f) (Force restore by killing running instances of the target programs)
     + check
         - [x] --task (-t) (ensure that task status reflects settings)
     + show [PROGRAM] (Display saves)

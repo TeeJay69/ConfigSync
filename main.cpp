@@ -413,7 +413,17 @@ inline void handleRestoreOption(char* argv[], int argc){
         const size_t cmpSize = sizeof(cmp) / sizeof(cmp[0]);
         std::string dateVal;
         if(CS::Args::argfcmp(dateVal, argv, argc, cmp, cmpSize) == 1){
-            std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << " from " << dateVal << std::endl;
+            if(CS::Args::argcmp(argv, argc, "--force") == 1 || CS::Args::argcmp(argv, argc, "-f") == 1){
+                std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << " from " << dateVal << " - Forced:" << std::endl;
+                for(const auto& proc : mgm.programs().at(canName).procNames){
+                    if(CS::Process::killProcess(proc.c_str()) == 1){
+                        std::cout << ANSI_COLOR_222 << "Killed " << proc << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+            }
+            else{
+                std::cout << ANSI_COLOR_161 << "Restoring config of " << canName << " from " << dateVal << ":" << std::endl;
+            }
             const uint64_t dateTst = CS::Utility::str_to_timestamp<uint64_t>(dateVal);
             const uint64_t date = getNearestDate(S, canName, dateTst);
             if(date == 0 || S.find_save(canName, date) == 0){
@@ -473,7 +483,16 @@ inline void handleRestoreOption(char* argv[], int argc){
                 std::cerr << "Fatal: No previous saves to restore." << std::endl;
                 return;
             }
-            std::cout << ANSI_COLOR_161 << "Restoring config of all programs from " << dateVal << ":" << ANSI_COLOR_RESET << std::endl;
+
+            int forceFlag = 0;
+            if(CS::Args::argcmp(argv, argc, "--force") == 1 || CS::Args::argcmp(argv, argc, "-f") == 1){
+                std::cout << ANSI_COLOR_161 << "Restoring config of all programs from " << dateVal << " - Forced:" << std::endl;
+                forceFlag = 1;
+            }
+            else{
+                std::cout << ANSI_COLOR_161 << "Restoring config of all programs from " << dateVal << ":" << ANSI_COLOR_RESET << std::endl;
+            }
+
             std::vector<std::string> success;
             std::vector<std::string> failed;
             for(const auto& prog : mgm.get_supported()){
@@ -482,6 +501,14 @@ inline void handleRestoreOption(char* argv[], int argc){
                     std::cout << ANSI_COLOR_YELLOW << "No save of " << prog << " found, skipping..." << ANSI_COLOR_RESET << std::endl;
                     failed.emplace_back(prog);
                     continue;
+                }
+                
+                if(forceFlag == 1){
+                    for(const auto& proc : mgm.programs().at(prog).procNames){
+                        if(CS::Process::killProcess(proc.c_str()) == 1){
+                            std::cout << ANSI_COLOR_222 << "Killed " << proc << ANSI_COLOR_RESET << std::endl;
+                        }
+                    }
                 }
 
                 if(preRestoreBackup(mgm, S, prog) != 1){
@@ -524,6 +551,81 @@ inline void handleRestoreOption(char* argv[], int argc){
 
             S.save();
         }
+        else{
+            CS::Saves S(savesFile);
+            if(S.load() != 1){
+                std::cerr << "Fatal: No previous saves to restore." << std::endl;
+                return;
+            }
+
+            int forceFlag = 0;
+            if(CS::Args::argcmp(argv, argc, "--force") == 1 || CS::Args::argcmp(argv, argc, "-f") == 1){
+                std::cout << ANSI_COLOR_161 << "Restoring config of all programs from latest save - Forced:" << std::endl;
+                forceFlag = 1;
+            }
+            else{
+                std::cout << ANSI_COLOR_161 << "Restoring config of all programs from latest save:" << ANSI_COLOR_RESET << std::endl;
+            }
+
+            std::vector<std::string> success;
+            std::vector<std::string> failed;
+            for(const auto& prog : mgm.get_supported()){
+                const uint64_t date = S.get_last_tst(prog);
+                if(date == 0 || S.find_save(prog, date) == 0){
+                    std::cout << ANSI_COLOR_YELLOW << "No save of " << prog << " found, skipping..." << ANSI_COLOR_RESET << std::endl;
+                    failed.emplace_back(prog);
+                    continue;
+                }
+                
+                if(forceFlag == 1){
+                    for(const auto& proc : mgm.programs().at(prog).procNames){
+                        if(CS::Process::killProcess(proc.c_str()) == 1){
+                            std::cout << ANSI_COLOR_222 << "Killed " << proc << ANSI_COLOR_RESET << std::endl;
+                        }
+                    }
+                }
+
+                if(preRestoreBackup(mgm, S, prog) != 1){
+                    std::cerr << ANSI_COLOR_RED << "Error: Failed to create Pre-Restore-Backup, terminating..." << ANSI_COLOR_RESET << std::endl; 
+                    std::exit(EXIT_FAILURE);
+                }
+                
+                if(restoreSave(S, prog, date) != 1){
+                    failed.push_back(prog);
+                    std::cerr << ANSI_COLOR_RED << "Failed to restore save." << ANSI_COLOR_RESET << std::endl;
+                    std::cout << ANSI_COLOR_222 << "Restoring from Pre-Restore-Backup..." << ANSI_COLOR_RESET << std::endl;
+                    if(restoreSave(S, prog, S.get_last_tst(prog)) != 1){
+                        std::cerr << ANSI_COLOR_RED << "Error: Failed to restore from Pre-Restore-Backup" << ANSI_COLOR_RESET << std::endl;
+                        std::cerr << "Please ensure the target program is functioning normally." << std::endl;
+                        S.save();
+                        std::exit(EXIT_FAILURE);
+                    }
+                }
+                else{
+                    success.push_back(prog);
+                }
+            }
+            std::cout << ANSI_COLOR_222 << "Restore complete." << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Preparing summary..." << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_161 << "Restored programs:" << ANSI_COLOR_RESET << std::endl;
+            unsigned i = 0;
+            for(const auto& el : success){
+                std::cout << ANSI_COLOR_GREEN << i << ". " << el << ANSI_COLOR_RESET << std::endl;
+                i++;
+            }
+
+            if(!failed.empty()){
+                std::cout << ANSI_COLOR_RED << "Failed to restore:" << ANSI_COLOR_RESET << std::endl;
+                unsigned ii = 0;
+                for(const auto& el : failed){
+                    std::cout << ANSI_COLOR_RED << ii << ". " << el << ANSI_COLOR_RESET << std::endl;
+                    i++;
+                }
+            }
+
+            S.save();
+
+        }
     }
     else{
         std::cerr << "Fatal: Missing argument or value. See 'configsync --help'" << std::endl;
@@ -555,7 +657,6 @@ inline void handleShowOption(char* argv[], int argc){
                 }
                 else{
                     std::cout << ANSI_COLOR_146 << i << ". " << CS::Utility::timestamp_to_str(save.first) << ANSI_COLOR_RESET << std::endl;
-                    std::cout << "tst: " << save.first << std::endl;
                 }
             }
             else{
