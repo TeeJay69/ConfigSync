@@ -372,7 +372,7 @@ inline uint64_t getNearestResDate(CS::Saves& S, const std::string& prog, const u
     return it->first;
 }
 
-inline uint64_t getNearestDateSave(CS::Saves& S, const std::string& prog, const uint64_t date){
+inline uint64_t getNearestSaveDate(CS::Saves& S, const std::string& prog, const uint64_t date){
     if(!S.exists(prog)){
         return 0;
     }
@@ -451,6 +451,7 @@ inline int restoreSave(CS::Saves& S, const std::string& prog, const uint64_t dat
 }
 
 inline int removeSave(CS::Saves& S, const std::string& prog, const uint64_t date){
+    checkDynamicPath(S, prog, date);
     for(const auto& [first, second] : S.saves().at(prog).at(date).pathVec){
         if(std::filesystem::exists(second)){
             if(std::filesystem::is_directory(second)){
@@ -1015,7 +1016,7 @@ inline void handleUndoOption(char* argv[], int argc){
                     }
 
                     if(restoreSave(S, prog, tst) != 1){
-                        std::cerr << ANSI_COLOR_RED << "Failed to undo restore " << prog << "." << ANSI_COLOR_RESET << std::endl;
+                        std::cerr << ANSI_COLOR_RED << "Failed to undo restore action of " << prog << "." << ANSI_COLOR_RESET << std::endl;
                         fail.push_back(prog);
                         continue;
                     }
@@ -1050,7 +1051,7 @@ inline void handleUndoOption(char* argv[], int argc){
                 std::vector<std::string> fail;
                 for(const auto& prog : mgm.get_supported()){
                     const uint64_t dateNotNear = CS::Utility::str_to_timestamp<uint64_t>(dateVal);
-                    const uint64_t tst = getNearestDateSave(S, prog, dateNotNear);
+                    const uint64_t tst = getNearestSaveDate(S, prog, dateNotNear);
                     if(tst == 0 || S.find_save(prog, tst) != 1){
                         std::cerr << ANSI_COLOR_YELLOW << prog << " date not found, skipping..." << ANSI_COLOR_RESET << std::endl;
                         if(S.saves().at(prog).empty()){
@@ -1102,7 +1103,7 @@ inline void handleUndoOption(char* argv[], int argc){
                 std::vector<std::string> fail;
                 std::vector<std::string> neverSync;
                 for(const auto& prog : mgm.get_supported()){
-                    const uint64_t tst = getNearestDateSave(S, prog, S.get_last_tst(prog));
+                    const uint64_t tst = getNearestSaveDate(S, prog, S.get_last_tst(prog));
                     if(tst == 0 || !S.find_save(prog, tst)){
                         std::cerr << ANSI_COLOR_YELLOW << prog << " no save found, skipping..." << ANSI_COLOR_RESET << std::endl;
                         neverSync.push_back(prog);
@@ -1142,11 +1143,86 @@ inline void handleUndoOption(char* argv[], int argc){
     }
     else if(std::string canName; getArgsName(canName, argv, argc) == 1){
         if(CS::Args::argcmp(argv, argc, "--restore") || CS::Args::argcmp(argv, argc, "-r")){
-            if(std::string date; CS::Args::argfcmp(date, argv, argc, "--date") || CS::Args::argfcmp(date, argv, argc, "-d")){
+            if(std::string dateVal; CS::Args::argfcmp(dateVal, argv, argc, "--date") || CS::Args::argfcmp(dateVal, argv, argc, "-d")){
+                int forceFlag = 0;
+                if(CS::Args::argcmp(argv, argc, "--force") || CS::Args::argcmp(argv, argc, "-f")){
+                    forceFlag = 1;
+                }
+                if(forceFlag){
+                    std::cout << ANSI_COLOR_166 << "Undo restore action of " << canName << " from " << dateVal << " - Forced:" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cout << ANSI_COLOR_166 << "Undo restore action of " << canName << " from" << dateVal << ":" << ANSI_COLOR_RESET << std::endl;
+                }
+                CS::Saves S(savesFile);
+                if(!S.load()){
+                    std::cerr << "Fatal: Nothing to undo." << std::endl;
+                    return;
+                }
+                const uint64_t tstRaw = CS::Utility::str_to_timestamp<uint64_t>(dateVal);
+                const uint64_t tst = getNearestResDate(S, canName, tstRaw);
+                if(tst == 0){
+                    std::cerr << "Fatal: Date not found." << std::endl;
+                    return;
+                }
+
+                if(forceFlag){
+                    for(const auto& proc : mgm.programs().at(canName).procNames){
+                        if(CS::Process::killProcess(proc.c_str())){
+                            std::cout << ANSI_COLOR_222 << "Killed " << proc << "." << ANSI_COLOR_RESET << std::endl;
+                        }
+                    }
+                }
+
+                if(!restoreSave(S, canName, tst)){
+                    std::cerr << ANSI_COLOR_RED << "Failed to undo restore action of " << canName << "." << ANSI_COLOR_RESET << std::endl;
+                    return;
+                }
+                else{
+                    std::cout << ANSI_COLOR_GREEN << "Undo action successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
                 
+                S.save();
             }
             else{
+                int forceFlag = 0;
+                if(CS::Args::argcmp(argv, argc, "--force") || CS::Args::argcmp(argv, argc, "-f")){
+                    forceFlag = 1;
+                }
+                if(forceFlag){
+                    std::cout << ANSI_COLOR_166 << "Undo latest restore action of " << canName << " - Forced:" << ANSI_COLOR_RESET << std::endl;
+                }
+                else{
+                    std::cout << ANSI_COLOR_166 << "Undo latest restore action of " << canName << ":" << ANSI_COLOR_RESET << std::endl;
+                }
+                CS::Saves S(savesFile);
+                if(!S.load()){
+                    std::cerr << "Fatal: Nothing to undo." << std::endl;
+                    return;
+                }
+                const uint64_t tst = getNearestResDate(S, canName, S.get_last_tst(canName));
+                if(tst == 0){
+                    std::cerr << "Fatal: No previous restore action to undo." << std::endl;
+                    return;
+                }
 
+                if(forceFlag){
+                    for(const auto& proc : mgm.programs().at(canName).procNames){
+                        if(CS::Process::killProcess(proc.c_str())){
+                            std::cout << ANSI_COLOR_222 << "Killed " << proc << "." << ANSI_COLOR_RESET << std::endl;
+                        }
+                    }
+                }
+
+                if(!restoreSave(S, canName, tst)){
+                    std::cerr << ANSI_COLOR_RED << "Fatal: Failed to undo latest restore action of " << canName << "." << ANSI_COLOR_RESET << std::endl;
+                    return;
+                }
+                else{
+                    std::cout << ANSI_COLOR_GREEN << "Undo action successfull!" << ANSI_COLOR_RESET << std::endl;
+                }
+
+                S.save();
             }
 
         }
@@ -1155,10 +1231,11 @@ inline void handleUndoOption(char* argv[], int argc){
                 CS::Saves S(savesFile);
                 if(!S.load()){
                     std::cerr << "Fatal: Nothing to undo." << std::endl;
+                    return;
                 }
                 std::cout << ANSI_COLOR_166 << "Undo save action of " << canName << " from " << dateVal << ":" << ANSI_COLOR_RESET << std::endl;
                 const uint64_t tstRaw = CS::Utility::str_to_timestamp<uint64_t>(dateVal);
-                const uint64_t tst = getNearestDateSave(S, canName, tstRaw);
+                const uint64_t tst = getNearestSaveDate(S, canName, tstRaw);
                 if(tst == 0 || !S.find_save(canName, tst)){
                     std::cerr << "Fatal: Date not found." << std::endl;
                     return;
@@ -1178,9 +1255,10 @@ inline void handleUndoOption(char* argv[], int argc){
                 CS::Saves S(savesFile);
                 if(!S.load()){
                     std::cerr << "Fatal: Nothing to undo." << std::endl;
+                    return;
                 }
                 std::cout << ANSI_COLOR_166 << "Undo latest save action of " << canName << ":" << ANSI_COLOR_RESET << std::endl;
-                const uint64_t tst = getNearestDateSave(S, canName, S.get_last_tst(canName));
+                const uint64_t tst = getNearestSaveDate(S, canName, S.get_last_tst(canName));
                 if(tst == 0){
                     std::cerr << "Fatal: No previous save action to undo." << std::endl;
                     return;
@@ -1200,6 +1278,9 @@ inline void handleUndoOption(char* argv[], int argc){
         else{
             std::cerr << "Fatal: Unrecognized argument. See 'configsync --help'." << std::endl;
         }
+    }
+    else{
+        std::cerr << "Fatal: Missing argument or value. See 'configsync --help'." << std::endl;
     }
 }
 
