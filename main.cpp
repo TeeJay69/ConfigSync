@@ -372,6 +372,33 @@ inline uint64_t getNearestResDate(CS::Saves& S, const std::string& prog, const u
     return it->first;
 }
 
+inline uint64_t getNearestDateSave(CS::Saves& S, const std::string& prog, const uint64_t date){
+    if(!S.exists(prog)){
+        return 0;
+    }
+
+    if(S.find_save(prog, date) == 1){
+        if(S.saves().at(prog).at(date).message != "Pre-Restore-Backup"){
+            return date;
+        }
+    }
+
+    auto it = S.saves().at(prog).upper_bound(date);
+
+    while(true){
+        if(it == S.saves().at(prog).end()){
+            return 0;
+        }
+        if(it--->second.message == "Pre-Restore-Backup"){
+            it--;
+        }
+        else{
+            break;
+        }
+    }
+    return it->first;
+}
+
 inline int createSave(CS::Programs::Mgm& mgm, CS::Saves& S, const std::string& prog, const std::string& destDayDir, const uint64_t tst, const std::string& message){
     const std::string tstDir = destDayDir + "\\" + std::to_string(tst);
     std::vector<std::pair<std::string,std::string>> pathvec;
@@ -406,11 +433,11 @@ inline int restoreSave(CS::Saves& S, const std::string& prog, const uint64_t dat
     checkDynamicPath(S, prog, date);
     for(const auto& pair : S.saves().at(prog).at(date).pathVec){
         if(std::filesystem::exists(pair.first)){
-            std::filesystem::permissions(pair.first, std::filesystem::perms::all);
             if(std::filesystem::is_directory(pair.first)){
                 CS::Filesystem::recurse_remove(pair.first);
             }
             else{
+                std::filesystem::permissions(pair.first, std::filesystem::perms::all);
                 std::filesystem::remove(pair.first);
             }
         }
@@ -420,6 +447,24 @@ inline int restoreSave(CS::Saves& S, const std::string& prog, const uint64_t dat
         }
     }
 
+    return 1;
+}
+
+inline int removeSave(CS::Saves& S, const std::string& prog, const uint64_t date){
+    for(const auto& [first, second] : S.saves().at(prog).at(date).pathVec){
+        if(std::filesystem::exists(second)){
+            if(std::filesystem::is_directory(second)){
+                CS::Filesystem::recurse_remove(second);
+            }
+            else{
+                std::filesystem::permissions(second, std::filesystem::perms::all);
+                std::filesystem::remove(second);
+            }
+        }
+    }
+    if(!S.erase_save(prog, date)){
+        return 0;
+    }
     return 1;
 }
 
@@ -885,10 +930,10 @@ inline void handleUndoOption(char* argv[], int argc){
                 std::vector<std::string> success;
                 std::vector<std::string> fail;
                 if(forceFlag){
-                    std::cout << ANSI_COLOR_166 << "Undo restore all, with date - Forced:" << ANSI_COLOR_RESET << std::endl;
+                    std::cout << ANSI_COLOR_166 << "Undo restore action for all, with date - Forced:" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
-                    std::cout << ANSI_COLOR_166 << "Undo restore all, with date:" << ANSI_COLOR_RESET << std::endl;
+                    std::cout << ANSI_COLOR_166 << "Undo restore action for all, with date:" << ANSI_COLOR_RESET << std::endl;
                 }
                 for(const auto& prog : mgm.get_supported()){
                     const uint64_t tstNotNear = CS::Utility::str_to_timestamp<uint64_t>(dateVal);
@@ -943,10 +988,10 @@ inline void handleUndoOption(char* argv[], int argc){
                 std::vector<std::string> success;
                 std::vector<std::string> fail;
                 if(forceFlag){
-                    std::cout << ANSI_COLOR_166 << "Undo restore all - Forced:" << ANSI_COLOR_RESET << std::endl;
+                    std::cout << ANSI_COLOR_166 << "Undo restore action for all - Forced:" << ANSI_COLOR_RESET << std::endl;
                 }
                 else{
-                    std::cout << ANSI_COLOR_166 << "Undo restore all:" << ANSI_COLOR_RESET << std::endl;
+                    std::cout << ANSI_COLOR_166 << "Undo restore action for all:" << ANSI_COLOR_RESET << std::endl;
                 }
                 for(const auto& prog : mgm.get_supported()){
                     const uint64_t tst = getNearestResDate(S, prog, S.get_last_tst(prog));
@@ -993,11 +1038,105 @@ inline void handleUndoOption(char* argv[], int argc){
             }
         }
         else if(CS::Args::argcmp(argv, argc, "--save") || CS::Args::argcmp(argv, argc, "-s")){
-            if(std::string date; CS::Args::argfcmp(date, argv, argc, "--date") || CS::Args::argfcmp(date, argv, argc, "-d")){
-                
+            if(std::string dateVal; CS::Args::argfcmp(dateVal, argv, argc, "--date") || CS::Args::argfcmp(dateVal, argv, argc, "-d")){
+                CS::Saves S(savesFile);
+                if(!S.load()){
+                    std::cerr << "Fatal: Nothing to undo." << std::endl;
+                    return;
+                }
+                std::cout << ANSI_COLOR_166 << "Undo save action for all, with date:" << ANSI_COLOR_RESET << std::endl;
+                std::vector<std::string> success;
+                std::vector<std::string> neverSync;
+                std::vector<std::string> fail;
+                for(const auto& prog : mgm.get_supported()){
+                    const uint64_t dateNotNear = CS::Utility::str_to_timestamp<uint64_t>(dateVal);
+                    const uint64_t tst = getNearestDateSave(S, prog, dateNotNear);
+                    if(tst == 0 || S.find_save(prog, tst) != 1){
+                        std::cerr << ANSI_COLOR_YELLOW << prog << " date not found, skipping..." << ANSI_COLOR_RESET << std::endl;
+                        if(S.saves().at(prog).empty()){
+                            neverSync.push_back(prog);
+                        }
+                        else{
+                            fail.push_back(prog);
+                        }
+                        continue;
+                    }
+
+                    if(!removeSave(S, prog, tst)){
+                        std::cerr << ANSI_COLOR_RED << "Failed to remove save of " << prog << " from " << dateVal << ANSI_COLOR_RESET << std::endl;
+                        fail.push_back(prog);
+                    }
+                    else{
+                        success.push_back(prog);
+                    }
+                }
+
+                if(!fail.empty()){
+                    std::cout << ANSI_COLOR_RED << "Failed:" << ANSI_COLOR_RESET << std::endl;
+                    for(const auto& el : fail){
+                        std::cout << ANSI_COLOR_RED << el << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+                if(!neverSync.empty()){
+                    std::cout << ANSI_COLOR_YELLOW << "Never synced:" << ANSI_COLOR_RESET << std::endl;
+                    for(const auto& el : neverSync){
+                        std::cout << ANSI_COLOR_YELLOW << el << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+                if(!success.empty()){
+                    std::cout << ANSI_COLOR_GREEN << "Success:" << ANSI_COLOR_RESET << std::endl;
+                    for(const auto& el : success){
+                        std::cout << ANSI_COLOR_GREEN << el << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+                S.save();
             }
             else{
+                CS::Saves S(savesFile);
+                if(!S.load()){
+                    std::cerr << "Fatal: Nothing to undo." << std::endl;
+                    return;
+                }
+                std::cout << ANSI_COLOR_166 << "Undo save action for all:" << ANSI_COLOR_RESET << std::endl;
+                std::vector<std::string> success;
+                std::vector<std::string> fail;
+                std::vector<std::string> neverSync;
+                for(const auto& prog : mgm.get_supported()){
+                    const uint64_t tst = getNearestDateSave(S, prog, S.get_last_tst(prog));
+                    if(tst == 0 || !S.find_save(prog, tst)){
+                        std::cerr << ANSI_COLOR_YELLOW << prog << " no save found, skipping..." << ANSI_COLOR_RESET << std::endl;
+                        neverSync.push_back(prog);
+                        continue;
+                    }
 
+                    if(!removeSave(S, prog, tst)){
+                        std::cerr << ANSI_COLOR_RED << "Failed to remove save of " << prog << ANSI_COLOR_RESET << std::endl;
+                        fail.push_back(prog);
+                    }
+                    else{
+                        success.push_back(prog);
+                    }
+                }
+
+                if(!fail.empty()){
+                    std::cout << ANSI_COLOR_RED << "Failed:" << ANSI_COLOR_RESET << std::endl;
+                    for(const auto& el : fail){
+                        std::cout << ANSI_COLOR_RED << el << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+                if(!neverSync.empty()){
+                    std::cout << ANSI_COLOR_YELLOW << "Never synced:" << ANSI_COLOR_RESET << std::endl;
+                    for(const auto& el : neverSync){
+                        std::cout << ANSI_COLOR_YELLOW << el << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+                if(!success.empty()){
+                    std::cout << ANSI_COLOR_GREEN << "Success:" << ANSI_COLOR_RESET << std::endl;
+                    for(const auto& el : success){
+                        std::cout << ANSI_COLOR_GREEN << el << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
+                S.save();
             }
         }
     }

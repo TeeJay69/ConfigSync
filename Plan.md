@@ -77,27 +77,15 @@ Install-Location
 
 
 ## Critical ToDo's:
-- [x] Refactor get_psetting name verification. Separate method, similar to ConfigSync.
-- [ ] XXX
-- [ ] Offer two distributions, one without the msix package, which does not offer a fallback winget install method and one that can install winget from the msix package as a fallback.
-- [ ] Add ANSI colors to iostream
-- [ ] Determine max size required for serialization and, in those cases, allocate on heap to prevent stack overflow.
-. [ ] Display register if program was installed using a register.
+- [ ] Block "Pre-Restore-Backup" as --message value for syncing.
+
 ## Reevaluate:
 - [Declined] ~~xxx~~
 - [x] xxx
-- [ ] Date modified member for 'Reg'
-- [ ] Move 'install --registers --builtin [NAME]' to 'install --builtin [NAME]'
-- [ ] Users can add an alias for their registers (In addition to the registers default name which should be shown in brackets after the alias or otherway round)
-- [ ] Package managers can be installed separately of registers individually or all with '--all'.
 
 ## Feature requests:
 - [Declined] ~~xxx~~
 - [ ] xxx
-- [ ] Custom buffer instead of std::cout
-- [ ] Support more package managers
-- [ ] Incremental search for identifying program name to install. Display all matches if name is ambigous
-- [ ] Store version for each program from the archive
 
 ## Known Bugs:
 - [Closed] xxx
