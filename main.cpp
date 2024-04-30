@@ -1284,6 +1284,21 @@ inline void handleUndoOption(char* argv[], int argc){
     }
 }
 
+inline void handleListOption(char* argv[], int argc){
+    CS::Programs::Mgm mgm;
+    if(argv[2] == NULL){
+        std::cout << ANSI_COLOR_166 << "Supported Programs:" << ANSI_COLOR_RESET << std::endl;
+        unsigned int i = 1;
+        for(const auto& prog : mgm.get_supported()){
+            std::cout << ANSI_COLOR_222 << i << ". " << prog << ANSI_COLOR_RESET << std::endl;
+            i++;
+        }
+    }
+    else{
+        std::cerr << "Fatal: Unrecognized argument. See 'configsync --help'." << std::endl;
+    }
+}
+
 int main(int argc, char* argv[]){   
     std::signal(SIGINT, exitSignalHandler);
     enableColors();
@@ -1372,7 +1387,7 @@ int main(int argc, char* argv[]){
     else if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h"){ // Help message param
         std::cout << "ConfigSync (JW-CoreUtils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
-        std::cout << "usage: cfgs [OPTIONS]... [PROGRAM]" << std::endl;
+        std::cout << "usage: configsync [OPTIONS]... [PROGRAM]" << std::endl;
         std::cout << std::endl;
         std::cout << "Options:\n";
         std::cout << "sync [PROGRAM]                Create a snapshot of a program's configuration.\n";
@@ -1416,11 +1431,13 @@ int main(int argc, char* argv[]){
     else if(std::string(argv[1]) == "undo"){
         handleUndoOption(argv, argc);
     }
+    else if(std::string(argv[1]) == "list"){
+        handleListOption(argv, argc);
+    }
     else{
         std::cerr << "Fatal: '" << argv[1] << "' is not a ConfigSync command.\n";
         return 1;
     }
-
     
     return 0;
 }
