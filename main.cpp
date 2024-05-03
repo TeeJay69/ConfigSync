@@ -141,6 +141,10 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         size_t cmpSize = sizeof(cmp) / sizeof(cmp[0]);
         int msgFlag= 0;
         if(CS::Args::argfcmp(msg, argv, argc, cmp, cmpSize) == 1){
+            if(msg == "Pre-Restore-Backup"){
+                std::cerr << "Fatal: Message is not allowed. Name is reserved." << std::endl;
+                std::exit(EXIT_FAILURE);
+            }
             msgFlag = 1;
         }
 
