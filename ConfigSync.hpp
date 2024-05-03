@@ -851,17 +851,24 @@ namespace CS {
                         const std::string roamingPath = "C:\\Users\\" + uName + "\\AppData\\Roaming\\cura\\";
                         unsigned i = 0; // matches
                         std::string ret;
-                        for(const auto& entry : std::filesystem::directory_iterator(roamingPath)){
-                            if(std::filesystem::is_directory(entry.path())){
-                                const std::string fname = entry.path().filename().string();
-                                if(std::stof(fname) >= 4.0){ // Check version
-                                    i++;
-                                    ret = fname;
+                        if(std::filesystem::exists(roamingPath) && !std::filesystem::is_empty(roamingPath)){
+                            for(const auto& entry : std::filesystem::directory_iterator(roamingPath)){
+                                if(std::filesystem::is_directory(entry.path())){
+                                    const std::string fname = entry.path().filename().string();
+                                    try{
+                                        if(std::stof(fname) >= 4.0){ // Check version
+                                            i++;
+                                            ret = fname;
+                                        }
+                                    }
+                                    catch(const std::invalid_argument& err){
+                                        continue;
+                                    }
                                 }
                             }
-                        }
-                        if(i <= 1){
-                            return ret;
+                            if(i <= 1){
+                                return ret;
+                            }
                         }
                         return {};
                     }
