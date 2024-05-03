@@ -1,9 +1,11 @@
 Files and directories included in version:
 main.cpp
-synchronizer.hpp
+ConfigSync.hpp
 ANSIcolor.hpp
 ConfigSync-Setup.exe
 ISS.iss
+changelog.md
+Copyright-Disclaimer.md
 ----------
 Compile command:
 g++ main.cpp -o ConfigSync.exe -std=c++23 -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -lbcrypt -lssl -lcrypto -l:libboost_filesystem-mgw13-mt-x64-1_84.a -lz -O0 -g
