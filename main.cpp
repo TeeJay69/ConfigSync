@@ -1338,7 +1338,7 @@ inline void handleSettingsOption(char* argv[], int argc, boost::property_tree::p
             std::cout << "See 'configsync settings.editor <vscode/vim/notepad>'" << std::endl << std::endl;
             std::cout << "For reset, see 'configsync settings --reset'" << std::endl;
         }
-        else if(CS::Args::argcmp(argv, argc, "--json")){
+        else if(CS::Args::argcmp(argv, argc, "--json") || CS::Args::argcmp(argv, argc, "-j")){
             std::cout << "Warning: any changes to the json file could make the file unreadable, please know what you are doing!" << std::endl;
             int counter = 2;
             while(counter != 0){
@@ -1463,12 +1463,13 @@ inline void handleSettingsOption(char* argv[], int argc, boost::property_tree::p
         }
     }
     else if(std::string buff; CS::Args::argfcmp(buff, argv, argc, "settings.task")){
+        std::cout << "Disclaimer: Microsoft Defender might falsely identify the task as a threat." << std::endl;
         if(buff.empty()){
             std::cerr << "Fatal: Missing value." << std::endl;
             return;
         }
         else if(buff == "true"){
-            if(CS::Task::exists){
+            if(CS::Task::exists(taskName)){
                 std::cout << "Fatal: Task already exists." << std::endl;
             }
             else{
@@ -1480,12 +1481,13 @@ inline void handleSettingsOption(char* argv[], int argc, boost::property_tree::p
             }
         }
         else if(buff == "false"){
-            if(!CS::Task::exists){
+            if(!CS::Task::exists(taskName)){
                 std::cout << "Fatal: Scheduled task does not exist." << std::endl;
             }
             else{
                 if(!CS::Task::remove(taskName)){
                     std::cerr << "Fatal: Failed to remove task." << std::endl;
+                    return;
                 }
                 std::cout << "Scheduled task removed." << std::endl;
             }
@@ -1617,15 +1619,16 @@ int main(int argc, char* argv[]){
         // Do nothing, pt contains correct config
     }
 
+    if(CS::Args::argcmp(argv, argc, "--verbose") == 1 || CS::Args::argcmp(argv, argc, "-v") == 1){
+        verbose = 1;
+    }
+
     if(argv[1] == NULL){ // No params, display Copyright Notice
         std::cout << "ConfigSync (JW-CoreUtils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber. All rights reserved." << std::endl;
         std::cout << "Software Configuration Synchronizer." << std::endl;
         std::cout << "See 'cfgs --help' for usage." << std::endl;
         std::exit(EXIT_SUCCESS);
-    }
-    else if(CS::Args::argcmp(argv, argc, "--verbose") == 1 || CS::Args::argcmp(argv, argc, "-v") == 1){
-        verbose = 1;
     }
     else if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version" || std::string(argv[1]) == "-v"){ // Version param
         std::cout << "ConfigSync (JW-Coreutils) " << ANSI_COLOR_36 << VERSION << ANSI_COLOR_RESET << std::endl;
@@ -1638,25 +1641,39 @@ int main(int argc, char* argv[]){
         std::cout << "usage: configsync [OPTIONS]... [PROGRAM]" << std::endl;
         std::cout << std::endl;
         std::cout << "Options:\n";
-        std::cout << "sync [PROGRAM]                Create a snapshot of a program's configuration.\n";
-        std::cout << "sync --all                    Create a snapshot for all supported programs.\n";
-        std::cout << "revert [PROGRAM] [DATE]       Revert configuration of the specified program, date.\n";
-        std::cout << "revert --all                  Revert configuration of all supported programs.\n";
-        std::cout << "undo [PROGRAM] [DATE]         Undo a restore of the specified program, date.\n";
-        std::cout << "undo --all                    Undo restore of all programs.\n";
-        std::cout << "status [PROGRAM]              Display synchronization state. (Default: all)\n";
-        std::cout << "show [PROGRAM]                List all existing snapshots of a program\n";
-        std::cout << "list --supported              Show all supported programs.\n";
-        std::cout << "settings                      Show settings.\n";
-        std::cout << "settings --json               Show settings (JSON).\n";
-        std::cout << "settings.reset [SETTING]      Reset one or multiple settings.\n";
-        std::cout << "settings.reset --all          Reset all settings to default.\n";
-        std::cout << "settings --help               Show detailed settings info.\n";
-        std::cout << "--help                        Display help message.\n";
-        std::cout << "--version                     Display version and copyright disclaimer.\n\n";
+        std::cout << "sync [PROGRAM]                          Synchronize specified program.\n";
+        std::cout << "    --all, -a                           Synchronize all supported programs.\n";
+        std::cout << "    --message, -m [NOTE]                Add a note to the save.\n";
+        std::cout << "restore [PROGRAM]                       Restore specified program to latest save by default.\n";
+        std::cout << "    --all, -a                           Restore configurations of all supported programs.\n";
+        std::cout << "    --date, -d [DATE]                   Restore from a specific date's save.\n";
+        std::cout << "    --force, -f                         Force restore by terminating running instances.\n";
+        std::cout << "check                                   Check task status reflects settings.\n";
+        std::cout << "    --task, -t                          Ensure that the task status is up-to-date.\n";
+        std::cout << "show [PROGRAM]                          Display saves of specified program.\n";
+        std::cout << "    --explorer, -e                      Open save archive in explorer.\n";
+        std::cout << "list                                    List all supported programs.\n";
+        std::cout << "undo [PROGRAM]                          Undo actions for specified program.\n";
+        std::cout << "    --restore, -r                       Undo the most recent restore.\n";
+        std::cout << "    --save, -s                          Undo the most recent save.\n";
+        std::cout << "    --all, -a                           Undo actions for all programs.\n";
+        std::cout << "    --date, -d [DATE]                   Undo a specific action from a specific date.\n";
+        std::cout << "    --force, -f                         Forced restore by killing instances of target program.\n";
+        std::cout << "status [PROGRAM]                        Show status, defaults to all programs.\n";
+        std::cout << "settings                                Manage settings for the program.\n";
+        std::cout << "    --reset, -r [SETTING]               Reset specific setting to default.\n";
+        std::cout << "    --all, -a                           Reset all settings to default.\n";
+        std::cout << "    --json, -j                          View raw settings file.\n";
+        std::cout << "    settings.savelimit                  Manage save limit setting.\n";
+        std::cout << "    settings.pre-restore-limit          Manage pre-restore limit setting.\n";
+        std::cout << "    settings.task                       Manage task setting.\n";
+        std::cout << "    settings.taskfrequency              Manage task frequency setting.\n";
+        std::cout << "    settings.editor [EDITOR]            Set preferred editor (vim, notepad, VSCode).\n";
+        std::cout << "version                                 Display version information.\n";
+        std::cout << "help                                    Display this help message.\n\n";
         std::cout << "Operands:\n";
-        std::cout << "[...] --force                 Kills running instances before, to avoid errors.\n";
-        std::cout << "[...] --verbose, -v           Enable verbose mode.\n";
+        std::cout << "[...] --verbose                         Enable verbose mode.\n";
+
         if(verbose){std::cout << "Verbose mode enabled!!!"<<std::endl;}
         std::exit(EXIT_SUCCESS);
     }

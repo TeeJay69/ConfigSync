@@ -51,13 +51,14 @@ generation
         - [x] --restore (-r) (Undo the most recent restore of a program)
         - [x] --save (-s) (Undo the most recent save of a program)
         - Operands:
-            - [x] --all (Undo an action for all programs)
-            - [x] --date (Undo a specific action from a specific date)
-            - [x] --force (Forced restore, kill running instances of target program)
+            - [x] --all (-a) (Undo an action for all programs)
+            - [x] --date (-d) (Undo a specific action from a specific date)
+            - [x] --force (-f) (Forced restore, kill running instances of target program)
     + status [PROGRAM]->default:all
     + settings
         - [x] --reset (-r) [SETTING] (Reset a specific setting to default)
             - [x] --all (-a) (Resets all settings to default)
+        - [x] --json (-j) (View raw settings file)
         - [x] settings.savelimit
         - [x] settings.pre-restore-limit
         - [x] settings.task
