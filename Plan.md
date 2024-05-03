@@ -46,7 +46,7 @@ generation
     + show [PROGRAM] (Display saves)
         - [x] --explorer (-e) (Open save archive in explorer)
     + list
-        - [ ] List all supported programs
+        - [x] List all supported programs
     + undo [PROGRAM]
         - [x] --restore (-r) (Undo the most recent restore of a program)
         - [x] --save (-s) (Undo the most recent save of a program)
@@ -56,7 +56,14 @@ generation
             - [x] --force (Forced restore, kill running instances of target program)
     + status [PROGRAM]->default:all
     + settings
-        - [ ] settings.editor (vim, notepad, VSCode) (Preferred editor when opening files from this program.)
+        - [x] --reset (-r) [SETTING] (Reset a specific setting to default)
+            - [x] --all (-a) (Resets all settings to default)
+        - [x] settings.savelimit
+        - [x] settings.pre-restore-limit
+        - [x] settings.task
+        - [x] settings.taskfrequency
+        - [x] settings.editor (vim, notepad, VSCode) (Preferred editor when opening files from this program.)
+
     + version
     + help
 - Operands:

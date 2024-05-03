@@ -43,6 +43,7 @@ const std::string taskName = "ConfigSyncTask";
 std::string archiveDir;
 std::string savesFile;
 std::string backupDir;
+std::string settingsPath;
 
 std::string CS::Logs::logDir;
 std::string CS::Logs::logPath;
@@ -57,16 +58,38 @@ inline void CS::Logs::init(){
 class Defaultsetting{
     public:
         const int savelimit = 60;
-        const int recyclelimit = 60;
+        const int preRestoreLimit = 60;
         const bool task = false;
         const std::string taskfrequency = "daily,1";
+        const std::string editor = "vscode";
 
-        void writeDefault(boost::property_tree::ptree& pt){
+        void putDefault(boost::property_tree::ptree& pt){
             pt.put("settingsID", SETTINGS_ID); // Settings identifier for updates
             pt.put("savelimit", savelimit);
-            pt.put("recyclelimit", recyclelimit);
+            pt.put("pre-restore-limit", preRestoreLimit);
             pt.put("task", task);
             pt.put("taskfrequency", taskfrequency);
+            pt.put("editor", editor);
+        }
+
+        void savelimitDefault(boost::property_tree::ptree& pt){
+            pt.put("saveimit", savelimit);
+        }
+
+        void preRestoreLimitDefault(boost::property_tree::ptree& pt){
+            pt.put("pre-restore-limit", preRestoreLimit);
+        }
+
+        void taskDefault(boost::property_tree::ptree& pt){
+            pt.put("task", task);
+        }
+
+        void taskfreqDefault(boost::property_tree::ptree& pt){
+            pt.put("taskfrequency", taskfrequency);
+        }
+
+        void editorDefault(boost::property_tree::ptree& pt){
+            pt.put("editor", editor);
         }
 };
 
@@ -1299,6 +1322,234 @@ inline void handleListOption(char* argv[], int argc){
     }
 }
 
+inline void handleSettingsOption(char* argv[], int argc, boost::property_tree::ptree& pt){
+    if(std::string(argv[1]) == "settings"){
+        if(argv[2] == NULL){
+            std::cout << "Settings:" << std::endl;
+            std::cout << "Max concurrent saves: " << ANSI_COLOR_50 << pt.get<int>("savelimit") << ANSI_COLOR_RESET << std::endl;
+            std::cout << "See 'configsync settings.savelimit <limit>'" << std::endl << std::endl;
+            std::cout << "Max Pre-Restore-Backups: " << ANSI_COLOR_50 << pt.get<int>("pre-restore-limit") << ANSI_COLOR_RESET << std::endl;
+            std::cout << "See 'configsync settings.pre-restore-limit <limit>'" << std::endl << std::endl;
+            std::cout << "Scheduled task on/off: " << ANSI_COLOR_50 << pt.get<bool>("task") << ANSI_COLOR_RESET << std::endl;
+            std::cout << "See 'configsync settings.task <true/false>'" << std::endl << std::endl;
+            std::cout << "Scheduled task frequency: " << ANSI_COLOR_50 << pt.get<std::string>("taskfrequency") << ANSI_COLOR_RESET << std::endl;
+            std::cout << "See 'configsync settings.taskfrequency <hourly/daily> <hours/days>'" << std::endl << std::endl;
+            std::cout << "Default editor: " << ANSI_COLOR_50 << pt.get<std::string>("editor") << ANSI_COLOR_RESET << std::endl;
+            std::cout << "See 'configsync settings.editor <vscode/vim/notepad>'" << std::endl << std::endl;
+            std::cout << "For reset, see 'configsync settings --reset'" << std::endl;
+        }
+        else if(CS::Args::argcmp(argv, argc, "--json")){
+            std::cout << "Warning: any changes to the json file could make the file unreadable, please know what you are doing!" << std::endl;
+            int counter = 2;
+            while(counter != 0){
+                if(counter != 1){
+                    std::cout << "\rProceeding in " << counter << " seconds" << std::flush; 
+                }
+                else{
+                    std::cout << "\rProceeding in " << counter << " second" << std::flush;
+                }
+                counter--;
+            }
+
+            const std::string editor = pt.get<std::string>("editor");
+            std::string com;
+            if(editor == "vscode"){
+                com = "cmd /c code \"" + settingsPath + "\"";
+            }
+            else if(editor == "vim"){
+                com = "cmd /c vim \"" + settingsPath + "\"";
+            }
+            else if(editor == "notepad"){
+                com = "cmd /c notepad \"" + settingsPath + "\"";
+            }
+
+            if(std::system(com.c_str()) != 0){
+                std::cout << "Failed to open file with text editor, please choose a different editor in the settings." << std::endl;
+            }
+        }
+        else if(std::string(argv[2]) == "--reset" || std::string(argv[2])  == "-r"){
+            if(argv[3] == NULL){
+                std::cerr << "Fatal: Missing argument or value." << std::endl;
+            }
+            else if(std::string(argv[3]) == "--all" || std::string(argv[3]) == "-a"){
+                Defaultsetting DS;
+                DS.putDefault(pt);
+                std::cout << "All settings reset to default." << std::endl;
+            }
+            else if(std::string(argv[3]) == "savelimit"){
+                Defaultsetting DS;
+                std::cout << "Savelimit reset to default." << std::endl;
+                std::cout << "(" << pt.get<int>("savelimit") << ") ==> (" << DS.savelimit << ")" << std::endl;
+                DS.savelimitDefault(pt);
+            }
+            else if(std::string(argv[3]) == "pre-restore-limit"){
+                Defaultsetting ds;
+                ds.preRestoreLimitDefault(pt);
+                std::cout << "Pre-Restore-Backups limit reset to default." << std::endl;
+                std::cout << "(" << pt.get<int>("pre-restore-limit") << ") ==> (" << ds.preRestoreLimit << ")" << std::endl;
+            }
+            else if(std::string(argv[3]) == "task"){
+                Defaultsetting ds;
+                ds.taskDefault(pt);
+                if(ds.task == false && CS::Task::exists(taskName)){
+                    if(!CS::Task::remove(taskName)){
+                        std::cerr << "Failed to remove task." << std::endl;
+                        return;
+                    }
+                }
+                else if(ds.task == true && !CS::Task::exists(taskName)){
+                    if(!CS::Task::create(taskName, pLocatFull, pt.get<std::string>("taskfrequency"))){
+                        std::cerr << "Failed to create task." << std::endl;
+                        return;
+                    }
+                }
+
+                std::cout << "Task reset to default." << std::endl;
+            }
+            else if(std::string(argv[3]) == "taskfrequency"){
+                Defaultsetting ds;
+                ds.taskfreqDefault(pt);
+                if(CS::Task::exists(taskName)){
+                    if(!CS::Task::remove(taskName)){
+                        std::cerr << "Failed to remove task." << std::endl;
+                        return;
+                    }
+                    if(!CS::Task::create(taskName, pLocatFull, ds.taskfrequency)){
+                        std::cerr << "Failed to create task." << std::endl;
+                    }
+                }
+                std::cout << "Task frequency reset to default." << std::endl;
+            }
+            else if(std::string(argv[3]) == "editor"){
+                Defaultsetting ds;
+                ds.editorDefault(pt);
+                std::cout << "Preferred text editor reset to default." << std::endl;
+            }
+            else{
+                std::cerr << "Fatal: '" << argv[3] << "' is not a valid argument." << std::endl;
+            }
+        }
+    }
+    else if(std::string val; CS::Args::argfcmp(val, argv, argc, "settings.savelimit")){
+        if(val.empty()){
+            std::cerr << "Fatal: Missing value." << std::endl;
+            return;
+        }
+        int value = std::stoi(val);
+        if(value > 10000000){
+            std::cerr << "Fatal: Value out of range." << std::endl;
+            return;
+        }
+        else{
+            std::cout << "Savelimit changed." << std::endl;
+            std::cout << "(" << pt.get<int>("savelimit") << ") ==> (" << value << ")" << std::endl;
+            pt.put("savelimit", value);
+        }
+    }
+    else if(std::string buff; CS::Args::argfcmp(val, argv, argc, "settings.pre-restore-limit")){
+        if(buff.empty()){
+            std::cerr << "Fatal: Missing value." << std::endl;
+            return;
+        }
+        int val = std::stoi(buff);
+        if(val > 10000000){
+            std::cerr << "Fatal: Value out of range." << std::endl;
+            return;
+        }
+        else{
+            std::cout << "Pre-Restore-Backups limit changed." << std::endl;
+            std::cout << "(" << pt.get<int>("pre-restore-limit") << ") ==> (" << val << ")" << std::endl;
+            pt.put("pre-restore-limit", val);
+        }
+    }
+    else if(std::string buff; CS::Args::argfcmp(buff, argv, argc, "settings.task")){
+        if(buff.empty()){
+            std::cerr << "Fatal: Missing value." << std::endl;
+            return;
+        }
+        else if(buff == "true"){
+            if(CS::Task::exists){
+                std::cout << "Fatal: Task already exists." << std::endl;
+            }
+            else{
+                if(!CS::Task::create(taskName, pLocatFull, pt.get<std::string>("taskfrequency"))){
+                    std::cerr << "Fatal: Failed to create task." << std::endl;
+                    return;
+                }
+                std::cout << "Scheduled task created." << std::endl;
+            }
+        }
+        else if(buff == "false"){
+            if(!CS::Task::exists){
+                std::cout << "Fatal: Scheduled task does not exist." << std::endl;
+            }
+            else{
+                if(!CS::Task::remove(taskName)){
+                    std::cerr << "Fatal: Failed to remove task." << std::endl;
+                }
+                std::cout << "Scheduled task removed." << std::endl;
+            }
+        }
+    }
+    else if(std::string buff; CS::Args::argfcmp(buff, argv, argc, "settings.taskfrequency")){
+        if(!buff.empty() && buff == "daily" || buff == "hourly"){
+            const char* cmp[] = {"daily", "hourly"};
+            size_t cmpSize = sizeof(cmp) / sizeof(cmp[0]);
+            std::string val;
+            if(CS::Args::argfcmp(val, argv, argc, cmp, cmpSize)){
+                unsigned int value = std::stoi(val);
+                if(value > 100000){
+                    std::cerr << "Fatal: Value out of range." << std::endl;
+                    return;
+                }
+                const std::string freq = buff + "," + val;
+                std::cout << "Task Frequency changed." << std::endl;
+                std::cout << "(" << pt.get<std::string>("taskfrequency") << ") ==> (" << freq << ")" << std::endl;
+                pt.put("taskfrequency", freq);
+            }
+        }
+        else{
+            std::cerr << "Fatal: Missing value." << std::endl;
+            return;
+        }
+    }
+    else if(std::string buff; CS::Args::argfcmp(buff, argv, argc, "settings.editor")){
+        if(buff.empty()){
+            std::cerr << "Fatal: Missing value." << std::endl;
+            return;
+        }
+        else if(buff == "vscode"){
+            if(std::system("cmd /c code --version >NUL 2>&1") != 0){
+                std::cerr << "Fatal: vscode was not found." << std::endl;
+                return;
+            }
+            pt.put("editor", "vscode");
+            std::cout << "Settings saved." << std::endl;
+        }
+        else if(buff == "vim"){
+            if(std::system("cmd /c vim --version >NUL 2>&1") != 0){
+                std::cerr << "Fatal: vim was not found." << std::endl;
+                return;
+            }
+            pt.put("editor", "vim");
+            std::cout << "Settings saved." << std::endl;
+        }
+        else if(buff == "notepad"){
+            if(!std::filesystem::exists("C:\\Windows\\system32\\notepad.exe")){
+                std::cerr << "Fatal: notepad was not found." << std::endl;
+                return;
+            }
+            pt.put("editor", "notepad");
+            std::cout << "Settings saved." << std::endl;
+        }
+    }
+    else{
+        std::cerr << "Fatal: '" << argv[1] << "' is not a valid argument." << std::endl;
+    }
+
+    boost::property_tree::write_json(settingsPath, pt);
+}
+
 int main(int argc, char* argv[]){   
     std::signal(SIGINT, exitSignalHandler);
     enableColors();
@@ -1309,7 +1560,7 @@ int main(int argc, char* argv[]){
     archiveDir = pLocat + "\\ConfigArchive";
     backupDir = pLocat + "\\PreRestoreBackups";
     savesFile = pLocat + "\\objects\\Saves.bin";
-    const std::string settingsPath = pLocat + "\\settings.json"; 
+    settingsPath = pLocat + "\\settings.json"; 
     CS::Logs::init();
     boost::property_tree::ptree pt;
 
@@ -1328,6 +1579,8 @@ int main(int argc, char* argv[]){
         
         try{
             std::cout << "Writing settings file..." << std::endl;
+            Defaultsetting DS;
+            DS.putDefault(pt);
             boost::property_tree::write_json(settingsPath, pt);
             std::cout << "Settings file created.\n" << std::endl;
         }
@@ -1353,12 +1606,7 @@ int main(int argc, char* argv[]){
         std::cerr << "Error: Failed to extract settingsID from " << settingsPath << std::endl;
         std::cout << "Restoring settings file..." << std::endl;
         Defaultsetting DS;
-        pt.put("settingsID", SETTINGS_ID);
-        pt.put("recyclelimit", DS.recyclelimit);
-        pt.put("savelimit", DS.savelimit);
-        pt.put("task", DS.task);
-        pt.put("taskfrequency", DS.taskfrequency);
-
+        DS.putDefault(pt);
     }
 
     else if(settingsID != SETTINGS_ID){ // Differing settingsID
@@ -1433,6 +1681,9 @@ int main(int argc, char* argv[]){
     }
     else if(std::string(argv[1]) == "list"){
         handleListOption(argv, argc);
+    }
+    else if(std::string(argv[1]).find("settings") != std::string::npos){
+        handleSettingsOption(argv, argc, pt);
     }
     else{
         std::cerr << "Fatal: '" << argv[1] << "' is not a ConfigSync command.\n";
