@@ -804,6 +804,9 @@ namespace CS {
 
                         add("Fusion360", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Autodesk\\Neutron Platform\\Options" + get_fusion360_dir()}, {"Fusion360.exe", "ADPClientService.exe", "AdskIdentityManager.exe"});
                         setAlias("Fusion360", {"Autodesk.Fusion360", "fusion360", "autodesk.fusion360", "autodesk-fusion360", "Autodesk-Fusion360"});
+                        
+                        add("Google.Chrome", {"C:\\Users\\" + uName + "\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Preferences"}, {"chrome.exe"});
+                        setAlias("Google.Chrome", {"GoogleChrome", "googlechrome", "Google-Chrome", "google-chrome", "Google.Chrome", "google.chrome", "chrome", "Chrome"});
 
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
