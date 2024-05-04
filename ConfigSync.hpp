@@ -802,6 +802,9 @@ namespace CS {
                         add("Ultimaker.Cura", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\cura\\" + get_cura_vers()}, {"UltiMaker-Cura.exe", "CuraEngine.exe"});
                         setAlias("Ultimaker.Cura", {"CuraSlicer", "UltimakerCura", "Ultimaker-Cura", "Ultimaker.Cura", "ultimaker.cura", "Cura", "Cura-Slicer", "Cura-slicer", "cura"});
 
+                        add("Fusion360", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Autodesk\\Neutron Platform\\Options" + get_fusion360_dir()}, {"Fusion360.exe", "ADPClientService.exe", "AdskIdentityManager.exe"});
+                        setAlias("Fusion360", {"Autodesk.Fusion360", "fusion360", "autodesk.fusion360", "autodesk-fusion360", "Autodesk-Fusion360"});
+
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
@@ -870,6 +873,30 @@ namespace CS {
                                 return ret;
                             }
                         }
+                        return {};
+                    }
+
+                    inline const std::string get_fusion360_dir(){
+                        const std::string roamingPath = "C:\\Users\\" + uName + "\\AppData\\Roaming\\Autodesk\\Neutron Platform\\Options";
+                        unsigned i = 0;
+                        std::string ret;
+                        if(!std::filesystem::exists(roamingPath)){
+                            return {};
+                        }
+                        for(const auto& entry : std::filesystem::directory_iterator(roamingPath)){
+                            if(entry.is_directory()){
+                                ret = entry.path().filename().string();
+                                i++;
+                            }
+                        }
+
+                        if(i <= 1){
+                            return ret;
+                        }
+                        else{
+                            std::cerr << "This should never happen. Please report this issue to https:\\\\github.com\\TeeJay69" << std::endl;
+                        }
+
                         return {};
                     }
 
