@@ -808,6 +808,9 @@ namespace CS {
                         add("Google.Chrome", {"C:\\Users\\" + uName + "\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Preferences"}, {"chrome.exe"});
                         setAlias("Google.Chrome", {"GoogleChrome", "googlechrome", "Google-Chrome", "google-chrome", "Google.Chrome", "google.chrome", "chrome", "Chrome"});
 
+                        add("Mozilla.Firefox", get_firefox_paths(), {"firefox.exe"});
+                        setAlias("Mozilla.Firefox", {"MozillaFirefox", "mozillafirefox", "Firefox", "firefox", "mozilla.firefox", "Mozilla-Firefox", "mozilla-firefox"});
+                        
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
@@ -905,6 +908,43 @@ namespace CS {
 
                     inline std::unordered_map<std::string,PInfo>& programs(){
                         return _programs;
+                    }
+                    
+                    inline const std::string find_firefox_prefs_file(const std::filesystem::__cxx11::directory_entry& __entry){
+                        if(__entry.is_directory()){
+                            for(const auto& entry : std::filesystem::directory_iterator(__entry)){
+                                if(entry.is_directory()){
+                                    find_firefox_prefs_file(entry);
+                                }
+                                else{
+                                    if(entry.path().filename().string() == "prefs.js"){
+                                        return entry.path().string();
+                                    }
+                                }
+                            }
+                        }
+                        else{
+                            if(__entry.path().filename().string() == "prefs.js"){
+                                return __entry.path().string();
+                            }
+                        }
+
+                        return {};
+                    }
+
+                    inline const std::vector<std::string> get_firefox_paths(){
+                        const std::string roamingPath = "C:\\Users\\" + uName + "\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles";
+                        std::cout << "function entered" << std::endl;
+                        std::vector<std::string> ret;
+                        if(std::filesystem::exists(roamingPath)){
+                            for(const auto& entry : std::filesystem::directory_iterator(roamingPath)){
+                                const std::string& pref = find_firefox_prefs_file(entry);
+                                if(!pref.empty()){
+                                    ret.push_back(pref);
+                                }
+                            }
+                        }
+                        return ret;
                     }
             };
     };
