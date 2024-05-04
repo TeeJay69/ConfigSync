@@ -817,6 +817,9 @@ namespace CS {
                         add("Powershell-Macros", {"C:\\Data\\" + uName + "\\Software\\Settings\\Powershell"}, {});
                         setAlias("Powershell-Macros", {"powershell-macros", "powershell.macros", "Powershell.Macros", "powershellmacros", "pwsh-macros", "pwsh.macros", "Pwsh.Macros", "Pwsh-Macros"});
                         
+                        add("Calibre", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\calibre"}, {"calibre.exe", "calibre-parallel.exe"});
+                        setAlias("Calibre", {"calibre"});
+                        
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }

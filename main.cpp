@@ -1659,6 +1659,11 @@ int main(int argc, char* argv[]){
             std::cout << "1. Locate your profile: `$PROFILE`" << std::endl;
             std::cout << "2. Copy contents of profile file to a new file `C:\\Data\\<username>\\software\\settings\\powershell\\profile\\Microsoft.PowerShell_profile.ps1`" << std::endl;
             std::cout << "3. Delete everything in the old file and add:\n```Pwsh\n$profile = \"C:\\Data\\<username>\\Software\\Settings\\Powershell\\profile\\Microsoft.PowerShell_profile.ps1\"\n. $profile\n```" << std::endl;
+
+            std::cout << ANSI_COLOR_GREEN << "Calibre:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << "If you want to restore the config on a new machine, you need to make sure that the configuration path is EXACTLY the same as before!\n(Because inside one of calibre's configuration files (customize.py) it stores hard-coded full paths to \"installed\" plugins.)" << std::endl;
+            std::cout << "It should work by default in most cases." << std::endl;
+            std::cout << "For more info, see `https://www.mobileread.com/forums/showthread.php?t=179802`" << std::endl;
         }
         else{
             std::cout << "ConfigSync (JW-CoreUtils) " << VERSION << std::endl;
