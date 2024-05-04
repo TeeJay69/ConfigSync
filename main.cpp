@@ -468,6 +468,12 @@ inline int restoreSave(CS::Saves& S, const std::string& prog, const uint64_t dat
                 std::filesystem::remove(pair.first);
             }
         }
+        else{
+            std::cout << "Warning: Restore target program path not found, creating directories...." << pair.first << std::endl; 
+            CS::Logs log;
+            log.msg("Warning: Restore target program path not found, creating directories...." + pair.first);
+            std::filesystem::create_directories(std::filesystem::path(pair.first).parent_path());
+        }
         std::filesystem::permissions(pair.second, std::filesystem::perms::all);
         if(std::filesystem::copy_file(pair.second, pair.first, std::filesystem::copy_options::overwrite_existing | std::filesystem::copy_options::update_existing) != 1){
             return 0;
@@ -1640,46 +1646,62 @@ int main(int argc, char* argv[]){
         std::exit(EXIT_SUCCESS);
     }
     else if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h"){ // Help message param
-        std::cout << "ConfigSync (JW-CoreUtils) " << VERSION << std::endl;
-        std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
-        std::cout << "usage: configsync [OPTIONS]... [PROGRAM]" << std::endl;
-        std::cout << std::endl;
-        std::cout << "Options:\n";
-        std::cout << "sync [PROGRAM]                          Synchronize specified program.\n";
-        std::cout << "    --all, -a                           Synchronize all supported programs.\n";
-        std::cout << "    --message, -m [NOTE]                Add a note to the save.\n";
-        std::cout << "restore [PROGRAM]                       Restore specified program to latest save by default.\n";
-        std::cout << "    --all, -a                           Restore configurations of all supported programs.\n";
-        std::cout << "    --date, -d [DATE]                   Restore from a specific date's save.\n";
-        std::cout << "    --force, -f                         Force restore by terminating running instances.\n";
-        std::cout << "check                                   Check task status reflects settings.\n";
-        std::cout << "    --task, -t                          Ensure that the task status is up-to-date.\n";
-        std::cout << "show [PROGRAM]                          Display saves of specified program.\n";
-        std::cout << "    --explorer, -e                      Open save archive in explorer.\n";
-        std::cout << "list                                    List all supported programs.\n";
-        std::cout << "undo [PROGRAM]                          Undo actions for specified program.\n";
-        std::cout << "    --restore, -r                       Undo the most recent restore.\n";
-        std::cout << "    --save, -s                          Undo the most recent save.\n";
-        std::cout << "    --all, -a                           Undo actions for all programs.\n";
-        std::cout << "    --date, -d [DATE]                   Undo a specific action from a specific date.\n";
-        std::cout << "    --force, -f                         Forced restore by killing instances of target program.\n";
-        std::cout << "status [PROGRAM]                        Show status, defaults to all programs.\n";
-        std::cout << "settings                                Manage settings for the program.\n";
-        std::cout << "    --reset, -r [SETTING]               Reset specific setting to default.\n";
-        std::cout << "    --all, -a                           Reset all settings to default.\n";
-        std::cout << "    --json, -j                          View raw settings file.\n";
-        std::cout << "    settings.savelimit                  Manage save limit setting.\n";
-        std::cout << "    settings.pre-restore-limit          Manage pre-restore limit setting.\n";
-        std::cout << "    settings.task                       Manage task setting.\n";
-        std::cout << "    settings.taskfrequency              Manage task frequency setting.\n";
-        std::cout << "    settings.editor [EDITOR]            Set preferred editor (vim, notepad, VSCode).\n";
-        std::cout << "version                                 Display version information.\n";
-        std::cout << "help                                    Display this help message.\n\n";
-        std::cout << "Operands:\n";
-        std::cout << "[...] --verbose                         Enable verbose mode.\n";
+        if(std::string(argv[2]) == "--programs" || std::string(argv[2]) == "-p"){
+            std::cout << "Program specific help:" << std::endl;
+            std::cout << ANSI_COLOR_GREEN << "CMD-Macros:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << "1. In order to add macros (aliases) to cmd, you need to add the path to your doskey file (if you created one) to the registry, using the following command:" << std::endl;
+            std::cout << "`reg add \"HKCU\\Software\\Microsoft\\Command Processor\" /v Autorun /d \"doskey /macrofile=\"c:\\data\\<username>\\software\\settings\\cmd\\profile\\macros.doskey\"\" /f`" << std::endl;
+            std::cout << "2. You can verify with:" << std::endl;
+            std::cout << "reg query \"HKCU\\Software\\Microsoft\\Command Processor\" /v Autorun" << std::endl;
 
-        if(verbose){std::cout << "Verbose mode enabled!!!"<<std::endl;}
-        std::exit(EXIT_SUCCESS);
+            std::cout << ANSI_COLOR_GREEN << "Powershell-Macros:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << "To add custom macros/aliases to your powershell profile, I recommend the following approach." << std::endl;
+            std::cout << "1. Locate your profile: `$PROFILE`" << std::endl;
+            std::cout << "2. Copy contents of profile file to a new file `C:\\Data\\<username>\\software\\settings\\powershell\\profile\\Microsoft.PowerShell_profile.ps1`" << std::endl;
+            std::cout << "3. Delete everything in the old file and add:\n```Pwsh\n$profile = \"C:\\Data\\<username>\\Software\\Settings\\Powershell\\profile\\Microsoft.PowerShell_profile.ps1\"\n. $profile\n```" << std::endl;
+        }
+        else{
+            std::cout << "ConfigSync (JW-CoreUtils) " << VERSION << std::endl;
+            std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
+            std::cout << "usage: configsync [OPTIONS]... [PROGRAM]" << std::endl;
+            std::cout << std::endl;
+            std::cout << "Options:\n";
+            std::cout << "sync [PROGRAM]                          Synchronize specified program.\n";
+            std::cout << "    --all, -a                           Synchronize all supported programs.\n";
+            std::cout << "    --message, -m [NOTE]                Add a note to the save.\n";
+            std::cout << "restore [PROGRAM]                       Restore specified program to latest save by default.\n";
+            std::cout << "    --all, -a                           Restore configurations of all supported programs.\n";
+            std::cout << "    --date, -d [DATE]                   Restore from a specific date's save.\n";
+            std::cout << "    --force, -f                         Force restore by terminating running instances.\n";
+            std::cout << "check                                   Check task status reflects settings.\n";
+            std::cout << "    --task, -t                          Ensure that the task status is up-to-date.\n";
+            std::cout << "show [PROGRAM]                          Display saves of specified program.\n";
+            std::cout << "    --explorer, -e                      Open save archive in explorer.\n";
+            std::cout << "list                                    List all supported programs.\n";
+            std::cout << "undo [PROGRAM]                          Undo actions for specified program.\n";
+            std::cout << "    --restore, -r                       Undo the most recent restore.\n";
+            std::cout << "    --save, -s                          Undo the most recent save.\n";
+            std::cout << "    --all, -a                           Undo actions for all programs.\n";
+            std::cout << "    --date, -d [DATE]                   Undo a specific action from a specific date.\n";
+            std::cout << "    --force, -f                         Forced restore by killing instances of target program.\n";
+            std::cout << "status [PROGRAM]                        Show status, defaults to all programs.\n";
+            std::cout << "settings                                Manage settings for the program.\n";
+            std::cout << "    --reset, -r [SETTING]               Reset specific setting to default.\n";
+            std::cout << "    --all, -a                           Reset all settings to default.\n";
+            std::cout << "    --json, -j                          View raw settings file.\n";
+            std::cout << "    settings.savelimit                  Manage save limit setting.\n";
+            std::cout << "    settings.pre-restore-limit          Manage pre-restore limit setting.\n";
+            std::cout << "    settings.task                       Manage task setting.\n";
+            std::cout << "    settings.taskfrequency              Manage task frequency setting.\n";
+            std::cout << "    settings.editor [EDITOR]            Set preferred editor (vim, notepad, VSCode).\n";
+            std::cout << "version                                 Display version information.\n";
+            std::cout << "help                                    Display this help message.\n\n";
+            std::cout << "Operands:\n";
+            std::cout << "[...] --verbose                         Enable verbose mode.\n";
+
+            if(verbose){std::cout << "Verbose mode enabled!!!"<<std::endl;}
+            std::exit(EXIT_SUCCESS);
+        }
     }
 
     else if(std::string(argv[1]) == "sync"){

@@ -67,6 +67,7 @@ generation
 
     + version
     + help
+        - [ ] --programs (-p) (Display information about the supported programs)
 - Operands:
     + source (e.g. winget, choco, jet/direct (repository of official releases from websites) / directly from website)
     + --disable-auto-packman-install (Prevents automatic installation of package managers like winget and chocolatey, when not installed)

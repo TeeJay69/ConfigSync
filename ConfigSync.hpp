@@ -811,6 +811,12 @@ namespace CS {
                         add("Mozilla.Firefox", get_firefox_paths(), {"firefox.exe"});
                         setAlias("Mozilla.Firefox", {"MozillaFirefox", "mozillafirefox", "Firefox", "firefox", "mozilla.firefox", "Mozilla-Firefox", "mozilla-firefox"});
                         
+                        add("CMD-Macros", {"C:\\Data\\" + uName + "\\Software\\Settings\\cmd"}, {});
+                        setAlias("CMD-Macros", {"cmd-macros", "cmd.macros", "CMD.Macros", "cmdmacros"});
+                        
+                        add("Powershell-Macros", {"C:\\Data\\" + uName + "\\Software\\Settings\\Powershell"}, {});
+                        setAlias("Powershell-Macros", {"powershell-macros", "powershell.macros", "Powershell.Macros", "powershellmacros", "pwsh-macros", "pwsh.macros", "Pwsh.Macros", "Pwsh-Macros"});
+                        
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
@@ -934,7 +940,6 @@ namespace CS {
 
                     inline const std::vector<std::string> get_firefox_paths(){
                         const std::string roamingPath = "C:\\Users\\" + uName + "\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles";
-                        std::cout << "function entered" << std::endl;
                         std::vector<std::string> ret;
                         if(std::filesystem::exists(roamingPath)){
                             for(const auto& entry : std::filesystem::directory_iterator(roamingPath)){
