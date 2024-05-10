@@ -1,3 +1,9 @@
+# v2.1.2
+### Fixes status/sync option errors
+- Filesystem error occurred when trying to hash invalid paths
+### Display insync status correctly
+- All "insync" programs were falsely labeled as "never synced"
+
 # v2.1.1
 ### Adds support for new programs
 - Fusion360

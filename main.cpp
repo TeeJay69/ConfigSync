@@ -30,7 +30,7 @@
 #endif
 
 #define SETTINGS_ID 1
-#define VERSION "v2.1.1"
+#define VERSION "v2.1.2"
 
 volatile sig_atomic_t interrupt = 0;
 int verbose = 0;
@@ -163,6 +163,10 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         if(loadFlag != 0){
             if(S.exists(canName)){
                 for(const auto& pair : S.get_lastsave(canName).pathVec){
+                    if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
+                        equal = 0;
+                        break;
+                    }
                     if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
                         equal = 0;
                         break;
@@ -250,6 +254,10 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
             if(loadFlag != 0){
                 if(S.exists(prog)){
                     for(const auto& pair : S.get_lastsave(prog).pathVec){
+                        if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
+                            equal = 0;
+                            break;
+                        }
                         if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
                             equal = 0;
                             break;
@@ -850,15 +858,18 @@ inline void handleStatusOption(char* argv[], int argc){
         std::cout << ANSI_COLOR_166 << "Status:" << ANSI_COLOR_RESET << std::endl;
         CS::Saves S(savesFile);
         if(!S.load()){
-            std::cout << ANSI_COLOR_RED << "Never synced:" << std::endl;
+            CS::Logs::msg("WARNING!!! Failed to load Saves file!!!");
+            std::cout << ANSI_COLOR_RED << "Never synced:" << ANSI_COLOR_RESET << std::endl;
             for(const auto& prog : mgm.get_supported()){
-                std::cout << prog << ANSI_COLOR_RESET << std::endl;
+                std::cout << prog << std::endl;
             }
+            return;
         }
         std::vector<std::string> insync;
         std::vector<std::string> outsync;
         std::vector<std::string> nsync;
         for(const auto& prog : mgm.get_supported()){
+            CS::Logs::msg("Status - Prog: " + prog);
             if(!S.exists(prog)){
                 nsync.push_back(prog);
                 continue;
@@ -871,6 +882,10 @@ inline void handleStatusOption(char* argv[], int argc){
 
             unsigned int equal = 1;
             for(const auto& pair : S.saves().at(prog).at(tst).pathVec){
+                if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
+                    CS::Logs::msg("WARNING: File not found: " + pair.first + " or " + pair.second);
+                    continue;
+                }
                 if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
                     outsync.push_back(prog);
                     equal = 0;
@@ -879,7 +894,7 @@ inline void handleStatusOption(char* argv[], int argc){
             }
 
             if(equal == 1){
-                nsync.push_back(prog);
+                insync.push_back(prog);
             }
         }
 
@@ -921,6 +936,10 @@ inline void handleStatusOption(char* argv[], int argc){
         }
 
         for(const auto& pair : S.saves().at(canName).at(tst).pathVec){
+            if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
+                CS::Logs::msg("WARNING: File not found: " + pair.first + " or " + pair.second);
+                continue;
+            }
             if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
                 std::cout << ANSI_COLOR_RED << "Out of Sync!" << ANSI_COLOR_RESET << std::endl;
                 return;
