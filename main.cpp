@@ -30,7 +30,7 @@
 #endif
 
 #define SETTINGS_ID 1
-#define VERSION "v2.2.0"
+#define VERSION "v2.2.1"
 
 volatile sig_atomic_t interrupt = 0;
 int verbose = 0;
@@ -181,8 +181,15 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
                             equal = 0;
                             break;
                         }
-                        if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                        try{
+                            if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                                equal = 0;
+                                break;
+                            }
+                        }
+                        catch(const std::runtime_error& err){
                             equal = 0;
+                            CS::Logs::msg("ERROR: Sync - runtime_error: " + std::string(err.what()) + " file: " + pair.first);
                             break;
                         }
                     }
@@ -287,7 +294,13 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
                                 equal = 0;
                                 break;
                             }
-                            if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                            try{
+                                if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                                    equal = 0;
+                                    break;
+                                }
+                            }
+                            catch(std::runtime_error& err){
                                 equal = 0;
                                 break;
                             }
@@ -935,7 +948,14 @@ inline void handleStatusOption(char* argv[], int argc){
                     CS::Logs::msg("WARNING: File not found: " + pair.first + " or " + pair.second);
                     continue;
                 }
-                if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                try{
+                    if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                        outsync.push_back(prog);
+                        equal = 0;
+                        break;
+                    }
+                }
+                catch(std::runtime_error& err){
                     outsync.push_back(prog);
                     equal = 0;
                     break;
@@ -989,7 +1009,13 @@ inline void handleStatusOption(char* argv[], int argc){
                 CS::Logs::msg("WARNING: File not found: " + pair.first + " or " + pair.second);
                 continue;
             }
-            if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+            try{
+                if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                    std::cout << ANSI_COLOR_RED << "Out of Sync!" << ANSI_COLOR_RESET << std::endl;
+                    return;
+                }
+            }
+            catch(std::runtime_error& err){
                 std::cout << ANSI_COLOR_RED << "Out of Sync!" << ANSI_COLOR_RESET << std::endl;
                 return;
             }

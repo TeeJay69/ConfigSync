@@ -101,7 +101,7 @@ Install-Location
 
 ## Known Bugs:
 - [Closed] xxx
-
+- Previously synchronized save. error when trying to hash the original file. (forced sync worked, then non forced may encounter issues, with potential file locks preventing hashing.) Mp3tag
 
 ## Trashcan:
 <!-- code -->
