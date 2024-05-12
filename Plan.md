@@ -36,6 +36,7 @@ generation
         - [x] --all (-a) (synchronize all supported programs)
         - Operands:
             - [x] --message (-m) (Add a note to that save)
+            - [x] --force (-f) (Kill running instances and skip up-to-date check)
     + restore [PROGRAM] (Defaults to latest save)
         - [x] --all (-a) (restore config of all supported programs)
         - Operands:
@@ -64,7 +65,7 @@ generation
         - [x] settings.task
         - [x] settings.taskfrequency
         - [x] settings.editor (vim, notepad, VSCode) (Preferred editor when opening files from this program.)
-
+    + [ ] remove (delete saves/restores)
     + version
     + help
         - [x] --programs (-p) (Display information about specific programs)

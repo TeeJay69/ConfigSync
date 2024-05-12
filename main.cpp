@@ -147,48 +147,63 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
             }
             msgFlag = 1;
         }
-
+        
         const std::string canName = mgm.get_canonical(std::string(argv[2]));
-        std::cout << ANSI_COLOR_161 << "Synchronizing " << canName << ":" << ANSI_COLOR_RESET << std::endl;
-        std::cout << ANSI_COLOR_222 << "Fetching files..." << ANSI_COLOR_RESET << std::endl;
-        std::cout << ANSI_COLOR_222 << "Starting synchronization..." << ANSI_COLOR_RESET << std::endl;
-        std::cout << ANSI_COLOR_222 << "Computing hashes..." << ANSI_COLOR_RESET << std::endl;
+        int forceFlag = 0;
+        if(CS::Args::argcmp(argv, argc, "--force") || CS::Args::argcmp(argv, argc, "-f")){
+            std::cout << ANSI_COLOR_161 << "Synchronizing " << canName << " - Forced:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Starting synchronization..." << ANSI_COLOR_RESET << std::endl;
+            for(const auto& proc : mgm.programs().at(canName).procNames){
+                if(CS::Process::killProcess(proc.c_str()) == 1){
+                    std::cout << ANSI_COLOR_222 << "Killed " << proc << ANSI_COLOR_RESET << std::endl;
+                }
+            }
+            forceFlag = 1;
+        }
+        else{
+            std::cout << ANSI_COLOR_161 << "Synchronizing " << canName << ":" << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Fetching files..." << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Starting synchronization..." << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Computing hashes..." << ANSI_COLOR_RESET << std::endl;
+        }
         CS::Saves S(savesFile);
         S.load();
         unsigned loadFlag = 1;
         if(S.load() != 1){
             loadFlag = 0;
         }
-        int equal = 1;
-        if(loadFlag != 0){
-            if(S.exists(canName)){
-                for(const auto& pair : S.get_lastsave(canName).pathVec){
-                    if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
-                        equal = 0;
-                        break;
+        if(forceFlag == 0){
+            int equal = 1;
+            if(loadFlag != 0){
+                if(S.exists(canName)){
+                    for(const auto& pair : S.get_lastsave(canName).pathVec){
+                        if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
+                            equal = 0;
+                            break;
+                        }
+                        if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                            equal = 0;
+                            break;
+                        }
                     }
-                    if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
-                        equal = 0;
-                        break;
-                    }
+                }
+                else{
+                    equal = 0;
                 }
             }
             else{
                 equal = 0;
             }
-        }
-        else{
-            equal = 0;
+
+            if(equal == 1){
+                std::cout << ANSI_COLOR_66 << canName + " config is up to date." << ANSI_COLOR_RESET << std::endl;
+                CS::Logs::msg("Hashes identical: " + canName);
+                return;
+            }
+            std::cout << ANSI_COLOR_138 << canName << " config is out of sync! Synchronizing..." << ANSI_COLOR_RESET << std::endl;
+            CS::Logs::msg("Hashes differ: " + canName);
         }
 
-        if(equal == 1){
-            std::cout << ANSI_COLOR_66 << canName + " config is up to date." << ANSI_COLOR_RESET << std::endl;
-            CS::Logs::msg("Hashes identical: " + canName);
-            return;
-        }
-        std::cout << ANSI_COLOR_138 << canName << " config is out of sync! Synchronizing..." << ANSI_COLOR_RESET << std::endl;
-        CS::Logs::msg("Hashes differ: " + canName);
-    
         uint64_t tst = CS::Utility::timestamp();
         const std::string dayDir = archiveDir + "\\" + canName + "\\" + CS::Utility::ymd_date();
         const std::string tstDir = dayDir + "\\" + std::to_string(tst);
@@ -237,7 +252,18 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         S.save();
     }
     else if(std::string(argv[2]) == "--all" || std::string(argv[2]) == "-a"){
-        std::cout << ANSI_COLOR_161 << "Synchronizing all programs:" << ANSI_COLOR_RESET << std::endl;
+        int forceFlag = 0;
+        if(CS::Args::argcmp(argv, argc, "--force") || CS::Args::argcmp(argv, argc, "-f")){
+            std::cout << ANSI_COLOR_161 << "Synchronizing all programs - Forced:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Starting synchronization..." << ANSI_COLOR_RESET << std::endl;
+            forceFlag = 1;
+        }
+        else{
+            std::cout << ANSI_COLOR_161 << "Synchronizing all programs:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Fetching programs..." << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Starting synchronization..." << ANSI_COLOR_RESET << std::endl;
+            std::cout << ANSI_COLOR_222 << "Computing hashes..." << ANSI_COLOR_RESET << std::endl;
+        }
         std::string msg;
         const char* cmp[] = {"--message", "-m"};
         size_t cmpSize = sizeof(cmp) / sizeof(cmp[0]);
@@ -245,10 +271,6 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         if(CS::Args::argfcmp(msg, argv, argc, cmp, cmpSize == 1)){
             msgFlag = 1;
         }
-
-        std::cout << ANSI_COLOR_222 << "Fetching programs..." << ANSI_COLOR_RESET << std::endl;
-        std::cout << ANSI_COLOR_222 << "Starting synchronization..." << ANSI_COLOR_RESET << std::endl;
-        std::cout << ANSI_COLOR_222 << "Computing hashes..." << ANSI_COLOR_RESET << std::endl;
         CS::Saves S(savesFile);
         unsigned loadFlag = 1;
         if(S.load() != 1){
@@ -256,35 +278,44 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         }
         std::vector<std::string> synced;
         for(const auto& prog : mgm.get_supported()){
-            unsigned equal = 1;
-            if(loadFlag != 0){
-                if(S.exists(prog)){
-                    for(const auto& pair : S.get_lastsave(prog).pathVec){
-                        if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
-                            equal = 0;
-                            break;
+            if(forceFlag == 0){
+                unsigned equal = 1;
+                if(loadFlag != 0){
+                    if(S.exists(prog)){
+                        for(const auto& pair : S.get_lastsave(prog).pathVec){
+                            if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
+                                equal = 0;
+                                break;
+                            }
+                            if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                                equal = 0;
+                                break;
+                            }
                         }
-                        if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
-                            equal = 0;
-                            break;
-                        }
+                    }
+                    else{
+                        equal = 0;
                     }
                 }
                 else{
                     equal = 0;
                 }
+
+                if(equal == 1){
+                    std::cout << ANSI_COLOR_66 << prog + " config is up to date." << ANSI_COLOR_RESET << std::endl;
+                    CS::Logs::msg("Hashes identical: " + prog);
+                    continue;
+                }
+                std::cout << ANSI_COLOR_138 << prog << " config is out of sync! Synchronizing..." << ANSI_COLOR_RESET << std::endl;
+                CS::Logs::msg("Hashes differ: " + prog);
             }
             else{
-                equal = 0;
+                for(const auto& proc : mgm.programs().at(prog).procNames){
+                    if(CS::Process::killProcess(proc.c_str()) == 1){
+                        std::cout << ANSI_COLOR_222 << "Killed" << proc << ANSI_COLOR_RESET << std::endl;
+                    }
+                }
             }
-
-            if(equal == 1){
-                std::cout << ANSI_COLOR_66 << prog + " config is up to date." << ANSI_COLOR_RESET << std::endl;
-                CS::Logs::msg("Hashes identical: " + prog);
-                continue;
-            }
-            std::cout << ANSI_COLOR_138 << prog << " config is out of sync! Synchronizing..." << ANSI_COLOR_RESET << std::endl;
-            CS::Logs::msg("Hashes differ: " + prog);
             
             uint64_t tst = CS::Utility::timestamp();
             const std::string dayDir = archiveDir + "\\" + prog + "\\" + CS::Utility::ymd_date();
@@ -456,9 +487,15 @@ inline int createSave(CS::Programs::Mgm& mgm, CS::Saves& S, const std::string& p
         if(!std::filesystem::exists(el)){
             CS::Logs log;
             log.msg("Warning: Program path not found. " + el);
+            id++;
             continue;
         }
-        CS::Filesystem::recurse_copy(el, dest, std::nullopt, pvecRef);
+        try{
+            CS::Filesystem::recurse_copy(el, dest, std::nullopt, pvecRef);
+        }
+        catch(std::runtime_error& err){
+            CS::Logs::msg("ERROR: Filesystem error: " + std::string(err.what()) + " path: " + el);
+        }
         id++;
     }
 
@@ -1691,6 +1728,7 @@ int main(int argc, char* argv[]){
             std::cout << "sync [PROGRAM]                          Synchronize specified program.\n";
             std::cout << "    --all, -a                           Synchronize all supported programs.\n";
             std::cout << "    --message, -m [NOTE]                Add a note to the save.\n";
+            std::cout << "    --force, -f                         Kill running instances and skip evaluation if previous save is already up-to-date.\n";
             std::cout << "restore [PROGRAM]                       Restore specified program to latest save by default.\n";
             std::cout << "    --all, -a                           Restore configurations of all supported programs.\n";
             std::cout << "    --date, -d [DATE]                   Restore from a specific date's save.\n";

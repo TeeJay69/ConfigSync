@@ -863,6 +863,10 @@ namespace CS {
                         return {};
                     }
 
+                    inline std::unordered_map<std::string,PInfo>& programs(){
+                        return _programs;
+                    }
+                    
                     /**
                      * @brief Get current installed version of Cura Slicer
                      * @param userName Username
@@ -916,10 +920,6 @@ namespace CS {
                         }
 
                         return {};
-                    }
-
-                    inline std::unordered_map<std::string,PInfo>& programs(){
-                        return _programs;
                     }
                     
                     inline const std::string find_firefox_prefs_file(const std::filesystem::__cxx11::directory_entry& __entry){

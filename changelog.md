@@ -1,3 +1,5 @@
+# v2.2.2
+### 
 # v2.1.2
 ### Fixes status/sync option errors
 - Filesystem error occurred when trying to hash invalid paths
