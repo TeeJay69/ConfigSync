@@ -1682,26 +1682,7 @@ int main(int argc, char* argv[]){
         std::exit(EXIT_SUCCESS);
     }
     else if(std::string(argv[1]) == "help" || std::string(argv[1]) == "--help" || std::string(argv[1]) == "-h"){ // Help message param
-        if(std::string(argv[2]) == "--programs" || std::string(argv[2]) == "-p"){
-            std::cout << "Program specific help:" << std::endl;
-            std::cout << ANSI_COLOR_GREEN << "CMD-Macros:" << ANSI_COLOR_RESET << std::endl;
-            std::cout << "1. In order to add macros (aliases) to cmd, you need to add the path to your doskey file (if you created one) to the registry, using the following command:" << std::endl;
-            std::cout << "`reg add \"HKCU\\Software\\Microsoft\\Command Processor\" /v Autorun /d \"doskey /macrofile=\"c:\\data\\<username>\\software\\settings\\cmd\\profile\\macros.doskey\"\" /f`" << std::endl;
-            std::cout << "2. You can verify with:" << std::endl;
-            std::cout << "reg query \"HKCU\\Software\\Microsoft\\Command Processor\" /v Autorun" << std::endl;
-
-            std::cout << ANSI_COLOR_GREEN << "Powershell-Macros:" << ANSI_COLOR_RESET << std::endl;
-            std::cout << "To add custom macros/aliases to your powershell profile, I recommend the following approach." << std::endl;
-            std::cout << "1. Locate your profile: `$PROFILE`" << std::endl;
-            std::cout << "2. Copy contents of profile file to a new file `C:\\Data\\<username>\\software\\settings\\powershell\\profile\\Microsoft.PowerShell_profile.ps1`" << std::endl;
-            std::cout << "3. Delete everything in the old file and add:\n```Pwsh\n$profile = \"C:\\Data\\<username>\\Software\\Settings\\Powershell\\profile\\Microsoft.PowerShell_profile.ps1\"\n. $profile\n```" << std::endl;
-
-            std::cout << ANSI_COLOR_GREEN << "Calibre:" << ANSI_COLOR_RESET << std::endl;
-            std::cout << "If you want to restore the config on a new machine, you need to make sure that the configuration path is EXACTLY the same as before!\n(Because inside one of calibre's configuration files (customize.py) it stores hard-coded full paths to \"installed\" plugins.)" << std::endl;
-            std::cout << "It should work by default in most cases." << std::endl;
-            std::cout << "For more info, see `https://www.mobileread.com/forums/showthread.php?t=179802`" << std::endl;
-        }
-        else{
+        if(argv[2] == NULL){
             std::cout << "ConfigSync (JW-CoreUtils) " << VERSION << std::endl;
             std::cout << "Copyright (C) 2024 - Jason Weber" << std::endl;
             std::cout << "usage: configsync [OPTIONS]... [PROGRAM]" << std::endl;
@@ -1742,6 +1723,25 @@ int main(int argc, char* argv[]){
 
             if(verbose){std::cout << "Verbose mode enabled!!!"<<std::endl;}
             std::exit(EXIT_SUCCESS);
+        }
+        else if(std::string(argv[2]) == "--programs" || std::string(argv[2]) == "-p"){
+            std::cout << "Program specific help:" << std::endl;
+            std::cout << ANSI_COLOR_GREEN << "CMD-Macros:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << "1. In order to add macros (aliases) to cmd, you need to add the path to your doskey file (if you created one) to the registry, using the following command:" << std::endl;
+            std::cout << "`reg add \"HKCU\\Software\\Microsoft\\Command Processor\" /v Autorun /d \"doskey /macrofile=\"c:\\data\\<username>\\software\\settings\\cmd\\profile\\macros.doskey\"\" /f`" << std::endl;
+            std::cout << "2. You can verify with:" << std::endl;
+            std::cout << "reg query \"HKCU\\Software\\Microsoft\\Command Processor\" /v Autorun" << std::endl;
+
+            std::cout << ANSI_COLOR_GREEN << "Powershell-Macros:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << "To add custom macros/aliases to your powershell profile, I recommend the following approach." << std::endl;
+            std::cout << "1. Locate your profile: `$PROFILE`" << std::endl;
+            std::cout << "2. Copy contents of profile file to a new file `C:\\Data\\<username>\\software\\settings\\powershell\\profile\\Microsoft.PowerShell_profile.ps1`" << std::endl;
+            std::cout << "3. Delete everything in the old file and add:\n```Pwsh\n$profile = \"C:\\Data\\<username>\\Software\\Settings\\Powershell\\profile\\Microsoft.PowerShell_profile.ps1\"\n. $profile\n```" << std::endl;
+
+            std::cout << ANSI_COLOR_GREEN << "Calibre:" << ANSI_COLOR_RESET << std::endl;
+            std::cout << "If you want to restore the config on a new machine, you need to make sure that the configuration path is EXACTLY the same as before!\n(Because inside one of calibre's configuration files (customize.py) it stores hard-coded full paths to \"installed\" plugins.)" << std::endl;
+            std::cout << "It should work by default in most cases." << std::endl;
+            std::cout << "For more info, see `https://www.mobileread.com/forums/showthread.php?t=179802`" << std::endl;
         }
     }
 
