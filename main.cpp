@@ -30,7 +30,7 @@
 #endif
 
 #define SETTINGS_ID 1
-#define VERSION "v2.1.2"
+#define VERSION "v2.2.2"
 
 volatile sig_atomic_t interrupt = 0;
 int verbose = 0;
@@ -208,9 +208,15 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
             const std::string dest = tstDir + "\\" + std::to_string(id);
             if(!std::filesystem::exists(el)){
                 CS::Logs::msg("Warning: Program path not found. [" + el + "]");
+                id++;
                 continue;
             }
-            CS::Filesystem::recurse_copy(el, dest, std::nullopt, pvecRef);
+            try{
+                CS::Filesystem::recurse_copy(el, dest, std::nullopt, pvecRef);
+            }
+            catch(std::runtime_error& err){
+                CS::Logs::msg("ERROR: Filesystem error: " + std::string(err.what()) + " path: " + el);
+            }
             id++;
         }
 
@@ -298,9 +304,15 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
                 if(!std::filesystem::exists(el)){
                     CS::Logs log;
                     log.msg("Warning: Program path not found. " + el);
+                    id++;
                     continue;
                 }
-                CS::Filesystem::recurse_copy(el, dest, std::nullopt, pvecRef);
+                try{
+                    CS::Filesystem::recurse_copy(el, dest, std::nullopt, pvecRef);
+                }
+                catch(std::runtime_error& err){
+                    CS::Logs::msg("ERROR: Filesystem error: " + std::string(err.what()) + " path: " + el);
+                }
                 id++;
             }
             // // for(const auto& pair : pathvec){
@@ -1342,7 +1354,12 @@ inline void handleListOption(char* argv[], int argc){
         std::cout << ANSI_COLOR_166 << "Supported Programs:" << ANSI_COLOR_RESET << std::endl;
         unsigned int i = 1;
         for(const auto& prog : mgm.get_supported()){
-            std::cout << ANSI_COLOR_222 << i << ". " << prog << ANSI_COLOR_RESET << std::endl;
+            if(i < 10){
+                std::cout << ANSI_COLOR_222 << i << std::left << std::setw(3) << ". " << prog << ANSI_COLOR_RESET << std::endl;
+            }
+            else{
+                std::cout << ANSI_COLOR_222 << i << ". " << prog << ANSI_COLOR_RESET << std::endl;
+            }
             i++;
         }
     }
@@ -1656,7 +1673,7 @@ int main(int argc, char* argv[]){
         std::cout << "ConfigSync (JW-CoreUtils) " << VERSION << std::endl;
         std::cout << "Copyright (C) 2024 - Jason Weber. All rights reserved." << std::endl;
         std::cout << "Software Configuration Synchronizer." << std::endl;
-        std::cout << "See 'cfgs --help' for usage." << std::endl;
+        std::cout << "See 'configsync --help' for usage." << std::endl;
         std::exit(EXIT_SUCCESS);
     }
     else if(std::string(argv[1]) == "version" || std::string(argv[1]) == "--version" || std::string(argv[1]) == "-v"){ // Version param

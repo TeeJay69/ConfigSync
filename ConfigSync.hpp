@@ -820,6 +820,9 @@ namespace CS {
                         add("Calibre", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\calibre"}, {"calibre.exe", "calibre-parallel.exe"});
                         setAlias("Calibre", {"calibre"});
                         
+                        add("Mp3tag", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Mp3tag"}, {"Mp3tag.exe"});
+                        setAlias("Mp3tag", {"mp3tag", "MP3Tag", "MP3tag", "Mp3Tag"});
+                        
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }

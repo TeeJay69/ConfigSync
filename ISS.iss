@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "ConfigSync"
-#define MyAppVersion "v2.0.0"
+#define MyAppVersion "v2.1.2"
 #define MyAppPublisher "Jason Weber"
 #define MyAppURL "https://github.com/TeeJay69"
 #define MyAppExeName "ConfigSync.exe"
