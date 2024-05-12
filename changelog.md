@@ -7,7 +7,7 @@
 - List: Display programs in formatted list without additional spaces for index below 10.
 ### New features
 #### Force synchronization operand
-- Kill running instances and skip evaluation if previous save is already up-to-date.
+- Kill running instances and skip evaluating up-to-date status of previous save.
     - Syntax: `--force, -f`
 
 # v2.1.2

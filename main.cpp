@@ -1728,7 +1728,7 @@ int main(int argc, char* argv[]){
             std::cout << "sync [PROGRAM]                          Synchronize specified program.\n";
             std::cout << "    --all, -a                           Synchronize all supported programs.\n";
             std::cout << "    --message, -m [NOTE]                Add a note to the save.\n";
-            std::cout << "    --force, -f                         Kill running instances and skip evaluation if previous save is already up-to-date.\n";
+            std::cout << "    --force, -f                         Kill running instances and skip evaluating up-to-date status of previous save.\n";
             std::cout << "restore [PROGRAM]                       Restore specified program to latest save by default.\n";
             std::cout << "    --all, -a                           Restore configurations of all supported programs.\n";
             std::cout << "    --date, -d [DATE]                   Restore from a specific date's save.\n";
