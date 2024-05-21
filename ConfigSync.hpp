@@ -29,6 +29,7 @@
 #include <locale>
 #include <codecvt>
 #include <cstdint>
+#include <comdef.h>
 
 extern int verbose;
 extern const std::string uName;
@@ -1252,7 +1253,7 @@ namespace CS {
                 // and exit if unsuccessful
                 while (hResult) {
                     // if we find the process: return process ID
-                    if (strcmp(procname, pe.szExeFile) == 0) {
+                    if (strcmp(procname, (const char*)(pe.szExeFile)) == 0) {
                     pid = pe.th32ProcessID;
                     break;
                     }  

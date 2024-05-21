@@ -88,7 +88,7 @@ Install-Location
 
 
 ## Critical ToDo's:
-- [ ] Block "Pre-Restore-Backup" as --message value for syncing.
+- [x] Block "Pre-Restore-Backup" as --message value for syncing.
 - [ ] Recognize operands in any order for all options
 
 ## Reevaluate:
@@ -97,7 +97,7 @@ Install-Location
 
 ## Feature requests:
 - [Declined] ~~xxx~~
-- [ ] xxx
+- [ ] Setting to change root drive the program uses to search for program paths
 
 ## Known Bugs:
 - [Closed] xxx
