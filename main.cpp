@@ -346,8 +346,7 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
             for(const auto& el : mgm.programs()[prog].paths){
                 const std::string dest = tstDir + "\\" + std::to_string(id);
                 if(!std::filesystem::exists(el)){
-                    CS::Logs log;
-                    log.msg("Warning: Program path not found. " + el);
+                    CS::Logs::msg("Warning: Program path not found. " + el);
                     id++;
                     continue;
                 }
@@ -498,8 +497,7 @@ inline int createSave(CS::Programs::Mgm& mgm, CS::Saves& S, const std::string& p
     for(const auto& el : mgm.programs()[prog].paths){
         const std::string dest = tstDir + "\\" + std::to_string(id);
         if(!std::filesystem::exists(el)){
-            CS::Logs log;
-            log.msg("Warning: Program path not found. " + el);
+            CS::Logs::msg("Warning: Program path not found. " + el);
             id++;
             continue;
         }
@@ -530,18 +528,25 @@ inline int restoreSave(CS::Saves& S, const std::string& prog, const uint64_t dat
     checkDynamicPath(S, prog, date);
     for(const auto& pair : S.saves().at(prog).at(date).pathVec){
         if(std::filesystem::exists(pair.first)){
-            if(std::filesystem::is_directory(pair.first)){
-                CS::Filesystem::recurse_remove(pair.first);
+            try{
+                if(std::filesystem::is_directory(pair.first)){
+                    CS::Filesystem::recurse_remove(pair.first);
+                }
+                else{
+                    std::filesystem::permissions(pair.first, std::filesystem::perms::all);
+                    std::filesystem::remove(pair.first);
+                }
             }
-            else{
-                std::filesystem::permissions(pair.first, std::filesystem::perms::all);
-                std::filesystem::remove(pair.first);
+            catch(const std::filesystem::filesystem_error& err){
+                CS::Logs::msg("ERROR: 'restoreSave': " + std::string(err.what()));
+                std::cerr << "Try again with '--force'. But save your open applications beforehand.";
+                throw err;
+                std::exit(EXIT_FAILURE);
             }
         }
         else{
             std::cout << "Warning: Restore target program path not found, creating directories...." << pair.first << std::endl; 
-            CS::Logs log;
-            log.msg("Warning: Restore target program path not found, creating directories...." + pair.first);
+            CS::Logs::msg("Warning: Restore target program path not found, creating directories...." + pair.first);
             std::filesystem::create_directories(std::filesystem::path(pair.first).parent_path());
         }
         std::filesystem::permissions(pair.second, std::filesystem::perms::all);
