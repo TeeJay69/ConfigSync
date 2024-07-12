@@ -1,9 +1,15 @@
+# v2.3.0
+### New program supported
+- foobar2000-v2
+> saves all the playlists and files from appdata
+
 # v2.2.1
 ### Fixes
 - Sync/Status: Prevent error when trying to sync a program whose previous save was a forced save
     - Explanation: Forced saves can include files that are not copied by a normal save (e.g. due to file locks by running instances of the target program). When you try to do a normal sync after a forced sync, the program will try to compare the hashes of the files from the previous save with the corresponding "current" files. When we try to hash a locked file, we get a runtime_error.
     - Fix: The program interprets a failed hash attempt as "out-of-sync"
     - Logs: All failed attempts including the filepath are logged.
+
 # v2.2.0
 ### Support for more programs
 - Mp3tag

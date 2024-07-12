@@ -823,6 +823,9 @@ namespace CS {
                         
                         add("Mp3tag", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Mp3tag"}, {"Mp3tag.exe"});
                         setAlias("Mp3tag", {"mp3tag", "MP3Tag", "MP3tag", "Mp3Tag"});
+
+                        add("foobar2000-v2", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\foobar2000-v2"}, {"foobar2000.exe"});
+                        setAlias("foobar2000-v2", {"foobar2000", "foobar2000v2"});
                         
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);

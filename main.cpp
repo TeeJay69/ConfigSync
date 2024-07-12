@@ -30,7 +30,7 @@
 #endif
 
 #define SETTINGS_ID 1
-#define VERSION "v2.2.1"
+#define VERSION "v2.3.0"
 
 volatile sig_atomic_t interrupt = 0;
 int verbose = 0;
@@ -834,7 +834,6 @@ inline void handleRestoreOption(char* argv[], int argc){
         std::cerr << "Fatal: Missing argument or value. See 'configsync --help'" << std::endl;
     }
 }
-
 
 inline void handleShowOption(char* argv[], int argc){
     CS::Programs::Mgm mgm;

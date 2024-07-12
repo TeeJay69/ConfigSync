@@ -94,6 +94,7 @@ Install-Location
 ## Reevaluate:
 - [Declined] ~~xxx~~
 - [x] xxx
+- [ ] foobar2000-v2 %APPDATA% directory contains a version.txt file, I am not sure if the exe uses it to check and handle moved config, if it does, we should continue to copy it along the rest if not it might be a problem since the file is overwritten by the restore.
 
 ## Feature requests:
 - [Declined] ~~xxx~~
@@ -102,6 +103,7 @@ Install-Location
 ## Known Bugs:
 - [Closed] xxx
 - Previously synchronized save. error when trying to hash the original file. (forced sync worked, then non forced may encounter issues, with potential file locks preventing hashing.) Mp3tag
+- [ ] When you change the task setting, the setting is not saved. (forgot to do pt.put<...>)
 
 ## Trashcan:
 <!-- code -->
