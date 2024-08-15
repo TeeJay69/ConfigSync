@@ -1,3 +1,8 @@
+# v2.4.0
+### New program supported
+- Chatterino
+> saves all the settings
+
 # v2.3.0
 ### New program supported
 - foobar2000-v2

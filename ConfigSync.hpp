@@ -827,6 +827,9 @@ namespace CS {
                         add("foobar2000-v2", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\foobar2000-v2"}, {"foobar2000.exe"});
                         setAlias("foobar2000-v2", {"foobar2000", "foobar2000v2"});
                         
+                        add("Chatterino", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Chatterino2\\Settings"}, {"chatterino.exe"});
+                        setAlias("Chatterino", {"chatterino"});
+                        
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
