@@ -415,7 +415,13 @@ namespace CS {
             static inline void recurse_remove(const std::filesystem::path& path){
                 for(const auto& entry : std::filesystem::recursive_directory_iterator(path)){
                     if(entry.is_directory()){
-                        recurse_remove(entry);
+                        if(std::filesystem::is_empty(entry)){
+                            std::filesystem::permissions(entry, std::filesystem::perms::all);
+                            std::filesystem::remove(entry);
+                        }
+                        else{
+                            recurse_remove(entry);
+                        }
                     }
                     else{
                         std::filesystem::permissions(entry, std::filesystem::perms::all);
