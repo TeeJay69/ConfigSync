@@ -1,7 +1,10 @@
 # v2.5.0
 ### New program supported
 - OBS-Studio
-> saves all the settings, profiles, scenes
+> saves all the settings, profiles, scenes#
+
+### Bugs
+- Fixed bug that prevented directories from being deleted.
 
 # v2.4.0
 ### New program supported
