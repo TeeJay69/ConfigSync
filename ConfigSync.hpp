@@ -835,6 +835,9 @@ namespace CS {
                         
                         add("Chatterino", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Chatterino2\\Settings"}, {"chatterino.exe"});
                         setAlias("Chatterino", {"chatterino"});
+
+                        add("OBS-Studio", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\obs-studio"}, {"obs64.exe"});
+                        setAlias("OBS-Studio", {"OBS", "obs-studio", "obs", "OBS-studio"});
                         
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);

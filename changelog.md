@@ -1,3 +1,8 @@
+# v2.5.0
+### New program supported
+- OBS-Studio
+> saves all the settings, profiles, scenes
+
 # v2.4.0
 ### New program supported
 - Chatterino
