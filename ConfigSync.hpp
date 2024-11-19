@@ -839,6 +839,9 @@ namespace CS {
                         add("OBS-Studio", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\obs-studio"}, {"obs64.exe"});
                         setAlias("OBS-Studio", {"OBS", "obs-studio", "obs", "OBS-studio"});
                         
+                        add("Elgato-StreamDeck", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Elgato\\StreamDeck"}, {"StreamDeck.exe"});
+                        setAlias("Elgato-StreamDeck", {"StreamDeck", "streamdeck", "stream-deck", "elgato-stream-deck", "elgato-streamdeck", "Elgato-StreamDeck"});
+                        
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }

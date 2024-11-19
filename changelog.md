@@ -1,3 +1,8 @@
+# v2.6.0
+### New program supported
+- Elgato-StreamDeck
+> saves all settings, profiles, plugins
+
 # v2.5.0
 ### New program supported
 - OBS-Studio
