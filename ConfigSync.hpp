@@ -856,7 +856,7 @@ namespace CS {
                         add("OBS-Studio", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\obs-studio"}, {"obs64.exe"});
                         setAlias("OBS-Studio", {"OBS", "obs-studio", "obs", "OBS-studio"});
                         
-                        add("Elgato-StreamDeck", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Elgato\\StreamDeck"}, {"StreamDeck.exe"});
+                        add("Elgato-StreamDeck", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Elgato\\StreamDeck\\Audio", "C:\\Users\\" + uName + "\\AppData\\Roaming\\Elgato\\StreamDeck\\Backup", "C:\\Users\\" + uName + "\\AppData\\Roaming\\Elgato\\StreamDeck\\Data", "C:\\Users\\" + uName + "\\AppData\\Roaming\\Elgato\\StreamDeck\\IconPacks", "C:\\Users\\" + uName + "\\AppData\\Roaming\\Elgato\\StreamDeck\\Marketplace", "C:\\Users\\" + uName + "\\AppData\\Roaming\\Elgato\\StreamDeck\\Plugins", "C:\\Users\\" + uName + "\\AppData\\Roaming\\Elgato\\StreamDeck\\ProfilesV2"}, {"StreamDeck.exe"});
                         setAlias("Elgato-StreamDeck", {"StreamDeck", "streamdeck", "stream-deck", "elgato-stream-deck", "elgato-streamdeck", "Elgato-StreamDeck"});
                         
                         add("Steam", get_steam_paths(), {"steam.exe", "steamwebhelper.exe", "mist.exe", "GameOverlayUI.exe", });
