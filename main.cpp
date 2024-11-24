@@ -369,7 +369,9 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
 
             if(S.saves().at(prog).size() > pt.get<int>("savelimit")){
                 uint64_t oldestTst = S.get_oldest_tst(prog);
-                CS::Filesystem::recurse_remove(dayDir + "\\" + std::to_string(oldestTst));
+                std::string dayTst = CS::Utility::timestamp_to_str_ymd(oldestTst);
+                std::string dayTstDir = archiveDir + "\\" + prog + "\\" + dayTst;
+                CS::Filesystem::recurse_remove(dayTstDir + "\\" + std::to_string(oldestTst));
                 S.erase_save(prog, oldestTst);
             }
             synced.push_back(prog);
@@ -1674,6 +1676,54 @@ inline void handleSettingsOption(char* argv[], int argc, boost::property_tree::p
     boost::property_tree::write_json(settingsPath, pt);
 }
 
+inline void handleDeleteOption(char* argv[], int argc){
+    CS::Programs::Mgm mgm;
+    if(argv[2] == NULL){
+        std::cerr << "Fatal: Missing argument or value." << std::endl;
+    }
+    else if(mgm.checkName(std::string(argv[2])) == 1){
+        const std::string canName = mgm.get_canonical(std::string(argv[2]));
+        CS::Saves S(savesFile);
+        if(S.load() == 0){
+            std::cerr << "Fatal: No previous saves found. See 'configsync --help'." << std::endl;
+            return;
+        }
+
+        if(std::string n; CS::Args::argfcmp(n, argv, argc, "--number") == 1 || CS::Args::argfcmp(n, argv, argc, "-n") == 1){
+            int number = 0;
+            try{
+                number = std::stoi(n);
+            }
+            catch(const std::invalid_argument& err){
+                std::cerr << "Fatal: Enter an integer for the '--number' argument.";
+                return;
+            }
+            if(number <= 0){
+                std::cerr << "Fatal: Enter an integer > 0 for the '--number' argument.";
+                return;
+            }
+            if(S.saves().at(canName).size() <= number){
+                std::cerr << "Fatal: Specified number is larger or equal to the number of available saves.";
+                return;
+            }
+            
+            while(number > 0){
+                uint64_t oldestTst = S.get_oldest_tst(canName);
+                std::string dayTst = CS::Utility::timestamp_to_str_ymd(oldestTst);
+                std::string dayDir = archiveDir + "\\" + canName + "\\" + dayTst;
+                CS::Filesystem::recurse_remove(dayDir + "\\" + std::to_string(oldestTst));
+                S.erase_save(canName, oldestTst);
+                number--;
+            }
+
+            S.save();
+        }
+    }
+    else{
+        std::cerr << "Fatal: Missing argument or value. See 'configsync --help'" << std::endl;
+    }
+}
+
 int main(int argc, char* argv[]){   
     std::signal(SIGINT, exitSignalHandler);
     enableColors();
@@ -1784,6 +1834,8 @@ int main(int argc, char* argv[]){
             std::cout << "    --date, -d [DATE]                   Undo a specific action from a specific date.\n";
             std::cout << "    --force, -f                         Forced restore by killing instances of target program.\n";
             std::cout << "status [PROGRAM]                        Show status, defaults to all programs.\n";
+            std::cout << "delete [PROGRAM]                        Delete the oldest x saves specified by the operand\n";
+            std::cout << "    --number, -n                        X number of oldest saves to delete\n";
             std::cout << "settings                                Manage settings for the program.\n";
             std::cout << "    --reset, -r [SETTING]               Reset specific setting to default.\n";
             std::cout << "    --all, -a                           Reset all settings to default.\n";
@@ -1842,6 +1894,9 @@ int main(int argc, char* argv[]){
     }
     else if(std::string(argv[1]) == "list"){
         handleListOption(argv, argc);
+    }
+    else if(std::string(argv[1]) == "delete"){
+        handleDeleteOption(argv, argc);
     }
     else if(std::string(argv[1]).find("settings") != std::string::npos){
         handleSettingsOption(argv, argc, pt);

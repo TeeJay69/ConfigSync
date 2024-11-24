@@ -6,6 +6,8 @@
 ### Fixes
 - Sync: Fixes error that prevented Fusion360 from being synced
     - Explanation: A missing backslash in ""C:\\Users\\" + uName + "\\AppData\\Roaming\\Autodesk\\Neutron Platform\\Options\\" + get_fusion360_dir()" (after "Options") led to a non existing path string.
+- Cleanup: Fixes logic error that prevented deletion of the oldest save if the save count is above the savelimit
+    - Explanation: The current day was falsely used to create a path that might not exist (currentDay\\oldestTst). Now it correctly converts the oldestTst to a YYYY-MM-DD string format which is used to construct the correct path of the oldest save.
 
 # v2.6.0
 ### New program supported

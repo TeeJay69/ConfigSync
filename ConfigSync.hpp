@@ -213,6 +213,23 @@ namespace CS {
                 return static_cast<T>(time_as_t);  // Cast to desired type and return
             }
 
+            template<typename T, typename std::enable_if<std::is_integral<T>::value, T>::type* = nullptr>
+            static const std::string timestamp_to_str_ymd(const T& timestamp){
+                static_assert(std::is_integral<T>::value, "Timestamp must be an integral type.");
+                std::time_t ts = static_cast<std::time_t>(timestamp);
+                std::tm* tm = std::localtime(&ts);
+
+                if (tm == nullptr) {
+                    throw std::runtime_error("Failed to convert timestamp to local time.");
+                }
+
+                char buffer[11]; // Buffer size for "YYYY-MM-DD\0"
+                std::strftime(buffer, sizeof(buffer), "%Y-%m-%d", tm);
+                return std::string(buffer);
+            }
+
+
+
             void sortby_filename(std::vector<std::string>& filenames){
                 std::sort(filenames.begin(), filenames.end(), [this](const std::string& path1, const std::string& path2){
                     std::string filename1 = std::filesystem::path(path1).filename().generic_string();
@@ -1160,11 +1177,11 @@ namespace CS {
             }
 
             inline uint64_t get_oldest_tst(const std::string& prog){
-                return _saves.at(prog).rend()->first;
+                return _saves.at(prog).begin()->first;
             }
 
             inline InternalSave get_oldestsave(const std::string& prog){
-                return _saves.at(prog).rend()->second;
+                return _saves.at(prog).begin()->second;
             }
 
             inline int exists(const std::string& prog){
