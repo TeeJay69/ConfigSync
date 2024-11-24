@@ -1,6 +1,7 @@
 {
   "files.associations": {
     "*.md": "markdown",
+    "*.bin": "code-text-binary",
     "array": "cpp",
     "atomic": "cpp",
     "bit": "cpp",
@@ -80,7 +81,9 @@
     "typeindex": "cpp",
     "any": "cpp",
     "future": "cpp",
-    "filesystem": "cpp"
+    "filesystem": "cpp",
+    "stdfloat": "cpp",
+    "text_encoding": "cpp"
   },
   "C_Cpp_Runner.msvcBatchPath": "C:/Program Files/Microsoft Visual Studio/2022/Community/VC/Auxiliary/Build/vcvarsall.bat",
   "C_Cpp_Runner.cCompilerPath": "C:/msys64/usr/bin/gcc.exe",

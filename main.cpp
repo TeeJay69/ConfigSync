@@ -1443,7 +1443,14 @@ inline void handleSettingsOption(char* argv[], int argc, boost::property_tree::p
             std::cout << "See 'configsync settings.savelimit <limit>'" << std::endl << std::endl;
             std::cout << "Max Pre-Restore-Backups: " << ANSI_COLOR_50 << pt.get<int>("pre-restore-limit") << ANSI_COLOR_RESET << std::endl;
             std::cout << "See 'configsync settings.pre-restore-limit <limit>'" << std::endl << std::endl;
-            std::cout << "Scheduled task on/off: " << ANSI_COLOR_50 << pt.get<bool>("task") << ANSI_COLOR_RESET << std::endl;
+            std::string taskState;
+            if(pt.get<bool>("task") == false){
+                taskState = "false";
+            } 
+            else{
+                taskState = "true";
+            }
+            std::cout << "Scheduled task on/off: " << ANSI_COLOR_50 << taskState << ANSI_COLOR_RESET << std::endl;
             std::cout << "See 'configsync settings.task <true/false>'" << std::endl << std::endl;
             std::cout << "Scheduled task frequency: " << ANSI_COLOR_50 << pt.get<std::string>("taskfrequency") << ANSI_COLOR_RESET << std::endl;
             std::cout << "See 'configsync settings.taskfrequency <hourly/daily> <hours/days>'" << std::endl << std::endl;
@@ -1590,6 +1597,7 @@ inline void handleSettingsOption(char* argv[], int argc, boost::property_tree::p
                     std::cerr << "Fatal: Failed to create task." << std::endl;
                     return;
                 }
+                pt.put("task", true);
                 std::cout << "Scheduled task created." << std::endl;
             }
         }
@@ -1602,6 +1610,7 @@ inline void handleSettingsOption(char* argv[], int argc, boost::property_tree::p
                     std::cerr << "Fatal: Failed to remove task." << std::endl;
                     return;
                 }
+                pt.put("task", false);
                 std::cout << "Scheduled task removed." << std::endl;
             }
         }
