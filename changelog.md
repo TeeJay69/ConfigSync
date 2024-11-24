@@ -1,3 +1,12 @@
+# v2.7.0
+### New program supported
+- Steam
+> saves all settings, custom artwork etc.
+
+### Fixes
+- Sync: Fixes error that prevented Fusion360 from being synced
+    - Explanation: A missing backslash in ""C:\\Users\\" + uName + "\\AppData\\Roaming\\Autodesk\\Neutron Platform\\Options\\" + get_fusion360_dir()" (after "Options") led to a non existing path string.
+
 # v2.6.0
 ### New program supported
 - Elgato-StreamDeck

@@ -809,7 +809,7 @@ namespace CS {
                         add("Ultimaker.Cura", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\cura\\" + get_cura_vers()}, {"UltiMaker-Cura.exe", "CuraEngine.exe"});
                         setAlias("Ultimaker.Cura", {"CuraSlicer", "UltimakerCura", "Ultimaker-Cura", "Ultimaker.Cura", "ultimaker.cura", "Cura", "Cura-Slicer", "Cura-slicer", "cura"});
 
-                        add("Fusion360", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Autodesk\\Neutron Platform\\Options" + get_fusion360_dir()}, {"Fusion360.exe", "ADPClientService.exe", "AdskIdentityManager.exe"});
+                        add("Fusion360", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Autodesk\\Neutron Platform\\Options\\" + get_fusion360_dir()}, {"Fusion360.exe", "ADPClientService.exe", "AdskIdentityManager.exe"});
                         setAlias("Fusion360", {"Autodesk.Fusion360", "fusion360", "autodesk.fusion360", "autodesk-fusion360", "Autodesk-Fusion360"});
                         
                         add("Google.Chrome", {"C:\\Users\\" + uName + "\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Preferences"}, {"chrome.exe"});
@@ -842,6 +842,9 @@ namespace CS {
                         add("Elgato-StreamDeck", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Elgato\\StreamDeck"}, {"StreamDeck.exe"});
                         setAlias("Elgato-StreamDeck", {"StreamDeck", "streamdeck", "stream-deck", "elgato-stream-deck", "elgato-streamdeck", "Elgato-StreamDeck"});
                         
+                        add("Steam", get_steam_paths(), {"steam.exe", "steamwebhelper.exe", "mist.exe", "GameOverlayUI.exe", });
+                        setAlias("Steam", {"Valve.Steam", "valve.steam", "steam"});
+
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
@@ -976,6 +979,48 @@ namespace CS {
                         }
                         return ret;
                     }
+
+                    std::vector<std::string> get_steam_paths() {
+                        std::vector<std::string> ret;
+                        // Add the fixed paths
+                        ret.push_back("C:\\Users\\" + uName + "\\AppData\\Local\\Steam\\htmlcache\\LocalPrefs.json");
+                        ret.push_back("C:\\Users\\" + uName + "\\AppData\\Local\\Steam\\htmlcache\\UserPrefs.json");
+                        ret.push_back("C:\\Program Files (x86)\\Steam\\config\\config.vdf");
+                        ret.push_back("C:\\Program Files (x86)\\Steam\\config\\libraryfolders.vdf");
+
+                        const std::string userdataPath = "C:\\Program Files (x86)\\Steam\\userdata";
+
+                        if (std::filesystem::exists(userdataPath) && std::filesystem::is_directory(userdataPath)) {
+                            for (const auto& userDirEntry : std::filesystem::directory_iterator(userdataPath)) {
+                                if (userDirEntry.is_directory()) {
+                                    // This is the "someNumber" directory
+                                    std::filesystem::path configPath = userDirEntry.path() / "config";
+                                    if (std::filesystem::exists(configPath) && std::filesystem::is_directory(configPath)) {
+                                        // Check for "grid" directory
+                                        std::filesystem::path gridPath = configPath / "grid";
+                                        if (std::filesystem::exists(gridPath) && std::filesystem::is_directory(gridPath)) {
+                                            ret.push_back(gridPath.string());
+                                        }
+                                        // Check for the .vdf files
+                                        std::vector<std::string> vdfFiles = {
+                                            "shortcuts.vdf",
+                                            "serverbrowser_ui.vdf",
+                                            "localconfig.vdf"
+                                        };
+                                        for (const auto& vdfFile : vdfFiles) {
+                                            std::filesystem::path filePath = configPath / vdfFile;
+                                            if (std::filesystem::exists(filePath) && std::filesystem::is_regular_file(filePath)) {
+                                                ret.push_back(filePath.string());
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        return ret;
+                    }
+
             };
     };
 
