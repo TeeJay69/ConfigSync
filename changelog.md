@@ -1,3 +1,9 @@
+# v2.7.1
+### Fixes
+- Sync: Fixes error that would always sync the Elgato-StreamDeck regardless of the sync status
+    - Explanation: The get_sha256hash() function is using fopen() which cannot handle non-ASCII filenames. The function threw a Runtime-Error which caused the catch statement to be executed and within that catch, the sync state was set to (equal = 0 (false)). The streamdeck program included non-ASCII named files which caused the issue
+    - Fix: Added a new get_sha256hash_cpp function which avoids the fopen() function.
+    
 # v2.7.0
 ### New program supported
 - Steam

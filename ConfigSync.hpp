@@ -277,7 +277,7 @@ namespace CS {
                 return md5string; 
             }
 
-
+            /* WARNING: this function cannot handle non-ASCII filenames and will throw a runtime error with fopen() */
             static inline std::string get_sha256hash(const std::string& fname){
                 FILE *file;
 
@@ -339,6 +339,43 @@ namespace CS {
 
                 return ss.str();
             }
+
+            static inline std::string get_sha256hash_cpp(const std::string& fname) {
+                // Convert fname to std::filesystem::path to handle special characters
+                std::filesystem::path filepath(fname);
+
+                // Open the file using std::ifstream with binary mode
+                std::ifstream file(filepath, std::ios::binary);
+                if (!file) {
+                    const std::string err = "Error: Failed to open file to hash.\n";
+                    throw std::runtime_error(err);
+                }
+
+                // Buffer for reading from file
+                unsigned char buf[8192];
+                // Output SHA256 hash
+                unsigned char output[SHA256_DIGEST_LENGTH];
+                // SHA256 context
+                SHA256_CTX sha256;
+                SHA256_Init(&sha256);
+
+                // Read from the file stream
+                while (file.read(reinterpret_cast<char*>(buf), sizeof(buf)) || file.gcount() != 0) {
+                    SHA256_Update(&sha256, buf, static_cast<size_t>(file.gcount()));
+                }
+                file.close();
+
+                SHA256_Final(output, &sha256);
+
+                // Convert hash to hexadecimal string
+                std::stringstream ss;
+                for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+                    ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(output[i]);
+                }
+
+                return ss.str();
+            }
+
             
             static std::string ymd_date(){
                 const std::chrono::time_point now(std::chrono::system_clock::now());

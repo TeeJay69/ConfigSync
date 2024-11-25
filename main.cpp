@@ -30,7 +30,7 @@
 #endif
 
 #define SETTINGS_ID 1
-#define VERSION "v2.7.0"
+#define VERSION "v2.7.1"
 
 volatile sig_atomic_t interrupt = 0;
 int verbose = 0;
@@ -292,16 +292,19 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
                         for(const auto& pair : S.get_lastsave(prog).pathVec){
                             if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
                                 equal = 0;
+                                CS::Logs::msg("FILE-EXISTS-CHECK:" + pair.first + " 2: " + pair.second);
                                 break;
                             }
                             try{
-                                if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                                if(CS::Utility::get_sha256hash_cpp(pair.first) != CS::Utility::get_sha256hash_cpp(pair.second)){
                                     equal = 0;
+                                    CS::Logs::msg("HASHES:" + pair.first + " 2: " + pair.second);
                                     break;
                                 }
                             }
                             catch(std::runtime_error& err){
                                 equal = 0;
+                                CS::Logs::msg("RUNTIME ERROR:" + pair.first + " 2: " + pair.second);
                                 break;
                             }
                         }
