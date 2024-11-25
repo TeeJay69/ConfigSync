@@ -1,3 +1,10 @@
+# v2.7.3
+### Fix
+- recurse_remove: Resolved issue where recurse_remove did not delete directories after removing files.
+    - Updated the recursive removal function to perform a post-order traversal. This ensures that directories are deleted after all their contents have been removed, preventing leftover empty directories when recursively deleting a path.
+    - Adjusted permissions handling to modify permissions before attempting to delete files and directories, ensuring that read-only files are properly removed.
+    - Eliminated modification of the directory structure during iteration to prevent undefined behavior.
+
 # v2.7.2
 ### Fixes
 - Delete: Fixes error that led to failures when users tried to delete saves (directory was not found)
