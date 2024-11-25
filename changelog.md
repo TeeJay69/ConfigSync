@@ -1,3 +1,9 @@
+# v2.7.2
+### Fixes
+- Delete: Fixes error that led to failures when users tried to delete saves (directory was not found)
+    - Explanation: timestamp_to_str_ymd() used localtime, whereas timestamp() and ymd_date() both used UTC. When your local time zone is ahead or behind UTC, especially around midnight, the dates produced by these two functions can differ by one day.
+    - Example: if it's 1 AM local time on November 25th but still November 24th in UTC, ymd_date() will return 2023-11-24 (UTC date), while timestamp_to_str_ymd() will return 2023-11-25 (local date).
+
 # v2.7.1
 ### Fixes
 - Sync: Fixes error that would always sync the Elgato-StreamDeck regardless of the sync status
