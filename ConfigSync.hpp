@@ -217,10 +217,10 @@ namespace CS {
             static const std::string timestamp_to_str_ymd(const T& timestamp){
                 static_assert(std::is_integral<T>::value, "Timestamp must be an integral type.");
                 std::time_t ts = static_cast<std::time_t>(timestamp);
-                std::tm* tm = std::localtime(&ts);
+                std::tm* tm = std::gmtime(&ts);  // Use UTC time
 
                 if (tm == nullptr) {
-                    throw std::runtime_error("Failed to convert timestamp to local time.");
+                    throw std::runtime_error("Failed to convert timestamp to UTC time.");
                 }
 
                 char buffer[11]; // Buffer size for "YYYY-MM-DD\0"
