@@ -466,21 +466,43 @@ namespace CS {
              * @param path Target
              * @note Can delete read only files. Permissions are modified before removal.
              */
-            static inline void recurse_remove(const std::filesystem::path& path){
-                for(const auto& entry : std::filesystem::recursive_directory_iterator(path)){
-                    if(entry.is_directory()){
-                        if(std::filesystem::is_empty(entry)){
-                            std::filesystem::permissions(entry, std::filesystem::perms::all);
-                            std::filesystem::remove(entry);
-                        }
-                        else{
-                            recurse_remove(entry);
-                        }
+            // static inline void recurse_remove(const std::filesystem::path& path){
+            //     for(const auto& entry : std::filesystem::recursive_directory_iterator(path)){
+            //         if(entry.is_directory()){
+            //             if(std::filesystem::is_empty(entry)){
+            //                 std::filesystem::permissions(entry, std::filesystem::perms::all);
+            //                 std::filesystem::remove(entry);
+            //             }
+            //             else{
+            //                 recurse_remove(entry);
+            //             }
+            //         }
+            //         else{
+            //             std::filesystem::permissions(entry, std::filesystem::perms::all);
+            //             std::filesystem::remove(entry);
+            //         }
+            //     }
+            // }
+
+            /**
+             * @brief Remove files and directories recursively
+             * @param path Target
+             * @note Can delete read only files. Permissions are modified before removal.
+             */
+            static inline void recurse_remove(const std::filesystem::path& path) {
+                std::error_code ec;
+                // Set permissions to allow deletion
+                std::filesystem::permissions(path, std::filesystem::perms::all, ec);
+
+                if (std::filesystem::is_directory(path)) {
+                    for (const auto& entry : std::filesystem::directory_iterator(path)) {
+                        recurse_remove(entry.path());
                     }
-                    else{
-                        std::filesystem::permissions(entry, std::filesystem::perms::all);
-                        std::filesystem::remove(entry);
-                    }
+                    // Remove the directory after its contents have been removed
+                    std::filesystem::remove(path, ec);
+                } else {
+                    // Remove the file
+                    std::filesystem::remove(path, ec);
                 }
             }
 
