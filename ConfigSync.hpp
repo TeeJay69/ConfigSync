@@ -921,6 +921,9 @@ namespace CS {
                         add("Steam", get_steam_paths(), {"steam.exe", "steamwebhelper.exe", "mist.exe", "GameOverlayUI.exe", });
                         setAlias("Steam", {"Valve.Steam", "valve.steam", "steam"});
 
+                        add("Filen", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\filen-desktop\\"}, {"Filen.exe"});
+                        setAlias("Filen", {"filen"});
+
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
