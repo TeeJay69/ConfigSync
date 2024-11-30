@@ -1,3 +1,8 @@
+# v2.8.0
+### New program supported
+- Filen
+> saves all history, sync directories
+
 # v2.7.3
 ### Fix
 - recurse_remove: Resolved issue where recurse_remove did not delete directories after removing files.
