@@ -30,7 +30,7 @@
 #endif
 
 #define SETTINGS_ID 1
-#define VERSION "v2.8.0"
+#define VERSION "v2.8.1"
 
 volatile sig_atomic_t interrupt = 0;
 int verbose = 0;
@@ -182,7 +182,7 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
                             break;
                         }
                         try{
-                            if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                            if(CS::Utility::get_sha256hash_cpp(pair.first) != CS::Utility::get_sha256hash_cpp(pair.second)){
                                 equal = 0;
                                 break;
                             }
@@ -958,7 +958,7 @@ inline void handleStatusOption(char* argv[], int argc){
                     continue;
                 }
                 try{
-                    if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                    if(CS::Utility::get_sha256hash_cpp(pair.first) != CS::Utility::get_sha256hash_cpp(pair.second)){
                         outsync.push_back(prog);
                         equal = 0;
                         break;
@@ -1019,7 +1019,7 @@ inline void handleStatusOption(char* argv[], int argc){
                 continue;
             }
             try{
-                if(CS::Utility::get_sha256hash(pair.first) != CS::Utility::get_sha256hash(pair.second)){
+                if(CS::Utility::get_sha256hash_cpp(pair.first) != CS::Utility::get_sha256hash_cpp(pair.second)){
                     std::cout << ANSI_COLOR_RED << "Out of Sync!" << ANSI_COLOR_RESET << std::endl;
                     return;
                 }

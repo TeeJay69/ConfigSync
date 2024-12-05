@@ -1,3 +1,7 @@
+# v2.8.1
+### Fix
+- Add hashing fix from v2.7.1 (5c59372c) to all other instances of hashing not just "sync" (status etc.)
+
 # v2.8.0
 ### New program supported
 - Filen
