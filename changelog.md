@@ -1,3 +1,7 @@
+# v2.8.2
+### ReadME.md
+- Moving to public repo
+
 # v2.8.1
 ### Fix
 - Add hashing fix from v2.7.1 (5c59372c) to all other instances of hashing not just "sync" (status etc.)
