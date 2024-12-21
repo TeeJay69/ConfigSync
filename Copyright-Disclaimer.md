@@ -6,6 +6,8 @@ All rights reserved.
 ### 1. **License Terms**  
 Redistribution, use, and modification of this software in source or binary forms are strictly prohibited without the prior written consent of [T. Jason Weber]. This software is provided solely for personal and educational purposes. Commercial use of the software, in whole or in part, is expressly forbidden without explicit permission.
 
+- **Private, Non-Commercial Use**: Private individuals are permitted to experiment, modify, and create forks of this software for personal, non-commercial purposes only. Any redistribution of these modifications or forks is prohibited without explicit permission.
+
 ### 2. **Attribution**  
 Any authorized use of this software must provide proper credit to [T. Jason Weber], including attribution in any derivative works, presentations, or other related materials.
 
