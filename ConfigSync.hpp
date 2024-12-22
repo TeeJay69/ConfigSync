@@ -888,7 +888,7 @@ namespace CS {
                         add("Fusion360", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\Autodesk\\Neutron Platform\\Options\\" + get_fusion360_dir()}, {"Fusion360.exe", "ADPClientService.exe", "AdskIdentityManager.exe"});
                         setAlias("Fusion360", {"Autodesk.Fusion360", "fusion360", "autodesk.fusion360", "autodesk-fusion360", "Autodesk-Fusion360"});
                         
-                        add("Google.Chrome", {"C:\\Users\\" + uName + "\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Preferences"}, {"chrome.exe"});
+                        add("Google.Chrome", get_chrome_paths(), {"chrome.exe"});
                         setAlias("Google.Chrome", {"GoogleChrome", "googlechrome", "Google-Chrome", "google-chrome", "Google.Chrome", "google.chrome", "chrome", "Chrome"});
 
                         add("Mozilla.Firefox", get_firefox_paths(), {"firefox.exe"});
@@ -1098,6 +1098,24 @@ namespace CS {
                         }
 
                         return ret;
+                    }
+
+                    inline const std::vector<std::string> get_chrome_paths(){
+                        const std::string localPath = "C:\\Users\\" + uName + "\\AppData\\Local\\Google\\Chrome\\User Data";
+                        std::vector<std::string> ret;
+                        if(std::filesystem::exists(localPath)){
+                            for(const auto& entry : std::filesystem::directory_iterator(localPath)){
+                                if (entry.is_directory()) {
+                                    const std::string profilePath = entry.path().string();
+                                    const std::string profileName = entry.path().filename().string();
+
+                                    // Include the "Default" profile and directories that start with "Profile "
+                                    if (profileName == "Default" || profileName.rfind("Profile ", 0) == 0) {
+                                        ret.push_back(profilePath + "\\Preferences");
+                                    }
+                                }
+                            }
+                        }
                     }
 
             };
