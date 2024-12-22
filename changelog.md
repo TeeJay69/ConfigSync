@@ -1,3 +1,7 @@
+# v2.8.3
+### Fix
+- Syncs all chrome profiles now, not just the default profile
+
 # v2.8.2
 ### ReadME.md
 - Moving to public repo

@@ -30,7 +30,7 @@
 #endif
 
 #define SETTINGS_ID 1
-#define VERSION "v2.8.2"
+#define VERSION "v2.8.3"
 
 volatile sig_atomic_t interrupt = 0;
 int verbose = 0;
