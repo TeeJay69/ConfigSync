@@ -1,3 +1,7 @@
+# v2.8.4
+### Hotfix
+- Fixes missing return that led to an illegal instruction causing the program to exit prematurely.
+
 # v2.8.3
 ### Fix
 - Syncs all chrome profiles now, not just the default profile
