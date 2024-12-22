@@ -5,6 +5,7 @@ is a powerful configuration backup, restoration, and synchronization tool for Wi
 > **Note**: This project is a passion project by [T. Jason Weber]. For any feedback or contributions, please open an issue or contact me directly.
 
 ## Table of Contents
+> **Important:** ConfigSync interacts with configuration files in protected directories, which may cause some antivirus software to flag it as suspicious or impact performance. For details on this and how to resolve it, see the [Antivirus & Performance Considerations](#why-does-configsync-get-flagged-by-antivirus-software) section in the FAQ.
 
 1. [Features](#features)  
 2. [Why ConfigSync?](#why-configsync)  
@@ -21,6 +22,7 @@ is a powerful configuration backup, restoration, and synchronization tool for Wi
 7. [Logs](#logs)  
 8. [Supported Programs](#supported-programs)  
 9. [Troubleshooting](#troubleshooting)  
+   - [Antivirus & Performance Considerations](#why-does-configsync-get-flagged-by-antivirus-software)  
 10. [License](#license)  
 11. [Contributing](#contributing)  
 12. [Acknowledgements](#acknowledgements)  
@@ -433,6 +435,20 @@ _If you find ConfigSync helpful, consider sharing it with others who might also 
 
 # **FAQ**
 ---
+
+## Why does ConfigSync get flagged by antivirus software? 
+### Antivirus & Performance Considerations
+
+Because **ConfigSync** copies configuration files from various applications, certain antivirus software (including Windows Defender) may flag it as potentially suspicious. Rest assured, **ConfigSync** does not contain any malicious code; it simply needs to access and copy files that are often located in protected directories.
+
+1. **Antivirus Flags**  
+   - If you see a warning from Microsoft Defender or another AV, you may safely whitelist the `ConfigSync.exe` executable and its folder.  
+   - This alert often arises because *reading and copying files from multiple applications’ folders* can be interpreted as suspicious behavior.
+
+2. **Slower Syncing Under Real-Time Protection**  
+   - When real-time protection is active, antivirus software scans **every file read and write** operation. This includes computing hashes (to detect changes) and copying files (during backups or restores).  
+   - As a result, **syncing may appear slower**, but it is primarily due to the overhead from the AV scans rather than any inefficiency in ConfigSync itself.
+   - If you find the performance impact significant, consider temporarily disabling real-time protection or adding ConfigSync’s working directory to your AV exclusions.
 
 ## Moving to a New Machine
 
