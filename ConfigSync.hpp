@@ -934,6 +934,23 @@ namespace CS {
                         add("Far Cry 5", get_far_cry_5_paths(), {});
                         setAlias("Far Cry 5", { "Far Cry 5", "fc5", "farcry5", "far-cry-5" });
 
+                        add("Helldivers 2", {
+                            "C:\\Users\\" + uName + "\\AppData\\Roaming\\Arrowhead\\Helldivers2\\saves",
+                            "C:\\Users\\" + uName + "\\AppData\\Roaming\\Arrowhead\\Helldivers2\\user_settings.config"
+                        }, {});
+                        setAlias("Helldivers 2", {"Helldivers 2", "helldivers2", "helldiversII", "Helldivers-2", "helldivers-2"});
+
+                        add("Just Cause 3", {
+                            "C:\\Users\\" + uName + "\\Documents\\Square Enix\\Just Cause 3\\Saves"
+                        }, {});
+                        setAlias("Just Cause 3", {"Just Cause 3", "justcause3", "just-cause-3", "JC3"});
+
+                        add("Path of Exile 2", {
+                            "C:\\Users\\" + uName + "\\Documents\\My Games\\Path of Exile 2\\"
+                        }, {});
+
+                        setAlias("Path of Exile 2", {"Path of Exile 2", "poe2", "PoE2", "pathofexile2", "path-of-exile-2", "PoE-2"});
+
 
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
