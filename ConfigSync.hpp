@@ -924,6 +924,17 @@ namespace CS {
                         add("Filen", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\filen-desktop\\"}, {"Filen.exe"});
                         setAlias("Filen", {"filen"});
 
+                        /* GAMES */
+                        add("AC Odyssey", get_ac_odyssey_paths(), {});
+                        setAlias("AC Odyssey", { "AC Odyssey", "ac-odyssey", "odyssey", "assassins-creed-odyssey" });
+                        
+                        add("AC Origins", get_ac_origins_paths(), {});
+                        setAlias("AC Origins", { "AC Origins", "ac-origins", "origins", "assassins-creed-origins" });
+                        
+                        add("Far Cry 5", get_far_cry_5_paths(), {});
+                        setAlias("Far Cry 5", { "Far Cry 5", "fc5", "farcry5", "far-cry-5" });
+
+
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
@@ -1120,6 +1131,44 @@ namespace CS {
                         return ret;
                     }
 
+                    inline std::string get_ubisoft_user_id() {
+                        const std::string baseDir = "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames";
+
+                        if (std::filesystem::exists(baseDir) && std::filesystem::is_directory(baseDir)) {
+                            for (const auto& entry : std::filesystem::directory_iterator(baseDir)) {
+                                if (entry.is_directory()) {
+                                    return entry.path().filename().string(); // Return the first (and usually only) user ID
+                                }
+                            }
+                        }
+
+                        std::cerr << "Could not find Ubisoft user ID directory in: " << baseDir << std::endl;
+                        return "";
+                    }
+
+                    inline std::vector<std::string> get_ac_odyssey_paths() {
+                        std::string userId = get_ubisoft_user_id();
+                        if (!userId.empty()) {
+                            return { "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\5059" };
+                        }
+                        return {};
+                    }
+
+                    inline std::vector<std::string> get_ac_origins_paths() {
+                        std::string userId = get_ubisoft_user_id();
+                        if (!userId.empty()) {
+                            return { "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\3539" };
+                        }
+                        return {};
+                    }
+
+                    inline std::vector<std::string> get_far_cry_5_paths() {
+                        std::string userId = get_ubisoft_user_id();
+                        if (!userId.empty()) {
+                            return { "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\4311" };
+                        }
+                        return {};
+                    }
             };
     };
 
