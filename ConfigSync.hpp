@@ -924,6 +924,9 @@ namespace CS {
                         add("Filen", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\filen-desktop\\"}, {"Filen.exe"});
                         setAlias("Filen", {"filen"});
 
+                        add("DS4Windows", {"C:\\Users\\" + uName + "\\AppData\\Roaming\\DS4Windows\\Profiles"}, {"DS4Windows.exe"});
+                        setAlias("DS4Windows", {"DS4Windows", "ds4windows", "ds4-windows"});
+
                         /* GAMES */
                         add("AC Odyssey", get_ac_odyssey_paths(), {});
                         setAlias("AC Odyssey", { "AC Odyssey", "ac-odyssey", "odyssey", "assassins-creed-odyssey" });
@@ -951,7 +954,7 @@ namespace CS {
 
                         setAlias("Path of Exile 2", {"Path of Exile 2", "poe2", "PoE2", "pathofexile2", "path-of-exile-2", "PoE-2"});
 
-
+                        
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
