@@ -1097,6 +1097,7 @@ namespace CS {
                         ret.push_back("C:\\Users\\" + uName + "\\AppData\\Local\\Steam\\htmlcache\\UserPrefs.json");
                         ret.push_back("C:\\Program Files (x86)\\Steam\\config\\config.vdf");
                         ret.push_back("C:\\Program Files (x86)\\Steam\\config\\libraryfolders.vdf");
+                        ret.push_back("C:\\Program Files (x86)\\Steam\\steamapps\\common\\Steam Controller Configs");
 
                         const std::string userdataPath = "C:\\Program Files (x86)\\Steam\\userdata";
 
