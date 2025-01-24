@@ -281,7 +281,7 @@ namespace CS {
             static inline std::string get_sha256hash(const std::string& fname){
                 FILE *file;
 
-                unsigned char buf[8192];
+                unsigned char buf[1048576];
                 unsigned char output[SHA256_DIGEST_LENGTH];
                 size_t len;
 
@@ -313,7 +313,7 @@ namespace CS {
 
             static inline std::string get_sha256hash_cpp(std::ifstream& file) {
                 // Buffer for reading from file
-                unsigned char buf[8192];
+                unsigned char buf[1048576];
                 // Output SHA256 hash
                 unsigned char output[SHA256_DIGEST_LENGTH];
                 // SHA256 context
@@ -352,7 +352,7 @@ namespace CS {
                 }
 
                 // Buffer for reading from file
-                unsigned char buf[8192];
+                unsigned char buf[1048576];
                 // Output SHA256 hash
                 unsigned char output[SHA256_DIGEST_LENGTH];
                 // SHA256 context
