@@ -949,12 +949,16 @@ namespace CS {
                         setAlias("Just Cause 3", {"Just Cause 3", "justcause3", "just-cause-3", "JC3"});
 
                         add("Path of Exile 2", {
-                            "C:\\Users\\" + uName + "\\Documents\\My Games\\Path of Exile 2\\"
+                            "C:\\Users\\" + uName + "\\Documents\\My Games\\Path of Exile 2"
                         }, {});
-
                         setAlias("Path of Exile 2", {"Path of Exile 2", "poe2", "PoE2", "pathofexile2", "path-of-exile-2", "PoE-2"});
 
-                        
+                        add("MSI Afterburner", {
+                            "C:\\Program Files (x86)\\MSI Afterburner\\Profiles"
+                        }, {});
+
+                        setAlias("MSI Afterburner", {"MSI Afterburner", "msi-afterburner", "afterburner", "MSI-Afterburner"});
+
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
