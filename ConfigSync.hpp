@@ -956,8 +956,12 @@ namespace CS {
                         add("MSI Afterburner", {
                             "C:\\Program Files (x86)\\MSI Afterburner\\Profiles"
                         }, {});
-
                         setAlias("MSI Afterburner", {"MSI Afterburner", "msi-afterburner", "afterburner", "MSI-Afterburner"});
+                        
+                        add("No Man's Sky", {
+                            "C:\\Users\\" + uName + "\\AppData\\Roaming\\HelloGames\\NMS"
+                        }, {});
+                        setAlias("No Man's Sky", {"No Man's Sky", "no-mans-sky", "nms", "nomanssky"});
 
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
