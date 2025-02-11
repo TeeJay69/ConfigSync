@@ -962,7 +962,14 @@ namespace CS {
                             "C:\\Users\\" + uName + "\\AppData\\Roaming\\HelloGames\\NMS"
                         }, {});
                         setAlias("No Man's Sky", {"No Man's Sky", "no-mans-sky", "nms", "nomanssky"});
-
+                        
+                        add("NVIDIA Control Panel", {
+                            "C:\\ProgramData\\NVIDIA Corporation\\Drs\\nvdrsdb1.bin",
+                            "C:\\ProgramData\\NVIDIA Corporation\\Drs\\nvdrsdb0.bin"
+                        }, {});
+                        
+                        setAlias("NVIDIA Control Panel", {"NVIDIA Control Panel", "nvidia-control-panel", "nvidia", "nvcontrol", "nvcp"});
+                                                
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
