@@ -969,7 +969,12 @@ namespace CS {
                         }, {});
                         
                         setAlias("NVIDIA Control Panel", {"NVIDIA Control Panel", "nvidia-control-panel", "nvidia", "nvcontrol", "nvcp"});
-                                                
+                        
+                        add("Battlefield 1", {
+                            "C:\\Users\\" + uName + "\\Documents\\Battlefield 1\\settings"
+                        }, {});
+                        setAlias("Battlefield 1", {"Battlefield 1", "bf1", "battlefield1", "battle-field-1"});
+                        
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
