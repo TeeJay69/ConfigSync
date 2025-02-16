@@ -975,6 +975,11 @@ namespace CS {
                         }, {});
                         setAlias("Battlefield 1", {"Battlefield 1", "bf1", "battlefield1", "battle-field-1"});
                         
+                        add("Dave the Diver", {
+                            "C:\\Users\\" + uName + "\\AppData\\LocalLow\\nexon\\DAVE THE DIVER\\SteamSData"
+                        }, {});
+                        setAlias("Dave the Diver", {"Dave the Diver", "dave-the-diver", "dtd", "davethediver"});
+                        
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
