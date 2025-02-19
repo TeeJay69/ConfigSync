@@ -104,7 +104,10 @@ Install-Location
 - [Closed] xxx
 - Previously synchronized save. error when trying to hash the original file. (forced sync worked, then non forced may encounter issues, with potential file locks preventing hashing.) Mp3tag
 - [ ] When you change the task setting, the setting is not saved. (forgot to do pt.put<...>)
-
+- [ ] When launching the application via Stream Deck, the expected environment variable USERNAME may not be set. This causes a crash when the program attempts to initialize a std::string from a null pointer. A temporary workaround is to manually set USERNAME in the Stream Deck macro or update the code to safely handle a missing environment variable.
+```bat
+cmd /k "set USERNAME=YourUserName && configsync --help && timeout /t 10 && exit"
+```
 ## Trashcan:
 <!-- code -->
 
