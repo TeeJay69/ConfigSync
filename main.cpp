@@ -176,21 +176,26 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
             int equal = 1;
             if(loadFlag != 0){
                 if(S.exists(canName)){
-                    for(const auto& pair : S.get_lastsave(canName).pathVec){
-                        if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
-                            equal = 0;
-                            break;
-                        }
-                        try{
-                            if(CS::Utility::get_sha256hash_cpp(pair.first) != CS::Utility::get_sha256hash_cpp(pair.second)){
+                    const auto& lastSave = S.get_lastsave(canName);
+                    if(lastSave.pathVec.empty()){
+                        equal = 0; // Treat an empty save as "out of sync"
+                    } else {
+                        for(const auto& pair : S.get_lastsave(canName).pathVec){
+                            if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
                                 equal = 0;
                                 break;
                             }
-                        }
-                        catch(const std::runtime_error& err){
-                            equal = 0;
-                            CS::Logs::msg("ERROR: Sync - runtime_error: " + std::string(err.what()) + " file: " + pair.first);
-                            break;
+                            try{
+                                if(CS::Utility::get_sha256hash_cpp(pair.first) != CS::Utility::get_sha256hash_cpp(pair.second)){
+                                    equal = 0;
+                                    break;
+                                }
+                            }
+                            catch(const std::runtime_error& err){
+                                equal = 0;
+                                CS::Logs::msg("ERROR: Sync - runtime_error: " + std::string(err.what()) + " file: " + pair.first);
+                                break;
+                            }
                         }
                     }
                 }
@@ -258,7 +263,7 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         std::cout << ANSI_COLOR_GREEN << "Synchronization of " << canName << " finished." << ANSI_COLOR_RESET << std::endl;
         S.save();
     }
-    else if(std::string(argv[2]) == "--all" || std::string(argv[2]) == "-a"){
+    else if(std::string(argv[2]) == "--all" || std::string(argv[2]) == "-a"){ //multi program
         int forceFlag = 0;
         if(CS::Args::argcmp(argv, argc, "--force") || CS::Args::argcmp(argv, argc, "-f")){
             std::cout << ANSI_COLOR_161 << "Synchronizing all programs - Forced:" << ANSI_COLOR_RESET << std::endl;
@@ -289,23 +294,28 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
                 unsigned equal = 1;
                 if(loadFlag != 0){
                     if(S.exists(prog)){
-                        for(const auto& pair : S.get_lastsave(prog).pathVec){
-                            if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
-                                equal = 0;
-                                CS::Logs::msg("FILE-EXISTS-CHECK:" + pair.first + " 2: " + pair.second);
-                                break;
-                            }
-                            try{
-                                if(CS::Utility::get_sha256hash_cpp(pair.first) != CS::Utility::get_sha256hash_cpp(pair.second)){
+                        const auto& lastSave = S.get_lastsave(prog);
+                        if(lastSave.pathVec.empty()){
+                            equal = 0; // Treat an empty save as "out of sync"
+                        } else {
+                            for(const auto& pair : S.get_lastsave(prog).pathVec){
+                                if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
                                     equal = 0;
-                                    CS::Logs::msg("HASHES:" + pair.first + " 2: " + pair.second);
+                                    CS::Logs::msg("FILE-EXISTS-CHECK:" + pair.first + " 2: " + pair.second);
                                     break;
                                 }
-                            }
-                            catch(std::runtime_error& err){
-                                equal = 0;
-                                CS::Logs::msg("RUNTIME ERROR:" + pair.first + " 2: " + pair.second);
-                                break;
+                                try{
+                                    if(CS::Utility::get_sha256hash_cpp(pair.first) != CS::Utility::get_sha256hash_cpp(pair.second)){
+                                        equal = 0;
+                                        CS::Logs::msg("HASHES:" + pair.first + " 2: " + pair.second);
+                                        break;
+                                    }
+                                }
+                                catch(std::runtime_error& err){
+                                    equal = 0;
+                                    CS::Logs::msg("RUNTIME ERROR:" + pair.first + " 2: " + pair.second);
+                                    break;
+                                }
                             }
                         }
                     }
@@ -952,25 +962,29 @@ inline void handleStatusOption(char* argv[], int argc){
             }
 
             unsigned int equal = 1;
-            for(const auto& pair : S.saves().at(prog).at(tst).pathVec){
-                if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
-                    CS::Logs::msg("WARNING: File not found: " + pair.first + " or " + pair.second);
-                    continue;
-                }
-                try{
-                    if(CS::Utility::get_sha256hash_cpp(pair.first) != CS::Utility::get_sha256hash_cpp(pair.second)){
+            const auto& lastSave = S.get_lastsave(prog);
+            if(lastSave.pathVec.empty()){
+                equal = 0; // Treat an empty save as "out of sync"
+            } else {
+                for(const auto& pair : S.saves().at(prog).at(tst).pathVec){
+                    if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
+                        CS::Logs::msg("WARNING: File not found: " + pair.first + " or " + pair.second);
+                        continue;
+                    }
+                    try{
+                        if(CS::Utility::get_sha256hash_cpp(pair.first) != CS::Utility::get_sha256hash_cpp(pair.second)){
+                            outsync.push_back(prog);
+                            equal = 0;
+                            break;
+                        }
+                    }
+                    catch(std::runtime_error& err){
                         outsync.push_back(prog);
                         equal = 0;
                         break;
                     }
                 }
-                catch(std::runtime_error& err){
-                    outsync.push_back(prog);
-                    equal = 0;
-                    break;
-                }
             }
-
             if(equal == 1){
                 insync.push_back(prog);
             }
@@ -1013,6 +1027,12 @@ inline void handleStatusOption(char* argv[], int argc){
             CS::Logs::msg("Warning: This should never happen. Failed to retrieve last timestamp for " + canName);
         }
 
+        const auto& pathVec = S.saves().at(canName).at(tst).pathVec;
+        if(pathVec.empty()){
+            std::cout << ANSI_COLOR_RED << "Out of Sync! Last save is empty!" << ANSI_COLOR_RESET << std::endl;
+            return;
+        }
+    
         for(const auto& pair : S.saves().at(canName).at(tst).pathVec){
             if(!std::filesystem::exists(pair.first) || !std::filesystem::exists(pair.second)){
                 CS::Logs::msg("WARNING: File not found: " + pair.first + " or " + pair.second);
