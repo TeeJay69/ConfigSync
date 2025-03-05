@@ -234,6 +234,7 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         for(const auto& el : mgm.programs().at(canName).paths){
             const std::string dest = tstDir + "\\" + std::to_string(id);
             if(!std::filesystem::exists(el)){
+                std::cerr << ANSI_COLOR_YELLOW << "Warning: Program path not found. [" << el << "]" << ANSI_COLOR_RESET << std::endl;
                 CS::Logs::msg("Warning: Program path not found. [" + el + "]");
                 id++;
                 continue;
@@ -246,14 +247,18 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
             }
             id++;
         }
-
-        if(msgFlag == 1){
-            S.add(canName, uName, root, msg, pathvec, tst);
+        if (pathvec.empty()) {
+            std::cerr << ANSI_COLOR_YELLOW << "Warning: No files were backed up for " << canName << ". Save skipped." << ANSI_COLOR_RESET << std::endl;
+            CS::Logs::msg("No files backed up for " + canName + ". Save skipped.");
         }
-        else{
-            S.add(canName, uName, root, "", pathvec, tst);
+        else {
+            if(msgFlag == 1){
+                S.add(canName, uName, root, msg, pathvec, tst);
+            }
+            else{
+                S.add(canName, uName, root, "", pathvec, tst);
+            }
         }
-
         if(S.saves().at(canName).size() > pt.get<int>("savelimit")){
             uint64_t oldestTst = S.get_oldest_tst(canName);
             CS::Filesystem::recurse_remove(dayDir + "\\" + std::to_string(oldestTst));
@@ -359,6 +364,7 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
             for(const auto& el : mgm.programs()[prog].paths){
                 const std::string dest = tstDir + "\\" + std::to_string(id);
                 if(!std::filesystem::exists(el)){
+                    std::cerr << ANSI_COLOR_YELLOW << "Warning: Program path not found. [" << el << "]" << ANSI_COLOR_RESET << std::endl;
                     CS::Logs::msg("Warning: Program path not found. " + el);
                     id++;
                     continue;
@@ -371,13 +377,20 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
                 }
                 id++;
             }
-            // // for(const auto& pair : pathvec){
-            //     std::cout << "pathvec: " << pair.first << std::endl;
-            if(msgFlag == 1){
-                S.add(prog, uName, root, msg, pathvec, tst);
+            if (pathvec.empty()) {
+                std::cerr << ANSI_COLOR_YELLOW << "Warning: No files were backed up for " << prog << ". Save skipped." << ANSI_COLOR_RESET << std::endl;
+                CS::Logs::msg("No files backed up for " + prog + ". Save skipped.");
+                continue;
             }
-            else{
-                S.add(prog, uName, root, "", pathvec, tst);
+            else {
+                // // for(const auto& pair : pathvec){
+                //     std::cout << "pathvec: " << pair.first << std::endl;
+                if(msgFlag == 1){
+                    S.add(prog, uName, root, msg, pathvec, tst);
+                }
+                else{
+                    S.add(prog, uName, root, "", pathvec, tst);
+                }
             }
 
             if(S.saves().at(prog).size() > pt.get<int>("savelimit")){
@@ -964,6 +977,7 @@ inline void handleStatusOption(char* argv[], int argc){
             unsigned int equal = 1;
             const auto& lastSave = S.get_lastsave(prog);
             if(lastSave.pathVec.empty()){
+                outsync.push_back(prog);
                 equal = 0; // Treat an empty save as "out of sync"
             } else {
                 for(const auto& pair : S.saves().at(prog).at(tst).pathVec){
