@@ -34,7 +34,7 @@
 
 volatile sig_atomic_t interrupt = 0;
 int verbose = 0;
-const std::string uName = std::getenv("username");
+const std::string uName = std::getenv("USERNAME");
 const int log_limit_extern = 60;
 std::string pLocat;
 std::string pLocatFull;
@@ -132,6 +132,7 @@ inline void checkDynamicPath(CS::Saves& S, const std::string& prog, const uint64
 
 inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree& pt){
     CS::Programs::Mgm mgm;
+    // std::cout << uName << std::endl;
     if(argv[2] == NULL){
         std::cerr << "Fatal: Missing argument or value." << std::endl;
     }
@@ -153,9 +154,11 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         bool installed = false;
         for(const auto& path : mgm.programs().at(canName).paths){
             if(std::filesystem::exists(path)){
+                // std::cout << "Installed: " << path << std::endl;
                 installed = true;
                 break;
             }
+            // else {std::cout << "NOT installed: " << path << std::endl;}
         }
         if(!installed){
             std::cout << ANSI_COLOR_YELLOW << canName << " is not installed, skipping." << ANSI_COLOR_RESET << std::endl;
