@@ -149,6 +149,19 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         }
         
         const std::string canName = mgm.get_canonical(std::string(argv[2]));
+        // Check if the program is installed.
+        bool installed = false;
+        for(const auto& path : mgm.programs().at(canName).paths){
+            if(std::filesystem::exists(path)){
+                installed = true;
+                break;
+            }
+        }
+        if(!installed){
+            std::cout << ANSI_COLOR_YELLOW << canName << " is not installed, skipping." << ANSI_COLOR_RESET << std::endl;
+            return;
+        }
+
         int forceFlag = 0;
         if(CS::Args::argcmp(argv, argc, "--force") || CS::Args::argcmp(argv, argc, "-f")){
             std::cout << ANSI_COLOR_161 << "Synchronizing " << canName << " - Forced:" << ANSI_COLOR_RESET << std::endl;
@@ -295,6 +308,18 @@ inline void handleSyncOption(char* argv[], int argc, boost::property_tree::ptree
         }
         std::vector<std::string> synced;
         for(const auto& prog : mgm.get_supported()){
+            // Check if the program is installed.
+            bool installed = false;
+            for(const auto& path : mgm.programs().at(prog).paths){
+                if(std::filesystem::exists(path)){
+                    installed = true;
+                    break;
+                }
+            }
+            if(!installed){
+                std::cout << ANSI_COLOR_YELLOW << prog << " is not installed, skipping." << ANSI_COLOR_RESET << std::endl;
+                continue;
+            }
             if(forceFlag == 0){
                 unsigned equal = 1;
                 if(loadFlag != 0){
@@ -962,8 +987,21 @@ inline void handleStatusOption(char* argv[], int argc){
         std::vector<std::string> insync;
         std::vector<std::string> outsync;
         std::vector<std::string> nsync;
+        std::vector<std::string> notInstalled;
         for(const auto& prog : mgm.get_supported()){
             CS::Logs::msg("Status - Prog: " + prog);
+            // First, check if the program is installed (i.e. any path exists)
+            bool installed = false;
+            for(const auto& path : mgm.programs().at(prog).paths){
+                if(std::filesystem::exists(path)){
+                    installed = true;
+                    break;
+                }
+            }
+            if(!installed){
+                notInstalled.push_back(prog);
+                continue;
+            }
             if(!S.exists(prog)){
                 nsync.push_back(prog);
                 continue;
@@ -1003,7 +1041,13 @@ inline void handleStatusOption(char* argv[], int argc){
                 insync.push_back(prog);
             }
         }
-
+        
+        if(!notInstalled.empty()){
+            std::cout << ANSI_COLOR_RED << "Not installed:" << ANSI_COLOR_RESET << std::endl;
+            for(const auto& el : notInstalled){
+                std::cout << ANSI_COLOR_RED << el << ANSI_COLOR_RESET << std::endl;
+            }
+        }
         if(!insync.empty()){
             std::cout << ANSI_COLOR_GREEN << "In sync:" << ANSI_COLOR_RESET << std::endl;
             for(const auto& el : insync){
@@ -1026,6 +1070,18 @@ inline void handleStatusOption(char* argv[], int argc){
     else if(mgm.checkName(std::string(argv[2])) == 1){
         const std::string canName = mgm.get_canonical(std::string(argv[2]));
         std::cout << ANSI_COLOR_166 << "Status:" << ANSI_COLOR_RESET << std::endl;
+        // First, check installation.
+        bool installed = false;
+        for(const auto& path : mgm.programs().at(canName).paths){
+            if(std::filesystem::exists(path)){
+                installed = true;
+                break;
+            }
+        }
+        if(!installed){
+            std::cout << ANSI_COLOR_RED << "Not installed: " << canName << ANSI_COLOR_RESET << std::endl;
+            return;
+        }
         CS::Saves S(savesFile);
         if(!S.load()){
             std::cout << ANSI_COLOR_RED << "Never synced: " << canName << std::endl;
