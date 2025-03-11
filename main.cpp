@@ -1808,10 +1808,16 @@ inline void handleDeleteOption(char* argv[], int argc){
                 std::string dayTst = CS::Utility::timestamp_to_str_ymd(oldestTst);
                 std::string dayDir = archiveDir + "\\" + canName + "\\" + dayTst;
                 CS::Filesystem::recurse_remove(dayDir + "\\" + std::to_string(oldestTst));
+
+                if(std::filesystem::is_empty(dayDir)){
+                    std::filesystem::remove(dayDir);
+                
+                }
+
                 S.erase_save(canName, oldestTst);
                 number--;
             }
-
+            std::cout << ANSI_COLOR_GREEN << "Successfully Erased oldest [" << n << "] saves of " << canName << ANSI_COLOR_RESET << std::endl;
             S.save();
         }
     }
