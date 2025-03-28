@@ -889,8 +889,8 @@ namespace CS {
                         setAlias("Fusion360", {"Autodesk.Fusion360", "fusion360", "autodesk.fusion360", "autodesk-fusion360", "Autodesk-Fusion360"});
                         
                         add("Google.Chrome", get_chrome_paths(), {"chrome.exe"});
-                        setAlias("Google.Chrome", {"GoogleChrome", "googlechrome", "Google-Chrome", "google-chrome", "Google.Chrome", "google.chrome", "chrome", "Chrome"});
-
+                        setAlias("Google.Chrome", {"GoogleChromeCanary", "googlechrome", "Google-Chrome", "google-chrome", "Google.Chrome", "google.chrome", "chrome", "Chrome"});
+                        
                         add("Mozilla.Firefox", get_firefox_paths(), {"firefox.exe"});
                         setAlias("Mozilla.Firefox", {"MozillaFirefox", "mozillafirefox", "Firefox", "firefox", "mozilla.firefox", "Mozilla-Firefox", "mozilla-firefox"});
                         
@@ -982,6 +982,9 @@ namespace CS {
                             "C:\\Users\\" + uName + "\\AppData\\LocalLow\\nexon\\DAVE THE DIVER\\SteamSData"
                         }, {});
                         setAlias("Dave the Diver", {"Dave the Diver", "dave-the-diver", "dtd", "davethediver"});
+                        
+                        add("Google.Chrome.Canary", get_chrome_canary_paths(), {"chrome.exe"});
+                        setAlias("Google.Chrome.Canary", {"GoogleChromeCanary", "googlechromecanary", "Google-Chrome-Canary", "google-chrome-canary","Google.Chrome.Canary", "google.chrome.canary", "chrome-canary", "ChromeCanary", "chromecanary"});
                         
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
@@ -1162,6 +1165,26 @@ namespace CS {
 
                     inline const std::vector<std::string> get_chrome_paths(){
                         const std::string localPath = "C:\\Users\\" + uName + "\\AppData\\Local\\Google\\Chrome\\User Data";
+                        std::vector<std::string> ret;
+                        if(std::filesystem::exists(localPath)){
+                            for(const auto& entry : std::filesystem::directory_iterator(localPath)){
+                                if (entry.is_directory()) {
+                                    const std::string profilePath = entry.path().string();
+                                    const std::string profileName = entry.path().filename().string();
+
+                                    // Include the "Default" profile and directories that start with "Profile "
+                                    if (profileName == "Default" || profileName.rfind("Profile ", 0) == 0) {
+                                        ret.push_back(profilePath + "\\Preferences");
+                                    }
+                                }
+                            }
+                        }
+
+                        return ret;
+                    }
+                    
+                    inline const std::vector<std::string> get_chrome_canary_paths(){
+                        const std::string localPath = "C:\\Users\\" + uName + "\\AppData\\Local\\Google\\Chrome SxS\\User Data";
                         std::vector<std::string> ret;
                         if(std::filesystem::exists(localPath)){
                             for(const auto& entry : std::filesystem::directory_iterator(localPath)){
