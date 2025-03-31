@@ -986,6 +986,12 @@ namespace CS {
                         add("Google.Chrome.Canary", get_chrome_canary_paths(), {"chrome.exe"});
                         setAlias("Google.Chrome.Canary", {"GoogleChromeCanary", "googlechromecanary", "Google-Chrome-Canary", "google-chrome-canary","Google.Chrome.Canary", "google.chrome.canary", "chrome-canary", "ChromeCanary", "chromecanary"});
                         
+                        add("GTA V Enhanced", {
+                            "C:\\Users\\" + uName + "\\Documents\\Rockstar Games\\GTAV Enhanced"
+                        }, {});
+                        
+                        setAlias("GTA V Enhanced", {"GTA V Enhanced", "gtav-enhanced", "gta5-enhanced", "GTA5Enhanced", "GTA-V-Enhanced", "gtav", "gta5"});
+                        
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
