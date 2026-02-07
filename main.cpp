@@ -30,7 +30,7 @@
 #endif
 
 #define SETTINGS_ID 1
-#define VERSION "v2.8.4"
+#define VERSION "v2.9.0"
 
 volatile sig_atomic_t interrupt = 0;
 int verbose = 0;
@@ -1826,6 +1826,62 @@ inline void handleDeleteOption(char* argv[], int argc){
     }
 }
 
+
+inline void handleVerifyOption(char* argv[], int argc){
+    // note: If a single timestamp directory was deleted manually.
+    // But the day dir still exists (with other saves) -> verify will not catch it
+
+    CS::Programs::Mgm mgm;
+    CS::Saves S(savesFile);
+
+    if(S.load() != 1){
+        std::cerr << "Fatal: No previous saves found. See 'configsync --help'." << std::endl;
+        return;
+    }
+
+    std::cout << ANSI_COLOR_166 << "Verify:" << ANSI_COLOR_RESET << std::endl;
+
+    for(const auto& prog : mgm.get_supported()){
+        if(!S.exists(prog)){
+            continue;
+        }
+
+        std::vector<uint64_t> toDelete;
+
+        for(const auto& save : S.saves().at(prog)){
+            const uint64_t tst = save.first;
+            const std::string dayTst = CS::Utility::timestamp_to_str_ymd(tst);
+            const std::string dayDir = archiveDir + "\\" + prog + "\\" + dayTst;
+
+            if(!std::filesystem::exists(dayDir)){
+                CS::Logs::msg("Verify: Missing save dir for " + prog);
+                toDelete.push_back(tst);
+            }
+            else if(std::filesystem::is_empty(dayDir)){
+                std::filesystem::remove(dayDir);
+                CS::Logs::msg("Verify: Removed empty save dir for " + prog);
+                toDelete.push_back(tst);
+            }
+        }
+
+        if(!toDelete.empty()){
+            for(const auto& tst : toDelete){
+                S.erase_save(prog, tst);
+            }
+
+            std::cout << ANSI_COLOR_YELLOW << prog << ANSI_COLOR_RESET << " " << ANSI_COLOR_RED << "FIXED" << ANSI_COLOR_RESET << " (" << toDelete.size() << " invalid save" << (toDelete.size() == 1 ? "" : "s") << ")" << std::endl;
+        }
+        else{
+            std::cout << ANSI_COLOR_GREEN << prog << ANSI_COLOR_RESET << " OK" << std::endl;
+        }
+    }
+
+    S.save();
+}
+
+
+
+
 int main(int argc, char* argv[]){   
     std::signal(SIGINT, exitSignalHandler);
     enableColors();
@@ -2002,6 +2058,9 @@ int main(int argc, char* argv[]){
     }
     else if(std::string(argv[1]).find("settings") != std::string::npos){
         handleSettingsOption(argv, argc, pt);
+    }
+    else if(std::string(argv[1]) == "verify"){
+        handleVerifyOption(argv, argc);
     }
     else{
         std::cerr << "Fatal: '" << argv[1] << "' is not a ConfigSync command.\n";

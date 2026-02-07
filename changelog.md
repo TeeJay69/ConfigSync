@@ -1,3 +1,13 @@
+# v2.9.0
+### New features
+#### Verify integrity of archive
+- Go through all saves and check if they are present (only top level day dir not actual individual saves)
+- Users can manually delete saves inside the configarchive (only the day dirs please!!!)
+- Shows how much it fixed
+
+### Fixes
+- savelimit enforcement doesnt fully work, and we dont delete empty daydirs after removing the timestamp dirs
+
 # v2.8.4
 ### Hotfix
 - Fixes missing return that led to an illegal instruction causing the program to exit prematurely.
