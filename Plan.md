@@ -99,6 +99,7 @@ Install-Location
 ## Feature requests:
 - [Declined] ~~xxx~~
 - [ ] Setting to change root drive the program uses to search for program paths
+- [ ] Add PreRestoreBackups to the handleVerifyOption()
 
 ## Known Bugs:
 - [Closed] xxx
