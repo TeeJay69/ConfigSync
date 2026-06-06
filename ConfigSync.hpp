@@ -939,23 +939,23 @@ namespace CS {
                         
                         add("Far Cry 5", get_far_cry_5_paths(), {});
                         setAlias("Far Cry 5", { "Far Cry 5", "fc5", "farcry5", "far-cry-5" });
-
+                        
                         add("Helldivers 2", {
                             "C:\\Users\\" + uName + "\\AppData\\Roaming\\Arrowhead\\Helldivers2\\saves",
                             "C:\\Users\\" + uName + "\\AppData\\Roaming\\Arrowhead\\Helldivers2\\user_settings.config"
                         }, {});
                         setAlias("Helldivers 2", {"Helldivers 2", "helldivers2", "helldiversII", "Helldivers-2", "helldivers-2"});
-
+                        
                         add("Just Cause 3", {
                             "C:\\Users\\" + uName + "\\Documents\\Square Enix\\Just Cause 3\\Saves"
                         }, {});
                         setAlias("Just Cause 3", {"Just Cause 3", "justcause3", "just-cause-3", "JC3"});
-
+                        
                         add("Path of Exile 2", {
                             "C:\\Users\\" + uName + "\\Documents\\My Games\\Path of Exile 2"
                         }, {});
                         setAlias("Path of Exile 2", {"Path of Exile 2", "poe2", "PoE2", "pathofexile2", "path-of-exile-2", "PoE-2"});
-
+                        
                         add("MSI Afterburner", {
                             "C:\\Program Files (x86)\\MSI Afterburner\\Profiles"
                         }, {});
@@ -992,6 +992,9 @@ namespace CS {
                         
                         setAlias("GTA V Enhanced", {"GTA V Enhanced", "gtav-enhanced", "gta5-enhanced", "GTA5Enhanced", "GTA-V-Enhanced", "gtav", "gta5"});
                         
+                        add("Far Cry 6", get_far_cry_6_paths(), {});
+                        setAlias("Far Cry 6", { "Far Cry 6", "fc6", "farcry6", "far-cry-6" });
+
                         for(const auto& pair : _programs){
                             sup.insert(pair.first);
                         }
@@ -1000,13 +1003,13 @@ namespace CS {
                     inline void add(const std::string& name, const std::vector<std::string>& paths, const std::vector<std::string>& procNames){
                         _programs[name] = PInfo(name, paths, procNames);
                     }
-
+                    
                     inline void setAlias(const std::string& canonical, const std::vector<std::string>& aliases){
                         for(const auto& el : aliases){
                             aliasMap[el] = canonical;
                         }
                     }
-
+                    
                     inline const std::set<std::string, CS::Utility::CaseInsensitiveCompare>& get_supported(){
                         return sup;
                     }
@@ -1227,7 +1230,10 @@ namespace CS {
                     inline std::vector<std::string> get_ac_odyssey_paths() {
                         std::string userId = get_ubisoft_user_id();
                         if (!userId.empty()) {
-                            return { "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\5059" };
+                            return {
+                                "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\5092", // steam
+                                "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\5059"  // ubisoft
+                            };
                         }
                         return {};
                     }
@@ -1235,7 +1241,10 @@ namespace CS {
                     inline std::vector<std::string> get_ac_origins_paths() {
                         std::string userId = get_ubisoft_user_id();
                         if (!userId.empty()) {
-                            return { "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\3539" };
+                            return {
+                                "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\4923", // steam
+                                "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\3539"  // ubisoft
+                            };
                         }
                         return {};
                     }
@@ -1243,7 +1252,21 @@ namespace CS {
                     inline std::vector<std::string> get_far_cry_5_paths() {
                         std::string userId = get_ubisoft_user_id();
                         if (!userId.empty()) {
-                            return { "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\4311" };
+                            return {
+                                "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\4311", // steam
+                                "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\1803"  // ubisoft
+                            };
+                        }
+                        return {};
+                    }
+
+                    inline std::vector<std::string> get_far_cry_6_paths() {
+                        std::string userId = get_ubisoft_user_id();
+                        if (!userId.empty()) {
+                            return {
+                                "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\920",  // steam
+                                "C:\\Program Files (x86)\\Ubisoft\\Ubisoft Game Launcher\\savegames\\" + userId + "\\5266"  // ubisoft
+                            };
                         }
                         return {};
                     }

@@ -8,7 +8,7 @@ changelog.md
 Copyright-Disclaimer.md
 ----------
 Compile command:
-g++ main.cpp -o ConfigSync.exe -std=c++23 -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -lbcrypt -lssl -lcrypto -lboost_filesystem-mt -lz -O3
+g++ main.cpp -o ConfigSync.exe -std=c++26 -static-libgcc -static-libstdc++ -Wl,-Bstatic -lstdc++ -lpthread -lbcrypt -lssl -lcrypto -lboost_filesystem-mt -lz -O3
 ----------
 Alias:
 ----------

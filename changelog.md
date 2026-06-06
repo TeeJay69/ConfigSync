@@ -1,3 +1,9 @@
+# v2.10.0
+### New program supported
+- Far Cry 6
+### Fixes
+- Add ubisoft install path to AC origins, odyssey and far cry 5, in case user installed through ubisoft and not steam
+
 # v2.9.0
 ### New features
 #### Verify integrity of archive
